@@ -3,7 +3,6 @@
 module Options.Applicative where
 
 import Control.Applicative
-import Control.Monad
 import Data.Foldable
 import Data.Maybe
 import Data.Monoid
@@ -32,9 +31,9 @@ data OptionGroup a = OptionGroup
 
 data OptReader a
   = OptReader (String -> Maybe (Parser a))
-  | FlagParser !a
-  | ArgParser ([String] -> Maybe a)
-  | SubParser !Bool (Parser a)
+  | FlagReader !a
+  | ArgReader ([String] -> Maybe a)
+  | SubReader (Parser a)
   deriving Functor
 
 liftOpt :: OptionGroup a -> Parser a
@@ -69,21 +68,16 @@ uncons (x : xs) = Just (x, xs)
 
 rdrApply :: OptReader a -> Maybe String -> [String] -> Maybe (Parser a, [String])
 rdrApply rdr value args = case rdr of
-  (OptReader f) -> do
+  OptReader f -> do
     (arg, rest) <- uncons $ maybeToList value ++ args
     parser <- f arg
     return (parser, rest)
-  (FlagParser r) -> do
-    guard $ isNothing value
-    return (pure r, args)
-  (ArgParser f) -> do
-    guard $ isNothing value
+  FlagReader r -> return (pure r, args)
+  ArgReader f -> do
     r <- f args
     return (pure r, [])
-  (SubParser strict parser) -> do
-    guard $ isNothing value
+  SubReader parser -> do
     (r, rest) <- runParser parser args
-    when strict . guard $ null rest
     return (pure r, rest)
 
 data MatchResult
@@ -96,7 +90,13 @@ instance Monoid MatchResult where
   mappend _ m = m
 
 optMatches :: Option a -> String -> MatchResult
-optMatches opt arg = foldMap matches ((arg, Nothing) : maybeToList arg1)
+optMatches opt arg = case optReader opt of
+  OptReader _  -> foldMap matches ((arg, Nothing) : maybeToList arg1)
+  FlagReader _ -> matches (arg, Nothing)
+  ArgReader _  -> Match Nothing
+  SubReader _
+    | arg == expected -> Match Nothing
+    | otherwise       -> NoMatch
   where
     name = optName opt
     expected
