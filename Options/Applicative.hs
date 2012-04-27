@@ -26,6 +26,13 @@ data Option a = Option
   , optDefault :: Maybe a
   } deriving Functor
 
+newtype OptionGroup a = OptionGroup {
+  aliases :: [Option a] }
+  deriving Functor
+
+optsDefault :: OptionGroup a -> Maybe a
+optsDefault = listToMaybe . mapMaybe optDefault . aliases
+
 data OptReader a
   = OptReader (String -> Maybe (Parser a))
   | FlagParser !a
@@ -34,21 +41,28 @@ data OptReader a
   deriving Functor
 
 liftOpt :: Option a -> Parser a
-liftOpt opt = ConsP (fmap const opt) (pure ())
+liftOpt opt = liftOpts [opt]
 
-option :: OptName
+liftOpts :: [Option a] -> Parser a
+liftOpts opts = ConsP (fmap const (OptionGroup opts)) (pure ())
+
+option :: String
+       -> Char
        -> Maybe a
        -> (String -> Maybe a)
        -> Parser a
-option name def p = liftOpt $ Option name reader def
+option lname sname def p = liftOpts
+  [ Option (OptLong lname) reader def
+  , Option (OptShort sname) reader def ]
   where
     reader = OptReader (fmap pure . p)
 
 optionR :: Read a
-        => OptName
+        => String
+        -> Char
         -> Maybe a
         -> Parser a
-optionR name def = option name def p
+optionR lname sname def = option lname sname def p
   where
     p arg = case reads arg of
       [(r, "")] -> Just r
@@ -110,7 +124,7 @@ optMatches opt arg = foldMap matches ((arg, Nothing) : maybeToList arg1)
 
 data Parser a where
   NilP :: a -> Parser a
-  ConsP :: Option (a -> b)
+  ConsP :: OptionGroup (a -> b)
         -> Parser a -> Parser b
 
 instance Functor Parser where
@@ -125,14 +139,19 @@ instance Applicative Parser where
 
 stepParser :: Parser a -> String -> [String] -> Maybe (Parser a, [String])
 stepParser (NilP _) _ _ = Nothing
-stepParser (ConsP opt rest) arg args
-  | Match value <- optMatches opt arg
+stepParser (ConsP opts rest) arg args
+  | (opt, value) : _ <- all_matches
   = do let reader = optReader opt
        (parser', args') <- rdrApply reader value args
        return (parser' <*> rest, args')
   | otherwise
   = do (parser', args') <- stepParser rest arg args
-       return (ConsP opt parser', args')
+       return (ConsP opts parser', args')
+  where
+    all_matches = catMaybes $ fmap match (aliases opts)
+    match opt = case optMatches opt arg of
+      NoMatch -> Nothing
+      Match value -> Just (opt, value)
 
 runParser :: Parser a -> [String] -> Maybe (a, [String])
 runParser parser args = case args of
@@ -147,4 +166,4 @@ runParser parser args = case args of
 
 evalParser :: Parser a -> Maybe a
 evalParser (NilP r) = pure r
-evalParser (ConsP opt rest) = optDefault opt <*> evalParser rest
+evalParser (ConsP opt rest) = optsDefault opt <*> evalParser rest

@@ -6,10 +6,7 @@ data User = User
   , userId :: Integer
   } deriving Show
 
-l :: String -> OptName
-l = OptLong
-
 parser :: Parser User
 parser = User
-  <$> option (l "name") Nothing Just
-  <*> optionR (l "id") (Just 0)
+  <$> option "name" 'n' Nothing Just
+  <*> optionR "id" 'i' (Just 0)
