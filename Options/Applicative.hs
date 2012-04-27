@@ -23,15 +23,12 @@ isShort _ = False
 data Option a = Option
   { optName :: OptName
   , optReader :: OptReader a
-  , optDefault :: Maybe a
   } deriving Functor
 
-newtype OptionGroup a = OptionGroup {
-  aliases :: [Option a] }
+data OptionGroup a = OptionGroup
+  { optAliases :: [Option a]
+  , optDefault :: Maybe a }
   deriving Functor
-
-optsDefault :: OptionGroup a -> Maybe a
-optsDefault = listToMaybe . mapMaybe optDefault . aliases
 
 data OptReader a
   = OptReader (String -> Maybe (Parser a))
@@ -40,20 +37,18 @@ data OptReader a
   | SubParser !Bool (Parser a)
   deriving Functor
 
-liftOpt :: Option a -> Parser a
-liftOpt opt = liftOpts [opt]
-
-liftOpts :: [Option a] -> Parser a
-liftOpts opts = ConsP (fmap const (OptionGroup opts)) (pure ())
+liftOpt :: OptionGroup a -> Parser a
+liftOpt opts = ConsP (fmap const opts) (pure ())
 
 option :: String
        -> Char
        -> Maybe a
        -> (String -> Maybe a)
        -> Parser a
-option lname sname def p = liftOpts
-  [ Option (OptLong lname) reader def
-  , Option (OptShort sname) reader def ]
+option lname sname def p = liftOpt OptionGroup
+  { optAliases = [ Option (OptLong lname) reader
+                 , Option (OptShort sname) reader ]
+  , optDefault = def }
   where
     reader = OptReader (fmap pure . p)
 
@@ -148,7 +143,7 @@ stepParser (ConsP opts rest) arg args
   = do (parser', args') <- stepParser rest arg args
        return (ConsP opts parser', args')
   where
-    all_matches = catMaybes $ fmap match (aliases opts)
+    all_matches = catMaybes $ fmap match (optAliases opts)
     match opt = case optMatches opt arg of
       NoMatch -> Nothing
       Match value -> Just (opt, value)
@@ -166,4 +161,4 @@ runParser parser args = case args of
 
 evalParser :: Parser a -> Maybe a
 evalParser (NilP r) = pure r
-evalParser (ConsP opt rest) = optsDefault opt <*> evalParser rest
+evalParser (ConsP opt rest) = optDefault opt <*> evalParser rest
