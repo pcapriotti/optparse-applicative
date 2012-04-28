@@ -48,17 +48,17 @@ uncons :: [a] -> Maybe (a, [a])
 uncons [] = Nothing
 uncons (x : xs) = Just (x, xs)
 
-rdrApply :: OptReader a -> Maybe String -> [String] -> Maybe (a, [String])
+rdrApply :: OptReader a -> Maybe String -> [String] -> P (a, [String])
 rdrApply rdr value args = case rdr of
   OptReader f -> do
-    (arg, args') <- uncons $ maybeToList value ++ args
-    r <- f arg
+    (arg, args') <- tryP . uncons $ maybeToList value ++ args
+    r <- tryP $ f arg
     return (r, args')
   FlagReader r -> return (r, args)
   ArgReader f -> do
-    r <- f args
+    r <- tryP $ f args
     return (r, [])
-  SubReader p -> runParser p args
+  SubReader p -> tryP $ runParser p args
 
 data MatchResult
   = NoMatch
@@ -113,13 +113,29 @@ instance Applicative Parser where
   ConsP opts p1 <*> p2 =
     ConsP (fmap uncurry opts) $ (,) <$> p1 <*> p2
 
-stepParser :: Parser a -> String -> [String] -> Maybe (Parser a, [String])
-stepParser (NilP _) _ _ = Nothing
+data P a
+  = ParseError
+  | NoParse
+  | ParseResult a
+  deriving Functor
+
+instance Monad P where
+  return = ParseResult
+  ParseError >>= _ = ParseError
+  NoParse >>= _ = NoParse
+  ParseResult a >>= f = f a
+  fail _ = ParseError
+
+tryP :: Maybe a -> P a
+tryP = maybe ParseError return
+
+stepParser :: Parser a -> String -> [String] -> P (Parser a, [String])
+stepParser (NilP _) _ _ = NoParse
 stepParser (ConsP opts p) arg args
   | (opt, value) : _ <- all_matches
   = do let reader = optReader opt
        (r, args') <- rdrApply reader value args
-       liftOpt' <- optCont opts r
+       liftOpt' <- tryP $ optCont opts r
        return (liftOpt' <*> p, args')
   | otherwise
   = do (p', args') <- stepParser p arg args
@@ -134,8 +150,9 @@ runParser :: Parser a -> [String] -> Maybe (a, [String])
 runParser p args = case args of
   [] -> result
   (arg : argt) -> case stepParser p arg argt of
-    Nothing -> result
-    Just (p', args') -> runParser p' args'
+    ParseError -> Nothing
+    NoParse -> result
+    ParseResult (p', args') -> runParser p' args'
   where
     result = (,) <$> evalParser p <*> pure args
 

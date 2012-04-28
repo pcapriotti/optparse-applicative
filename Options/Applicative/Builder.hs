@@ -28,6 +28,9 @@ auto = OptReader $ \arg -> case reads arg of
   [(r, "")] -> Just r
   _         -> Nothing
 
+str :: OptReader String
+str = OptReader Just
+
 disabled :: OptReader a
 disabled = OptReader $ const Nothing
 
