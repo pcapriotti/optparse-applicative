@@ -25,9 +25,13 @@ data Option a = Option
   } deriving Functor
 
 data OptionGroup a = OptionGroup
-  { optAliases :: [Option a]
+  { optMain :: Option a
+  , optAliases :: [Option a]
   , optDefault :: Maybe a }
   deriving Functor
+
+optOptions :: OptionGroup a -> [Option a]
+optOptions opts = optMain opts : optAliases opts
 
 data OptReader a
   = OptReader (String -> Maybe (Parser a))
@@ -45,8 +49,8 @@ option :: String
        -> (String -> Maybe a)
        -> Parser a
 option lname sname def p = liftOpt OptionGroup
-  { optAliases = [ Option (OptLong lname) reader
-                 , Option (OptShort sname) reader ]
+  { optMain = Option (OptLong lname) reader
+  , optAliases = [Option (OptShort sname) reader]
   , optDefault = def }
   where
     reader = OptReader (fmap pure . p)
@@ -143,7 +147,7 @@ stepParser (ConsP opts rest) arg args
   = do (parser', args') <- stepParser rest arg args
        return (ConsP opts parser', args')
   where
-    all_matches = catMaybes $ fmap match (optAliases opts)
+    all_matches = catMaybes $ fmap match (optOptions opts)
     match opt = case optMatches opt arg of
       NoMatch -> Nothing
       Match value -> Just (opt, value)
