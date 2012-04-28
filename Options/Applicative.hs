@@ -24,23 +24,20 @@ data Option a = Option
   , optReader :: OptReader a
   } deriving Functor
 
-data OptionGroup a = OptionGroup
-  { optMain :: Option a
-  , optAliases :: [Option a]
-  , optDefault :: Maybe a }
+data OptionGroup r a = OptionGroup
+  { optOptions :: [Option r]
+  , optDefault :: Maybe a
+  , optCont :: r -> Parser a }
   deriving Functor
 
-optOptions :: OptionGroup a -> [Option a]
-optOptions opts = optMain opts : optAliases opts
-
 data OptReader a
-  = OptReader (String -> Maybe (Parser a))
+  = OptReader (String -> Maybe a)
   | FlagReader !a
   | ArgReader ([String] -> Maybe a)
   | SubReader (Parser a)
   deriving Functor
 
-liftOpt :: OptionGroup a -> Parser a
+liftOpt :: OptionGroup r a -> Parser a
 liftOpt opts = ConsP (fmap const opts) (pure ())
 
 option :: String
@@ -49,11 +46,12 @@ option :: String
        -> (String -> Maybe a)
        -> Parser a
 option lname sname def p = liftOpt OptionGroup
-  { optMain = Option (OptLong lname) reader
-  , optAliases = [Option (OptShort sname) reader]
-  , optDefault = def }
+  { optOptions = [ Option (OptLong lname) reader
+                 , Option (OptShort sname) reader ]
+  , optDefault = def
+  , optCont = pure }
   where
-    reader = OptReader (fmap pure . p)
+    reader = OptReader p
 
 optionR :: Read a
         => String
@@ -70,19 +68,17 @@ uncons :: [a] -> Maybe (a, [a])
 uncons [] = Nothing
 uncons (x : xs) = Just (x, xs)
 
-rdrApply :: OptReader a -> Maybe String -> [String] -> Maybe (Parser a, [String])
+rdrApply :: OptReader a -> Maybe String -> [String] -> Maybe (a, [String])
 rdrApply rdr value args = case rdr of
   OptReader f -> do
-    (arg, rest) <- uncons $ maybeToList value ++ args
-    parser <- f arg
-    return (parser, rest)
-  FlagReader r -> return (pure r, args)
+    (arg, args') <- uncons $ maybeToList value ++ args
+    r <- f arg
+    return (r, args')
+  FlagReader r -> return (r, args)
   ArgReader f -> do
     r <- f args
-    return (pure r, [])
-  SubReader parser -> do
-    (r, rest) <- runParser parser args
-    return (pure r, rest)
+    return (r, [])
+  SubReader parser -> runParser parser args
 
 data MatchResult
   = NoMatch
@@ -123,29 +119,31 @@ optMatches opt arg = case optReader opt of
 
 data Parser a where
   NilP :: a -> Parser a
-  ConsP :: OptionGroup (a -> b)
-        -> Parser a -> Parser b
+  ConsP :: OptionGroup r (a -> b)
+        -> Parser a
+        -> Parser b
 
 instance Functor Parser where
   fmap f (NilP x) = NilP (f x)
-  fmap f (ConsP opt rest) = ConsP (fmap (f.) opt) rest
+  fmap f (ConsP opts p) = ConsP (fmap (f.) opts) p
 
 instance Applicative Parser where
   pure = NilP
   NilP f <*> p = fmap f p
-  ConsP opt rest <*> p =
-    ConsP (fmap uncurry opt) (fmap (,) rest <*> p)
+  ConsP opts p1 <*> p2 =
+    ConsP (fmap uncurry opts) $ (,) <$> p1 <*> p2
 
 stepParser :: Parser a -> String -> [String] -> Maybe (Parser a, [String])
 stepParser (NilP _) _ _ = Nothing
-stepParser (ConsP opts rest) arg args
+stepParser (ConsP opts p) arg args
   | (opt, value) : _ <- all_matches
   = do let reader = optReader opt
-       (parser', args') <- rdrApply reader value args
-       return (parser' <*> rest, args')
+       (r, args') <- rdrApply reader value args
+       let parser' = optCont opts r
+       return (parser' <*> p, args')
   | otherwise
-  = do (parser', args') <- stepParser rest arg args
-       return (ConsP opts parser', args')
+  = do (p', args') <- stepParser p arg args
+       return (ConsP opts p', args')
   where
     all_matches = catMaybes $ fmap match (optOptions opts)
     match opt = case optMatches opt arg of
@@ -165,4 +163,4 @@ runParser parser args = case args of
 
 evalParser :: Parser a -> Maybe a
 evalParser (NilP r) = pure r
-evalParser (ConsP opt rest) = optDefault opt <*> evalParser rest
+evalParser (ConsP opts p) = optDefault opts <*> evalParser p
