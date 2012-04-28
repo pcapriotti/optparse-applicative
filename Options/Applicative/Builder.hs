@@ -75,6 +75,9 @@ option lname f = liftOpt (f opts)
       , optReader = auto
       }
 
+strOption :: String -> (OptionGroup String String -> OptionGroup String a) -> Parser a
+strOption lname f = option lname (f . this (reader str))
+
 multi :: OptionGroup r a -> OptionGroup r [a]
 multi opts = mkOptGroup []
   where
