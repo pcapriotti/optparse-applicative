@@ -3,11 +3,13 @@
 module Options.Applicative where
 
 import Control.Applicative
+import Control.Monad
 import Data.Foldable
 import Data.Maybe
 import Data.Monoid
 
-data OptName = OptLong String | OptShort Char
+data OptName = OptLong !String
+             | OptShort !Char
 
 optNameStr :: OptName -> String
 optNameStr (OptLong name) = name
@@ -19,11 +21,6 @@ isLong _ = False
 isShort (OptShort _ ) = True
 isShort _ = False
 
-data Option a = Option
-  { optName :: OptName
-  , optReader :: OptReader a
-  } deriving Functor
-
 data OptionGroup r a = OptionGroup
   { optMain :: Option r
   , optAliases :: [Option r]
@@ -34,11 +31,11 @@ data OptionGroup r a = OptionGroup
 optOptions :: OptionGroup r a -> [Option r]
 optOptions opts = optMain opts : optAliases opts
 
-data OptReader a
-  = OptReader (String -> Maybe a)
-  | FlagReader !a
-  | ArgReader ([String] -> Maybe a)
-  | SubReader (Parser a)
+data Option a
+  = Option !OptName (String -> Maybe a)
+  | Flag !OptName !a
+  | Argument (String -> Maybe a)
+  | Command (String -> Maybe (Parser a))
   deriving Functor
 
 liftOpt :: OptionGroup r a -> Parser a
@@ -47,18 +44,6 @@ liftOpt opts = ConsP (fmap const opts) (pure ())
 uncons :: [a] -> Maybe (a, [a])
 uncons [] = Nothing
 uncons (x : xs) = Just (x, xs)
-
-rdrApply :: OptReader a -> Maybe String -> [String] -> P (a, [String])
-rdrApply rdr value args = case rdr of
-  OptReader f -> do
-    (arg, args') <- tryP . uncons $ maybeToList value ++ args
-    r <- tryP $ f arg
-    return (r, args')
-  FlagReader r -> return (r, args)
-  ArgReader f -> do
-    r <- tryP $ f args
-    return (r, [])
-  SubReader p -> tryP $ runParser p args
 
 data MatchResult
   = NoMatch
@@ -69,33 +54,45 @@ instance Monoid MatchResult where
   mappend m@(Match _) _ = m
   mappend _ m = m
 
-optMatches :: Option a -> String -> MatchResult
-optMatches opt arg = case optReader opt of
-  OptReader _  -> foldMap matches ((arg, Nothing) : maybeToList arg1)
-  FlagReader _ -> matches (arg, Nothing)
-  ArgReader _  -> Match Nothing
-  SubReader _
-    | arg == expected -> Match Nothing
-    | otherwise       -> NoMatch
+type Matcher a = [String] -> P (a, [String])
+
+optMatches :: Option a -> String -> Maybe (Matcher a)
+optMatches opt arg = case opt of
+  Option name f
+    | Match value <- foldMap matches ((arg, Nothing) : maybeToList arg1)
+    -> Just $ \args -> do
+        (arg', args') <- tryP . uncons $ maybeToList value ++ args
+        r <- tryP $ f arg'
+        return (r, args')
+      where
+        matches (s, rest)
+          | s == expected name = Match rest
+          | otherwise          = NoMatch
+        arg1
+          | isLong name
+          = case span (/= '=') arg of
+              (_, "")   -> Nothing
+              (s, _ : rest) -> Just (s, Just rest)
+          | otherwise
+          = case splitAt 2 arg of
+              (_, "") -> Nothing
+              (s, rest) -> Just (s, Just rest)
+  Flag name x
+    | arg == expected name
+    -> Just $ \args -> return (x, args)
+  Argument f
+    | Just result <- f arg
+    -> Just $ \args -> return (result, args)
+  Command f
+    | Just p <- f arg
+    -> Just $ \args -> tryP $ runParser p args
+  _ -> Nothing
   where
-    name = optName opt
-    expected
+    expected name
       | isLong name
       = '-' : '-' : optNameStr name
       | otherwise
       = '-' : optNameStr name
-    matches (s, rest)
-      | s == expected = Match rest
-      | otherwise     = NoMatch
-    arg1
-      | isLong name
-      = case span (/= '=') arg of
-          (_, "")   -> Nothing
-          (s, _ : rest) -> Just (s, Just rest)
-      | otherwise
-      = case splitAt 2 arg of
-          (_, "") -> Nothing
-          (s, rest) -> Just (s, Just rest)
 
 data Parser a where
   NilP :: a -> Parser a
@@ -126,25 +123,27 @@ instance Monad P where
   ParseResult a >>= f = f a
   fail _ = ParseError
 
+instance Applicative P where
+  pure = return
+  (<*>) = ap
+
 tryP :: Maybe a -> P a
 tryP = maybe ParseError return
 
 stepParser :: Parser a -> String -> [String] -> P (Parser a, [String])
 stepParser (NilP _) _ _ = NoParse
 stepParser (ConsP opts p) arg args
-  | (opt, value) : _ <- all_matches
-  = do let reader = optReader opt
-       (r, args') <- rdrApply reader value args
+  -- take first matcher
+  | matcher : _ <- all_matchers
+  = do (r, args') <- matcher args
        liftOpt' <- tryP $ optCont opts r
        return (liftOpt' <*> p, args')
   | otherwise
   = do (p', args') <- stepParser p arg args
        return (ConsP opts p', args')
   where
-    all_matches = catMaybes $ fmap match (optOptions opts)
-    match opt = case optMatches opt arg of
-      NoMatch -> Nothing
-      Match value -> Just (opt, value)
+    all_matchers = catMaybes $ fmap match (optOptions opts)
+    match opt = optMatches opt arg
 
 runParser :: Parser a -> [String] -> Maybe (a, [String])
 runParser p args = case args of
