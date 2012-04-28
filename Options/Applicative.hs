@@ -25,10 +25,14 @@ data Option a = Option
   } deriving Functor
 
 data OptionGroup r a = OptionGroup
-  { optOptions :: [Option r]
+  { optMain :: Option r
+  , optAliases :: [Option r]
   , optDefault :: Maybe a
-  , optCont :: r -> Parser a }
+  , optCont :: r -> Maybe (Parser a) }
   deriving Functor
+
+optOptions :: OptionGroup r a -> [Option r]
+optOptions opts = optMain opts : optAliases opts
 
 data OptReader a
   = OptReader (String -> Maybe a)
@@ -39,30 +43,6 @@ data OptReader a
 
 liftOpt :: OptionGroup r a -> Parser a
 liftOpt opts = ConsP (fmap const opts) (pure ())
-
-option :: String
-       -> Char
-       -> Maybe a
-       -> (String -> Maybe a)
-       -> Parser a
-option lname sname def p = liftOpt OptionGroup
-  { optOptions = [ Option (OptLong lname) reader
-                 , Option (OptShort sname) reader ]
-  , optDefault = def
-  , optCont = pure }
-  where
-    reader = OptReader p
-
-optionR :: Read a
-        => String
-        -> Char
-        -> Maybe a
-        -> Parser a
-optionR lname sname def = option lname sname def p
-  where
-    p arg = case reads arg of
-      [(r, "")] -> Just r
-      _         -> Nothing
 
 uncons :: [a] -> Maybe (a, [a])
 uncons [] = Nothing
@@ -78,7 +58,7 @@ rdrApply rdr value args = case rdr of
   ArgReader f -> do
     r <- f args
     return (r, [])
-  SubReader parser -> runParser parser args
+  SubReader p -> runParser p args
 
 data MatchResult
   = NoMatch
@@ -139,8 +119,8 @@ stepParser (ConsP opts p) arg args
   | (opt, value) : _ <- all_matches
   = do let reader = optReader opt
        (r, args') <- rdrApply reader value args
-       let parser' = optCont opts r
-       return (parser' <*> p, args')
+       liftOpt' <- optCont opts r
+       return (liftOpt' <*> p, args')
   | otherwise
   = do (p', args') <- stepParser p arg args
        return (ConsP opts p', args')
@@ -151,15 +131,13 @@ stepParser (ConsP opts p) arg args
       Match value -> Just (opt, value)
 
 runParser :: Parser a -> [String] -> Maybe (a, [String])
-runParser parser args = case args of
+runParser p args = case args of
   [] -> result
-  (arg : argt) -> case stepParser parser arg argt of
+  (arg : argt) -> case stepParser p arg argt of
     Nothing -> result
-    Just (parser', args') -> runParser parser' args'
+    Just (p', args') -> runParser p' args'
   where
-    result = do
-      r <- evalParser parser
-      return (r, args)
+    result = (,) <$> evalParser p <*> pure args
 
 evalParser :: Parser a -> Maybe a
 evalParser (NilP r) = pure r
