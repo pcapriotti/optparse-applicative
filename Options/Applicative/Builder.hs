@@ -9,19 +9,16 @@ import Options.Applicative
 mainL :: Lens (OptionGroup r a) (Option r)
 mainL = lens optMain $ \m opts -> opts { optMain = m }
 
-aliasesL :: Lens (OptionGroup r a) [Option r]
-aliasesL = lens optAliases $ \as opts -> opts { optAliases = as }
-
 defaultL :: Lens (OptionGroup r a) (Maybe a)
 defaultL = lens optDefault $ \x opts -> opts { optDefault = x }
 
 helpL :: Lens (OptionGroup r a) String
 helpL = lens optHelp $ \h opts -> opts { optHelp = h }
 
-setName :: OptName -> Option a -> Option a
-setName name (Option _ p) = Option name p
-setName name (Flag _ x) = Flag name x
-setName _ opt = opt
+addName :: OptName -> Option a -> Option a
+addName name (Option names p) = Option (name : names) p
+addName name (Flag names x) = Flag (name : names) x
+addName _ opt = opt
 
 -- readers --
 
@@ -38,11 +35,11 @@ disabled = const Nothing
 
 -- combinators --
 
-long :: String -> Option r -> Option r
-long = setName . OptLong
+long :: String -> OptionGroup r a -> OptionGroup r a
+long = modL mainL . addName . OptLong
 
-short :: Char -> Option r -> Option r
-short = setName . OptShort
+short :: Char -> OptionGroup r a -> OptionGroup r a
+short = modL mainL . addName . OptShort
 
 value :: a -> OptionGroup r a -> OptionGroup r a
 value r = defaultL ^= Just r
@@ -50,28 +47,10 @@ value r = defaultL ^= Just r
 help :: String -> OptionGroup r a -> OptionGroup r a
 help htext = helpL ^= htext
 
-reader :: (String -> Maybe a) -> Option a -> Option a
-reader p (Option name _) = Option name p
-reader _ opt = opt
-
-flag :: a -> Option a -> Option a
-flag x (Option name _) = Flag name x
-flag x (Flag name _) = Flag name x
-flag _ opt = opt
-
-alt :: OptionGroup r a -> Option r -> Option r
-alt opts _ = optMain opts
-
-this :: (Option r -> Option r)
-     -> OptionGroup r a
-     -> OptionGroup r a
-this = modL mainL
-
-alias :: (Option r -> Option r)
-      -> OptionGroup r a
-      -> OptionGroup r a
-alias f opts = modL aliasesL (opt:) opts
-  where opt = f (opts ^. mainL)
+reader :: (String -> Maybe r) -> OptionGroup r a -> OptionGroup r a
+reader p = modL mainL $ \opt -> case opt of
+  Option names _ -> Option names p
+  _ -> opt
 
 multi :: OptionGroup r a -> OptionGroup r [a]
 multi opts = mkOptGroup []
@@ -87,7 +66,6 @@ multi opts = mkOptGroup []
 baseOpts :: Option a -> OptionGroup a a
 baseOpts opt = OptionGroup
   { optMain = opt
-  , optAliases = []
   , optCont = Just . pure
   , optHelp = ""
   , optDefault = Nothing }
@@ -104,11 +82,14 @@ argument = baseParser . Argument
 arguments :: (String -> Maybe a) -> (OptionGroup a [a] -> OptionGroup a b) -> Parser b
 arguments p f = argument p (f . multi)
 
-nullOption :: String -> (OptionGroup a a -> OptionGroup a b) -> Parser b
-nullOption lname = baseParser $ Option (OptLong lname) disabled
+flag :: a -> (OptionGroup a a -> OptionGroup a b) -> Parser b
+flag = baseParser . Flag []
 
-strOption :: String -> (OptionGroup String String -> OptionGroup String a) -> Parser a
-strOption lname f = nullOption lname (f . this (reader str))
+nullOption :: (OptionGroup a a -> OptionGroup a b) -> Parser b
+nullOption = baseParser $ Option [] disabled
 
-option :: Read a => String -> (OptionGroup a a -> OptionGroup a b) -> Parser b
-option lname f = nullOption lname (f . this (reader auto))
+strOption :: (OptionGroup String String -> OptionGroup String a) -> Parser a
+strOption f = nullOption $ f . reader str
+
+option :: Read a => (OptionGroup a a -> OptionGroup a b) -> Parser b
+option f = nullOption $ f . reader auto

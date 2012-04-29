@@ -10,8 +10,10 @@ data User = User
 
 example :: Parser User
 example = User
-  <$> strOption "name" (   help "Specify a username"
-                       >>> alias (short 'n'))
-  <*> option "id" (   value 0
-                  >>> help "Specify the user id"
-                  >>> alias (short 'i'))
+  <$> strOption (
+        long "name" >>> short 'n' >>>
+        help "Specify a username")
+  <*> option (
+        long "id" >>> short 'i' >>>
+        value 0 >>>
+        help "Specify the user id")
