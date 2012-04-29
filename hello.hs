@@ -1,21 +1,20 @@
 import Control.Applicative
 import Options.Applicative
 import Options.Applicative.Builder
-import System.Environment
-import System.IO
+import Options.Applicative.Extra
 
 data Sample = Sample
   { hello :: String }
 
 sample :: Parser Sample
-sample = Sample <$> option "hello" (this (reader str))
+sample = Sample
+     <$> strOption
+         ( long "hello"
+         . metavar "TARGET"
+         . help "Target for the greeting" )
 
 greet :: Sample -> IO ()
 greet (Sample h) = putStrLn $ "Hello, " ++ h
 
 main :: IO ()
-main = do
-  args <- getArgs
-  case runParser sample args of
-    Nothing -> hPutStrLn stderr "Parse error"
-    Just (s, _) -> greet s
+main = execParser sample >>= greet

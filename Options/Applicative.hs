@@ -8,6 +8,8 @@ import Data.List
 import Data.Maybe
 import Data.Monoid
 
+import Options.Applicative.Utils
+
 data OptName = OptShort !Char
              | OptLong !String
   deriving (Eq, Ord)
@@ -159,11 +161,6 @@ mapParser :: (forall r x . Option r x -> b)
           -> [b]
 mapParser _ (NilP _) = []
 mapParser f (ConsP opt p) = f opt : mapParser f p
-
-(<+>) :: String -> String -> String
-"" <+> s = s
-s <+> "" = s
-s1 <+> s2 = s1 ++ " " ++ s2
 
 optShow :: OptName -> String
 optShow (OptLong n) = "--" ++ n
