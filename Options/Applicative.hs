@@ -22,27 +22,27 @@ isLong _ = False
 isShort (OptShort _ ) = True
 isShort _ = False
 
-data OptionGroup r a = OptionGroup
-  { optMain :: Option r
+data Option r a = Option
+  { optMain :: OptReader r
   , optDefault :: Maybe a
   , optHelp :: String
   , optCont :: r -> Maybe (Parser a) }
   deriving Functor
 
-data Option a
-  = Option [OptName] (String -> Maybe a)
-  | Flag [OptName] !a
-  | Argument (String -> Maybe a)
-  | Command (String -> Maybe (Parser a))
+data OptReader a
+  = OptReader [OptName] (String -> Maybe a)
+  | FlagReader [OptName] !a
+  | ArgReader (String -> Maybe a)
+  | CmdReader (String -> Maybe (Parser a))
   deriving Functor
 
-optNames :: Option a -> [OptName]
-optNames (Option names _) = names
-optNames (Flag names _) = names
+optNames :: OptReader a -> [OptName]
+optNames (OptReader names _) = names
+optNames (FlagReader names _) = names
 optNames _ = []
 
-liftOpt :: OptionGroup r a -> Parser a
-liftOpt opts = ConsP (fmap const opts) (pure ())
+liftOpt :: Option r a -> Parser a
+liftOpt opt = ConsP (fmap const opt) (pure ())
 
 uncons :: [a] -> Maybe (a, [a])
 uncons [] = Nothing
@@ -59,9 +59,9 @@ instance Monoid MatchResult where
 
 type Matcher a = [String] -> P (a, [String])
 
-optMatches :: Option a -> String -> Maybe (Matcher a)
-optMatches opt arg = case opt of
-  Option names f
+optMatches :: OptReader a -> String -> Maybe (Matcher a)
+optMatches rdr arg = case rdr of
+  OptReader names f
     | Just (arg1, val) <- parsed
     , arg1 `elem` names
     -> Just $ \args -> do
@@ -69,14 +69,14 @@ optMatches opt arg = case opt of
          r <- tryP $ f arg'
          return (r, args')
     | otherwise -> Nothing
-  Flag names x
+  FlagReader names x
     | Just (arg1, Nothing) <- parsed
     , arg1 `elem` names
     -> Just $ \args -> return (x, args)
-  Argument f
+  ArgReader f
     | Just result <- f arg
     -> Just $ \args -> return (result, args)
-  Command f
+  CmdReader f
     | Just p <- f arg
     -> Just $ \args -> tryP $ runParser p args
   _ -> Nothing
@@ -96,19 +96,19 @@ optMatches opt arg = case opt of
 
 data Parser a where
   NilP :: a -> Parser a
-  ConsP :: OptionGroup r (a -> b)
+  ConsP :: Option r (a -> b)
         -> Parser a
         -> Parser b
 
 instance Functor Parser where
   fmap f (NilP x) = NilP (f x)
-  fmap f (ConsP opts p) = ConsP (fmap (f.) opts) p
+  fmap f (ConsP opt p) = ConsP (fmap (f.) opt) p
 
 instance Applicative Parser where
   pure = NilP
   NilP f <*> p = fmap f p
-  ConsP opts p1 <*> p2 =
-    ConsP (fmap uncurry opts) $ (,) <$> p1 <*> p2
+  ConsP opt p1 <*> p2 =
+    ConsP (fmap uncurry opt) $ (,) <$> p1 <*> p2
 
 data P a
   = ParseError
@@ -130,15 +130,15 @@ tryP = maybe ParseError return
 
 stepParser :: Parser a -> String -> [String] -> P (Parser a, [String])
 stepParser (NilP _) _ _ = ParseError
-stepParser (ConsP opts p) arg args
+stepParser (ConsP opt p) arg args
   -- take first matcher
-  | Just matcher <- optMatches (optMain opts) arg
+  | Just matcher <- optMatches (optMain opt) arg
   = do (r, args') <- matcher args
-       liftOpt' <- tryP $ optCont opts r
+       liftOpt' <- tryP $ optCont opt r
        return (liftOpt' <*> p, args')
   | otherwise
   = do (p', args') <- stepParser p arg args
-       return (ConsP opts p', args')
+       return (ConsP opt p', args')
 
 runParser :: Parser a -> [String] -> Maybe (a, [String])
 runParser p args = case args of
@@ -151,9 +151,9 @@ runParser p args = case args of
 
 evalParser :: Parser a -> Maybe a
 evalParser (NilP r) = pure r
-evalParser (ConsP opts p) = optDefault opts <*> evalParser p
+evalParser (ConsP opt p) = optDefault opt <*> evalParser p
 
-mapParser :: (forall r x . OptionGroup r x -> b)
+mapParser :: (forall r x . Option r x -> b)
           -> Parser a
           -> [b]
 mapParser _ (NilP _) = []
@@ -162,7 +162,7 @@ mapParser f (ConsP opt p) = f opt : mapParser f p
 generateHelp :: Parser a -> String
 generateHelp = intercalate "\n" . mapParser doc
   where
-    doc opts = ' ' : names 24 opts ++ " " ++ optHelp opts
+    doc opt = ' ' : names 24 opt ++ " " ++ optHelp opt
     names size = pad size . intercalate ", " . map name . optNames . optMain
     pad size str = str ++ replicate (size - n `max` 0) ' '
       where n = length str
