@@ -197,7 +197,7 @@ shortDesc = foldr (<+>) "" . mapParser (optDesc style)
 fullDesc :: Parser a -> String
 fullDesc = intercalate "\n" . mapParser doc
   where
-    doc opt = ' ' : names 24 opt ++ " " ++ optHelp opt
+    doc opt = "  " ++ names 24 opt ++ " " ++ optHelp opt
     names size = pad size . optDesc style
     style = OptDescStyle
       { descSep = ","

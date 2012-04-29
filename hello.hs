@@ -1,4 +1,5 @@
 import Control.Applicative
+import Data.Default
 import Options.Applicative
 import Options.Applicative.Builder
 import Options.Applicative.Extra
@@ -17,4 +18,8 @@ greet :: Sample -> IO ()
 greet (Sample h) = putStrLn $ "Hello, " ++ h
 
 main :: IO ()
-main = execParser sample >>= greet
+main = execParser opts sample >>= greet
+  where opts = def
+             { execFullDesc = True
+             , execProgDesc = "Print a greeting for TARGET"
+             , execHeader = "hello - a test for optparse-applicative" }
