@@ -8,9 +8,9 @@ import Data.List
 import Data.Maybe
 import Data.Monoid
 
-data OptName = OptLong !String
-             | OptShort !Char
-  deriving Eq
+data OptName = OptShort !Char
+             | OptLong !String
+  deriving (Eq, Ord)
 
 optNameStr :: OptName -> String
 optNameStr (OptLong name) = name
@@ -26,6 +26,7 @@ data Option r a = Option
   { optMain :: OptReader r
   , optDefault :: Maybe a
   , optHelp :: String
+  , optMetaVar :: String
   , optCont :: r -> Maybe (Parser a) }
   deriving Functor
 
@@ -159,12 +160,50 @@ mapParser :: (forall r x . Option r x -> b)
 mapParser _ (NilP _) = []
 mapParser f (ConsP opt p) = f opt : mapParser f p
 
-generateHelp :: Parser a -> String
-generateHelp = intercalate "\n" . mapParser doc
+(<+>) :: String -> String -> String
+"" <+> s = s
+s <+> "" = s
+s1 <+> s2 = s1 ++ " " ++ s2
+
+optShow :: OptName -> String
+optShow (OptLong n) = "--" ++ n
+optShow (OptShort n) = '-' : [n]
+
+data OptDescStyle = OptDescStyle
+  { descSep :: String
+  , descSurround :: Bool }
+
+optDesc :: OptDescStyle -> Option r a -> String
+optDesc style opt =
+  let ns = optNames $ optMain opt
+      mv = optMetaVar opt
+      descs = map optShow (sort ns)
+      desc' = intercalate (descSep style) descs <+> mv
+      render text
+        | null text || not (descSurround style)
+        = text
+        | isJust (optDefault opt)
+        = "[" ++ text ++ "]"
+        | [_] <- descs
+        = text
+        | otherwise
+        = "(" ++ text ++ ")"
+  in render desc'
+
+shortDesc :: Parser a -> String
+shortDesc = foldr (<+>) "" . mapParser (optDesc style)
+  where
+    style = OptDescStyle
+      { descSep = "|"
+      , descSurround = True }
+
+fullDesc :: Parser a -> String
+fullDesc = intercalate "\n" . mapParser doc
   where
     doc opt = ' ' : names 24 opt ++ " " ++ optHelp opt
-    names size = pad size . intercalate ", " . map name . optNames . optMain
+    names size = pad size . optDesc style
+    style = OptDescStyle
+      { descSep = ","
+      , descSurround = False }
     pad size str = str ++ replicate (size - n `max` 0) ' '
       where n = length str
-    name (OptLong n) = "--" ++ n
-    name (OptShort n) = '-' : [n]

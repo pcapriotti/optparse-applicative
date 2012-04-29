@@ -7,13 +7,16 @@ import Options.Applicative
 -- lenses --
 
 mainL :: Lens (Option r a) (OptReader r)
-mainL = lens optMain $ \m opts -> opts { optMain = m }
+mainL = lens optMain $ \m opt -> opt { optMain = m }
 
 defaultL :: Lens (Option r a) (Maybe a)
-defaultL = lens optDefault $ \x opts -> opts { optDefault = x }
+defaultL = lens optDefault $ \x opt -> opt { optDefault = x }
 
 helpL :: Lens (Option r a) String
-helpL = lens optHelp $ \h opts -> opts { optHelp = h }
+helpL = lens optHelp $ \h opt -> opt { optHelp = h }
+
+metaVarL :: Lens (Option r a) String
+metaVarL = lens optMetaVar $ \mv opt -> opt { optMetaVar = mv }
 
 addName :: OptName -> OptReader a -> OptReader a
 addName name (OptReader names p) = OptReader (name : names) p
@@ -52,20 +55,24 @@ reader p = modL mainL $ \opt -> case opt of
   OptReader names _ -> OptReader names p
   _ -> opt
 
+metavar :: String -> Option r a -> Option r a
+metavar = setL metaVarL
+
 multi :: Option r a -> Option r [a]
-multi opts = mkOptGroup []
+multi opt = mkOptGroup []
   where
-    mkOptGroup xs = opts
+    mkOptGroup xs = opt
       { optDefault = Just xs
       , optCont = mkCont xs }
     mkCont xs r = do
-      p' <- optCont opts r
+      p' <- optCont opt r
       x <- evalParser p'
       return $ liftOpt (mkOptGroup (x:xs))
 
 baseOpts :: OptReader a -> Option a a
 baseOpts opt = Option
   { optMain = opt
+  , optMetaVar = ""
   , optCont = Just . pure
   , optHelp = ""
   , optDefault = Nothing }
