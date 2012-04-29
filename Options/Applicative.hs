@@ -5,10 +5,9 @@ module Options.Applicative where
 import Control.Applicative
 import Control.Monad
 import Data.Foldable
+import Data.List
 import Data.Maybe
 import Data.Monoid
-
-import Text.PrettyPrint
 
 data OptName = OptLong !String
              | OptShort !Char
@@ -170,10 +169,12 @@ mapParser :: (forall r x . OptionGroup r x -> b)
 mapParser _ (NilP _) = []
 mapParser f (ConsP opt p) = f opt : mapParser f p
 
-generateHelp :: Parser a -> Doc
-generateHelp = vcat . mapParser doc
+generateHelp :: Parser a -> String
+generateHelp = intercalate "\n" . mapParser doc
   where
-    doc opts = hcat (names opts) <+> text (optHelp opts)
-    names = punctuate (text ", ") . map nameDoc . mapMaybe optName . optOptions
-    nameDoc (OptLong n) = text $ "--" ++ n
-    nameDoc (OptShort n) = text $ '-' : [n]
+    doc opts = ' ' : names 24 opts ++ " " ++ optHelp opts
+    names size = pad size . intercalate ", " . map name . mapMaybe optName . optOptions
+    pad size str = str ++ replicate (size - n `max` 0) ' '
+      where n = length str
+    name (OptLong n) = "--" ++ n
+    name (OptShort n) = '-' : [n]
