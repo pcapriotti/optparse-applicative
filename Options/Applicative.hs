@@ -120,14 +120,12 @@ instance Applicative Parser where
 
 data P a
   = ParseError
-  | NoParse
   | ParseResult a
   deriving Functor
 
 instance Monad P where
   return = ParseResult
   ParseError >>= _ = ParseError
-  NoParse >>= _ = NoParse
   ParseResult a >>= f = f a
   fail _ = ParseError
 
@@ -139,7 +137,7 @@ tryP :: Maybe a -> P a
 tryP = maybe ParseError return
 
 stepParser :: Parser a -> String -> [String] -> P (Parser a, [String])
-stepParser (NilP _) _ _ = NoParse
+stepParser (NilP _) _ _ = ParseError
 stepParser (ConsP opts p) arg args
   -- take first matcher
   | matcher : _ <- all_matchers
@@ -157,8 +155,7 @@ runParser :: Parser a -> [String] -> Maybe (a, [String])
 runParser p args = case args of
   [] -> result
   (arg : argt) -> case stepParser p arg argt of
-    ParseError -> Nothing
-    NoParse -> result
+    ParseError -> result
     ParseResult (p', args') -> runParser p' args'
   where
     result = (,) <$> evalParser p <*> pure args
