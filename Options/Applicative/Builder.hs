@@ -15,6 +15,9 @@ aliasesL = lens optAliases $ \as opts -> opts { optAliases = as }
 defaultL :: Lens (OptionGroup r a) (Maybe a)
 defaultL = lens optDefault $ \x opts -> opts { optDefault = x }
 
+helpL :: Lens (OptionGroup r a) String
+helpL = lens optHelp $ \h opts -> opts { optHelp = h }
+
 setName :: OptName -> Option a -> Option a
 setName name (Option _ p) = Option name p
 setName name (Flag _ x) = Flag name x
@@ -43,6 +46,9 @@ short = setName . OptShort
 
 value :: a -> OptionGroup r a -> OptionGroup r a
 value r = defaultL ^= Just r
+
+help :: String -> OptionGroup r a -> OptionGroup r a
+help htext = helpL ^= htext
 
 reader :: (String -> Maybe a) -> Option a -> Option a
 reader p (Option name _) = Option name p
@@ -83,6 +89,7 @@ baseOpts opt = OptionGroup
   { optMain = opt
   , optAliases = []
   , optCont = Just . pure
+  , optHelp = ""
   , optDefault = Nothing }
 
 baseParser :: Option a -> (OptionGroup a a -> OptionGroup a b) -> Parser b

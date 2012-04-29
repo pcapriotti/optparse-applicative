@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, DeriveFunctor #-}
+{-# LANGUAGE GADTs, Rank2Types, DeriveFunctor #-}
 
 module Options.Applicative where
 
@@ -7,6 +7,8 @@ import Control.Monad
 import Data.Foldable
 import Data.Maybe
 import Data.Monoid
+
+import Text.PrettyPrint
 
 data OptName = OptLong !String
              | OptShort !Char
@@ -25,6 +27,7 @@ data OptionGroup r a = OptionGroup
   { optMain :: Option r
   , optAliases :: [Option r]
   , optDefault :: Maybe a
+  , optHelp :: String
   , optCont :: r -> Maybe (Parser a) }
   deriving Functor
 
@@ -37,6 +40,11 @@ data Option a
   | Argument (String -> Maybe a)
   | Command (String -> Maybe (Parser a))
   deriving Functor
+
+optName :: Option a -> Maybe OptName
+optName (Option name _) = Just name
+optName (Flag name _) = Just name
+optName _ = Nothing
 
 liftOpt :: OptionGroup r a -> Parser a
 liftOpt opts = ConsP (fmap const opts) (pure ())
@@ -158,3 +166,17 @@ runParser p args = case args of
 evalParser :: Parser a -> Maybe a
 evalParser (NilP r) = pure r
 evalParser (ConsP opts p) = optDefault opts <*> evalParser p
+
+mapParser :: (forall r x . OptionGroup r x -> b)
+          -> Parser a
+          -> [b]
+mapParser _ (NilP _) = []
+mapParser f (ConsP opt p) = f opt : mapParser f p
+
+generateHelp :: Parser a -> Doc
+generateHelp = vcat . mapParser doc
+  where
+    doc opts = hcat (names opts) <+> text (optHelp opts)
+    names = punctuate (text ", ") . map nameDoc . mapMaybe optName . optOptions
+    nameDoc (OptLong n) = text $ "--" ++ n
+    nameDoc (OptShort n) = text $ '-' : [n]
