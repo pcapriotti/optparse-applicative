@@ -27,6 +27,7 @@ isShort _ = False
 data Option r a = Option
   { optMain :: OptReader r
   , optDefault :: Maybe a
+  , optShow :: Bool
   , optHelp :: String
   , optMetaVar :: String
   , optCont :: r -> Maybe (Parser a) }
@@ -162,21 +163,24 @@ mapParser :: (forall r x . Option r x -> b)
 mapParser _ (NilP _) = []
 mapParser f (ConsP opt p) = f opt : mapParser f p
 
-optShow :: OptName -> String
-optShow (OptLong n) = "--" ++ n
-optShow (OptShort n) = '-' : [n]
+showOption :: OptName -> String
+showOption (OptLong n) = "--" ++ n
+showOption (OptShort n) = '-' : [n]
 
 data OptDescStyle = OptDescStyle
   { descSep :: String
+  , descHidden :: Bool
   , descSurround :: Bool }
 
 optDesc :: OptDescStyle -> Option r a -> String
 optDesc style opt =
   let ns = optNames $ optMain opt
       mv = optMetaVar opt
-      descs = map optShow (sort ns)
+      descs = map showOption (sort ns)
       desc' = intercalate (descSep style) descs <+> mv
       render text
+        | not (optShow opt) && not (descHidden style)
+        = ""
         | null text || not (descSurround style)
         = text
         | isJust (optDefault opt)
@@ -192,6 +196,7 @@ shortDesc = foldr (<+>) "" . mapParser (optDesc style)
   where
     style = OptDescStyle
       { descSep = "|"
+      , descHidden = False
       , descSurround = True }
 
 fullDesc :: Parser a -> String
@@ -201,6 +206,7 @@ fullDesc = intercalate "\n" . mapParser doc
     names size = pad size . optDesc style
     style = OptDescStyle
       { descSep = ","
+      , descHidden = True
       , descSurround = False }
     pad size str = str ++ replicate (size - n `max` 0) ' '
       where n = length str

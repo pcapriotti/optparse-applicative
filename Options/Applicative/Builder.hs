@@ -18,6 +18,9 @@ helpL = lens optHelp $ \h opt -> opt { optHelp = h }
 metaVarL :: Lens (Option r a) String
 metaVarL = lens optMetaVar $ \mv opt -> opt { optMetaVar = mv }
 
+showL :: Lens (Option r a) Bool
+showL = lens optShow $ \s opt -> opt { optShow = s }
+
 addName :: OptName -> OptReader a -> OptReader a
 addName name (OptReader names p) = OptReader (name : names) p
 addName name (FlagReader names x) = FlagReader (name : names) x
@@ -58,6 +61,9 @@ reader p = modL mainL $ \opt -> case opt of
 metavar :: String -> Option r a -> Option r a
 metavar = setL metaVarL
 
+hide :: Option r a -> Option r a
+hide = showL ^= False
+
 multi :: Option r a -> Option r [a]
 multi opt = mkOptGroup []
   where
@@ -73,6 +79,7 @@ baseOpts :: OptReader a -> Option a a
 baseOpts opt = Option
   { optMain = opt
   , optMetaVar = ""
+  , optShow = True
   , optCont = Just . pure
   , optHelp = ""
   , optDefault = Nothing }

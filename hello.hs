@@ -18,7 +18,7 @@ greet :: Sample -> IO ()
 greet (Sample h) = putStrLn $ "Hello, " ++ h
 
 main :: IO ()
-main = execParser opts sample >>= greet
+main = execParser opts (helper <*> sample) >>= greet
   where opts = def
              { execFullDesc = True
              , execProgDesc = "Print a greeting for TARGET"
