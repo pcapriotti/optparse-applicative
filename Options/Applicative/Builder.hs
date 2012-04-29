@@ -88,7 +88,7 @@ baseParser :: OptReader a -> (Option a a -> Option a b) -> Parser b
 baseParser opt f = liftOpt $ f (baseOpts opt)
 
 command :: (String -> Maybe (Parser a)) -> (Option a a -> Option a b) -> Parser b
-command = baseParser . CmdReader
+command cmd f = baseParser (CmdReader cmd) (f . metavar "COMMAND")
 
 argument :: (String -> Maybe a) -> (Option a a -> Option a b) -> Parser b
 argument = baseParser . ArgReader

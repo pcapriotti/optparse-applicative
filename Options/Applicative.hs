@@ -185,7 +185,7 @@ optDesc style opt =
         = text
         | isJust (optDefault opt)
         = "[" ++ text ++ "]"
-        | [_] <- descs
+        | null (drop 1 descs)
         = text
         | otherwise
         = "(" ++ text ++ ")"
@@ -200,10 +200,13 @@ shortDesc = foldr (<+>) "" . mapParser (optDesc style)
       , descSurround = True }
 
 fullDesc :: Parser a -> String
-fullDesc = intercalate "\n" . mapParser doc
+fullDesc = intercalate "\n" . filter (not . null) . mapParser doc
   where
-    doc opt = "  " ++ names 24 opt ++ " " ++ optHelp opt
-    names size = pad size . optDesc style
+    doc opt
+      | null n = ""
+      | null (optHelp opt) = ""
+      | otherwise = "  " ++ pad 24 n ++ " " ++ optHelp opt
+      where n = optDesc style opt
     style = OptDescStyle
       { descSep = ","
       , descHidden = True

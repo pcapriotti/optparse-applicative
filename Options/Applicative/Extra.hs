@@ -18,7 +18,7 @@ data ExecOptions = ExecOptions
 
 instance Default ExecOptions where
  def = ExecOptions
-     { execFullDesc = False
+     { execFullDesc = True
      , execHeader = ""
      , execProgDesc = ""
      , execFooter = ""
@@ -43,9 +43,10 @@ execParser opts p = do
       usage p
       unless (null (execProgDesc opts)) $
         putStrLn $ "  " ++ execProgDesc opts
-      when (execFullDesc opts) $ do
+      let desc = fullDesc p
+      when (execFullDesc opts && not (null desc)) $ do
         putStrLn "\nCommon options:"
-        putStrLn $ fullDesc p
+        putStrLn desc
       unless (null (execFooter opts)) $
         putStrLn $ '\n' : execFooter opts
       exitWith (ExitFailure 1)

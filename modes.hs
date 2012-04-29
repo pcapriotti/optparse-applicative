@@ -1,27 +1,25 @@
 import Control.Applicative
+import Data.Default
 import Options.Applicative
 import Options.Applicative.Builder
-import System.Environment
-import System.IO
+import Options.Applicative.Extra
 
 data Sample
   = Hello String
   | Goodbye
 
 hello :: Parser Sample
-hello = Hello <$> strOption (long "whom" . short 'w')
+hello = Hello <$> argument str (metavar "TARGET")
 
 sample :: Parser Sample
 sample = command (`lookup`
-  [("hello", Hello <$> strOption (long "whom" . short 'w' . value "world"))
+  [("hello", hello)
   ,("goodbye", pure Goodbye)])
   id
 
+run :: Sample -> IO ()
+run (Hello target) = putStrLn $ "Hello, " ++ target ++ "!"
+run Goodbye = putStrLn "Goodbye."
+
 main :: IO ()
-main = do
-  args <- getArgs
-  case runParser sample args of
-    Nothing -> hPutStrLn stderr "Parse error"
-    Just (s, _) -> case s of
-      Hello w -> putStrLn $ "Hello, " ++ w ++ "!"
-      Goodbye -> putStrLn "Goodbye."
+main = execParser def sample >>= run
