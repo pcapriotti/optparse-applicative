@@ -40,7 +40,8 @@ execParser opts p = do
     _ -> do
       unless (null (execHeader opts)) $
         putStrLn $ execHeader opts ++ "\n"
-      usage p
+      prog <- getProgName
+      usage p prog
       unless (null (execProgDesc opts)) $
         putStrLn $ "  " ++ execProgDesc opts
       let desc = fullDesc p
@@ -51,12 +52,10 @@ execParser opts p = do
         putStrLn $ '\n' : execFooter opts
       exitWith (ExitFailure 1)
 
-usage :: Parser a -> IO ()
-usage p = do
-  prog <- getProgName
-  hPutStrLn stderr (msg prog)
+usage :: Parser a -> String -> IO ()
+usage p prog = hPutStrLn stderr msg
   where
-    msg prog = foldr (<+>) ""
-             [ "Usage:"
-             , prog
-             , shortDesc p ]
+    msg = foldr (<+>) ""
+        [ "Usage:"
+        , prog
+        , shortDesc p ]
