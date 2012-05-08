@@ -200,16 +200,14 @@ shortDesc = foldr (<+>) "" . mapParser (optDesc style)
       , descSurround = True }
 
 fullDesc :: Parser a -> String
-fullDesc = intercalate "\n" . filter (not . null) . mapParser doc
+fullDesc = tabulate' . catMaybes . mapParser doc
   where
     doc opt
-      | null n = ""
-      | null (optHelp opt) = ""
-      | otherwise = "  " ++ pad 24 n ++ " " ++ optHelp opt
+      | null n = Nothing
+      | null (optHelp opt) = Nothing
+      | otherwise = Just (n, optHelp opt)
       where n = optDesc style opt
     style = OptDescStyle
       { descSep = ","
       , descHidden = True
       , descSurround = False }
-    pad size str = str ++ replicate (size - n `max` 0) ' '
-      where n = length str
