@@ -1,4 +1,9 @@
-module Options.Applicative.Utils where
+module Options.Applicative.Utils (
+  (<+>),
+  vcat,
+  tabulate,
+  pad
+  ) where
 
 import Data.List
 

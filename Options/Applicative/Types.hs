@@ -1,5 +1,20 @@
 {-# LANGUAGE GADTs, DeriveFunctor, TemplateHaskell #-}
-module Options.Applicative.Types where
+module Options.Applicative.Types (
+  ParserInfo(..),
+  info,
+  Option(..),
+  OptName(..),
+  OptReader(..),
+  Parser(..),
+  P(..),
+
+  optMain,
+  optDefault,
+  optShow,
+  optHelp,
+  optMetaVar,
+  optCont
+  ) where
 
 import Control.Applicative
 import Control.Monad

@@ -1,5 +1,5 @@
 import Control.Applicative
-import Options.Applicative.Types
+import Options.Applicative
 import Options.Applicative.Builder
 import Options.Applicative.Extra
 

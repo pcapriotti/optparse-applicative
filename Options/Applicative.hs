@@ -1,21 +1,22 @@
 {-# LANGUAGE Rank2Types, PatternGuards #-}
-module Options.Applicative where
+module Options.Applicative (
+  Parser,
+
+  ParserInfo(..),
+  info,
+
+  evalParser,
+  runParser,
+  liftOpt,
+  mapParser,
+  optionNames
+  ) where
 
 import Control.Applicative
 import Data.Lens.Common
 import Data.Maybe
 import Data.Monoid
 import Options.Applicative.Types
-
-optNameStr :: OptName -> String
-optNameStr (OptLong name) = name
-optNameStr (OptShort n) = [n]
-
-isLong, isShort :: OptName -> Bool
-isLong (OptLong _ ) = True
-isLong _ = False
-isShort (OptShort _ ) = True
-isShort _ = False
 
 optionNames :: OptReader a -> [OptName]
 optionNames (OptReader names _) = names

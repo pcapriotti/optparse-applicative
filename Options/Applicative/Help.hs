@@ -1,5 +1,11 @@
 {-# LANGUAGE PatternGuards #-}
-module Options.Applicative.Help where
+module Options.Applicative.Help (
+  optDesc,
+  cmdDesc,
+  shortDesc,
+  fullDesc,
+  parserHelpText,
+  ) where
 
 import Data.Lens.Common
 import Data.List

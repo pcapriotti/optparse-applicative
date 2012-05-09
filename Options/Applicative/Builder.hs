@@ -1,5 +1,30 @@
 {-# LANGUAGE TemplateHaskell, ScopedTypeVariables #-}
-module Options.Applicative.Builder where
+module Options.Applicative.Builder (
+  -- * Readers
+  auto,
+  str,
+  disabled,
+  -- * Combinators
+  short,
+  long,
+  help,
+  value,
+  metavar,
+  reader,
+  hide,
+  multi,
+  command,
+  idm,
+  (&),
+  -- * Parsers
+  subparser,
+  argument,
+  arguments,
+  flag,
+  nullOption,
+  strOption,
+  option
+  ) where
 
 import Control.Applicative
 import Control.Category
@@ -20,10 +45,6 @@ data FlagFields a = FlagFields
 
 data CommandFields a = CommandFields
   { _cmdCommands :: [(String, ParserInfo a)] }
-
-data ArgFields a = ArgFields
-
-data CmdFields a = CmdFields
 
 $( makeLenses [ ''OptionFields
               , ''FlagFields
