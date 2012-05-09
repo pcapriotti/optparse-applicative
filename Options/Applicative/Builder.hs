@@ -18,12 +18,16 @@ data OptionFields a = OptionFields
 data FlagFields a = FlagFields
   { _flagNames :: [OptName] }
 
+data CommandFields a = CommandFields
+  { _cmdCommands :: [(String, ParserInfo a)] }
+
 data ArgFields a = ArgFields
 
 data CmdFields a = CmdFields
 
 $( makeLenses [ ''OptionFields
-              , ''FlagFields ])
+              , ''FlagFields
+              , ''CommandFields ] )
 
 class HasName f where
   name :: OptName -> f a -> f a
@@ -97,6 +101,11 @@ multi = optionMod f
           x <- evalParser p'
           return $ liftOpt (mkOptGroup (x:xs))
 
+command :: String -> ParserInfo r -> Mod CommandFields r a a
+command cmd pinfo = fieldMod $ cmdCommands^%=((cmd, pinfo):)
+
+-- parsers --
+
 baseOpts :: OptReader a -> Option a a
 baseOpts opt = Option
   { _optMain = opt
@@ -106,9 +115,12 @@ baseOpts opt = Option
   , _optHelp = ""
   , _optDefault = Nothing }
 
-command :: (String -> Maybe (ParserInfo a)) -> Mod f a a b -> Parser b
-command cmd m = liftOpt . g . baseOpts $ CmdReader cmd
-  where Mod _ g = m . metavar "COMMAND"
+subparser :: Mod CommandFields a a b -> Parser b
+subparser m = liftOpt . g . baseOpts $ opt
+  where
+    Mod f g = m . metavar "COMMAND"
+    CommandFields cmds = f (CommandFields [])
+    opt = CmdReader (map fst cmds) (`lookup` cmds)
 
 argument :: (String -> Maybe a) -> Mod f a a b -> Parser b
 argument p (Mod _ g) = liftOpt . g . baseOpts $ ArgReader p

@@ -40,7 +40,7 @@ data OptReader a
   = OptReader [OptName] (String -> Maybe a)
   | FlagReader [OptName] !a
   | ArgReader (String -> Maybe a)
-  | CmdReader (String -> Maybe (ParserInfo a))
+  | CmdReader [String] (String -> Maybe (ParserInfo a))
   deriving Functor
 
 data Parser a where

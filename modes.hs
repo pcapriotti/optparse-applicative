@@ -11,10 +11,9 @@ hello :: Parser Sample
 hello = Hello <$> argument str (metavar "TARGET")
 
 sample :: Parser Sample
-sample = command (`lookup`
-  [("hello", info hello)
-  ,("goodbye", info (pure Goodbye))])
-  idm
+sample = subparser
+       ( command "hello" (info hello)
+       & command "goodbye" (info (pure Goodbye)))
 
 run :: Sample -> IO ()
 run (Hello target) = putStrLn $ "Hello, " ++ target ++ "!"
