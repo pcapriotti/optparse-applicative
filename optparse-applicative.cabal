@@ -16,8 +16,8 @@ library
                        Options.Applicative.Types,
                        Options.Applicative.Builder,
                        Options.Applicative.Utils,
-                       Options.Applicative.Extra
-  -- other-modules:       
+                       Options.Applicative.Extra,
+                       Options.Applicative.Help
   build-depends:       base == 4.5.*,
                        data-lens == 2.10.*,
                        data-lens-template == 2.1.*,

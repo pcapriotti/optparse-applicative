@@ -5,6 +5,23 @@ import Control.Applicative
 import Control.Monad
 import Data.Lens.Template
 
+data ParserInfo a = ParserInfo
+  { infoParser :: Parser a
+  , infoFullDesc :: Bool
+  , infoHeader :: String
+  , infoProgDesc :: String
+  , infoFooter :: String
+  , infoFailureCode :: Int }
+
+info :: Parser a -> ParserInfo a
+info parser = ParserInfo
+  { infoParser = parser
+  , infoFullDesc = True
+  , infoHeader = ""
+  , infoProgDesc = ""
+  , infoFooter = ""
+  , infoFailureCode = 1 }
+
 data OptName = OptShort !Char
              | OptLong !String
   deriving (Eq, Ord)

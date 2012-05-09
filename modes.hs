@@ -1,5 +1,4 @@
 import Control.Applicative
-import Data.Default
 import Options.Applicative.Types
 import Options.Applicative.Builder
 import Options.Applicative.Extra
@@ -22,4 +21,4 @@ run (Hello target) = putStrLn $ "Hello, " ++ target ++ "!"
 run Goodbye = putStrLn "Goodbye."
 
 main :: IO ()
-main = execParser def sample >>= run
+main = execParser (info sample) >>= run

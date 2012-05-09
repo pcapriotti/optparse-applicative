@@ -1,9 +1,14 @@
 module Options.Applicative.Utils where
 
+import Data.List
+
 (<+>) :: String -> String -> String
 "" <+> s = s
 s <+> "" = s
 s1 <+> s2 = s1 ++ " " ++ s2
+
+vcat :: [String] -> String
+vcat = intercalate "\n\n" . filter (not . null)
 
 tabulate :: Int -> [(String, String)] -> String
 tabulate size table = unlines
