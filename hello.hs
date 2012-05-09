@@ -1,6 +1,6 @@
 import Control.Applicative
 import Data.Default
-import Options.Applicative
+import Options.Applicative.Types
 import Options.Applicative.Builder
 import Options.Applicative.Extra
 
@@ -11,8 +11,8 @@ sample :: Parser Sample
 sample = Sample
      <$> strOption
          ( long "hello"
-         . metavar "TARGET"
-         . help "Target for the greeting" )
+         & metavar "TARGET"
+         & help "Target for the greeting" )
 
 greet :: Sample -> IO ()
 greet (Sample h) = putStrLn $ "Hello, " ++ h

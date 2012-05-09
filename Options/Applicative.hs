@@ -1,18 +1,14 @@
-{-# LANGUAGE GADTs, Rank2Types, DeriveFunctor #-}
-
+{-# LANGUAGE Rank2Types, PatternGuards #-}
 module Options.Applicative where
 
 import Control.Applicative
-import Control.Monad
+import Data.Lens.Common
 import Data.List
 import Data.Maybe
 import Data.Monoid
 
 import Options.Applicative.Utils
-
-data OptName = OptShort !Char
-             | OptLong !String
-  deriving (Eq, Ord)
+import Options.Applicative.Types
 
 optNameStr :: OptName -> String
 optNameStr (OptLong name) = name
@@ -24,26 +20,10 @@ isLong _ = False
 isShort (OptShort _ ) = True
 isShort _ = False
 
-data Option r a = Option
-  { optMain :: OptReader r
-  , optDefault :: Maybe a
-  , optShow :: Bool
-  , optHelp :: String
-  , optMetaVar :: String
-  , optCont :: r -> Maybe (Parser a) }
-  deriving Functor
-
-data OptReader a
-  = OptReader [OptName] (String -> Maybe a)
-  | FlagReader [OptName] !a
-  | ArgReader (String -> Maybe a)
-  | CmdReader (String -> Maybe (Parser a))
-  deriving Functor
-
-optNames :: OptReader a -> [OptName]
-optNames (OptReader names _) = names
-optNames (FlagReader names _) = names
-optNames _ = []
+optionNames :: OptReader a -> [OptName]
+optionNames (OptReader names _) = names
+optionNames (FlagReader names _) = names
+optionNames _ = []
 
 liftOpt :: Option r a -> Parser a
 liftOpt opt = ConsP (fmap const opt) (pure ())
@@ -97,48 +77,15 @@ optMatches rdr arg = case rdr of
           (a : rest) -> Just (OptShort a, Just rest)
       | otherwise = Nothing
 
-
-data Parser a where
-  NilP :: a -> Parser a
-  ConsP :: Option r (a -> b)
-        -> Parser a
-        -> Parser b
-
-instance Functor Parser where
-  fmap f (NilP x) = NilP (f x)
-  fmap f (ConsP opt p) = ConsP (fmap (f.) opt) p
-
-instance Applicative Parser where
-  pure = NilP
-  NilP f <*> p = fmap f p
-  ConsP opt p1 <*> p2 =
-    ConsP (fmap uncurry opt) $ (,) <$> p1 <*> p2
-
-data P a
-  = ParseError
-  | ParseResult a
-  deriving Functor
-
-instance Monad P where
-  return = ParseResult
-  ParseError >>= _ = ParseError
-  ParseResult a >>= f = f a
-  fail _ = ParseError
-
-instance Applicative P where
-  pure = return
-  (<*>) = ap
-
 tryP :: Maybe a -> P a
 tryP = maybe ParseError return
 
 stepParser :: Parser a -> String -> [String] -> P (Parser a, [String])
 stepParser (NilP _) _ _ = ParseError
 stepParser (ConsP opt p) arg args
-  -- take first matcher
-  | Just matcher <- optMatches (optMain opt) arg
+  | Just matcher <- optMatches (opt^.optMain) arg
   = do (r, args') <- matcher args
-       liftOpt' <- tryP $ optCont opt r
+       liftOpt' <- tryP $ getL optCont opt r
        return (liftOpt' <*> p, args')
   | otherwise
   = do (p', args') <- stepParser p arg args
@@ -155,7 +102,7 @@ runParser p args = case args of
 
 evalParser :: Parser a -> Maybe a
 evalParser (NilP r) = pure r
-evalParser (ConsP opt p) = optDefault opt <*> evalParser p
+evalParser (ConsP opt p) = opt^.optDefault <*> evalParser p
 
 mapParser :: (forall r x . Option r x -> b)
           -> Parser a
@@ -174,16 +121,16 @@ data OptDescStyle = OptDescStyle
 
 optDesc :: OptDescStyle -> Option r a -> String
 optDesc style opt =
-  let ns = optNames $ optMain opt
-      mv = optMetaVar opt
+  let ns = optionNames $ opt^.optMain
+      mv = opt^.optMetaVar
       descs = map showOption (sort ns)
       desc' = intercalate (descSep style) descs <+> mv
       render text
-        | not (optShow opt) && not (descHidden style)
+        | not (opt^.optShow) && not (descHidden style)
         = ""
         | null text || not (descSurround style)
         = text
-        | isJust (optDefault opt)
+        | isJust (opt^.optDefault)
         = "[" ++ text ++ "]"
         | null (drop 1 descs)
         = text
@@ -204,9 +151,10 @@ fullDesc = tabulate' . catMaybes . mapParser doc
   where
     doc opt
       | null n = Nothing
-      | null (optHelp opt) = Nothing
-      | otherwise = Just (n, optHelp opt)
+      | null h = Nothing
+      | otherwise = Just (n, h)
       where n = optDesc style opt
+            h = opt^.optHelp
     style = OptDescStyle
       { descSep = ","
       , descHidden = True

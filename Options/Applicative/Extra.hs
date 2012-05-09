@@ -3,6 +3,7 @@ module Options.Applicative.Extra where
 import Control.Monad
 import Data.Default
 import Options.Applicative
+import Options.Applicative.Types
 import Options.Applicative.Builder
 import Options.Applicative.Utils
 import System.Environment
@@ -27,10 +28,10 @@ instance Default ExecOptions where
 helper :: Parser (a -> a)
 helper = nullOption
        ( long "help"
-       . short 'h'
-       . help "Show this help text"
-       . value id
-       . hide )
+       & short 'h'
+       & help "Show this help text"
+       & value id
+       & hide )
 
 execParser :: ExecOptions -> Parser a -> IO a
 execParser opts p = do

@@ -1,30 +1,52 @@
+{-# LANGUAGE TemplateHaskell, ScopedTypeVariables #-}
 module Options.Applicative.Builder where
 
 import Control.Applicative
+import Control.Category
 import Data.Lens.Common
+import Data.Lens.Template
+
 import Options.Applicative
+import Options.Applicative.Types
 
--- lenses --
+import Prelude hiding (id, (.))
 
-mainL :: Lens (Option r a) (OptReader r)
-mainL = lens optMain $ \m opt -> opt { optMain = m }
+data OptionFields a = OptionFields
+  { _optNames :: [OptName]
+  , _optReader :: String -> Maybe a }
 
-defaultL :: Lens (Option r a) (Maybe a)
-defaultL = lens optDefault $ \x opt -> opt { optDefault = x }
+data FlagFields a = FlagFields
+  { _flagNames :: [OptName] }
 
-helpL :: Lens (Option r a) String
-helpL = lens optHelp $ \h opt -> opt { optHelp = h }
+data ArgFields a = ArgFields
 
-metaVarL :: Lens (Option r a) String
-metaVarL = lens optMetaVar $ \mv opt -> opt { optMetaVar = mv }
+data CmdFields a = CmdFields
 
-showL :: Lens (Option r a) Bool
-showL = lens optShow $ \s opt -> opt { optShow = s }
+$( makeLenses [ ''OptionFields
+              , ''FlagFields ])
 
-addName :: OptName -> OptReader a -> OptReader a
-addName name (OptReader names p) = OptReader (name : names) p
-addName name (FlagReader names x) = FlagReader (name : names) x
-addName _ opt = opt
+class HasName f where
+  name :: OptName -> f a -> f a
+
+instance HasName OptionFields where
+  name n = modL optNames (n:)
+
+instance HasName FlagFields where
+  name n = modL flagNames (n:)
+
+-- mod --
+
+data Mod f r a b = Mod (f r -> f r) (Option r a -> Option r b)
+
+optionMod :: (Option r a -> Option r b) -> Mod f r a b
+optionMod = Mod id
+
+fieldMod :: (f r -> f r) -> Mod f r a a
+fieldMod f = Mod f id
+
+instance Category (Mod f r) where
+  id = Mod id id
+  Mod f1 g1 . Mod f2 g2 = Mod (f1 . f2) (g1 . g2)
 
 -- readers --
 
@@ -41,69 +63,79 @@ disabled = const Nothing
 
 -- combinators --
 
-long :: String -> Option r a -> Option r a
-long = modL mainL . addName . OptLong
+short :: HasName f => Char -> Mod f r a a
+short = fieldMod . name . OptShort
 
-short :: Char -> Option r a -> Option r a
-short = modL mainL . addName . OptShort
+long :: HasName f => String -> Mod f r a a
+long = fieldMod . name . OptLong
 
-value :: a -> Option r a -> Option r a
-value r = defaultL ^= Just r
+value :: a -> Mod f r a a
+value = optionMod . setL optDefault . Just
 
-help :: String -> Option r a -> Option r a
-help htext = helpL ^= htext
+help :: String -> Mod f r a a
+help = optionMod . setL optHelp
 
-reader :: (String -> Maybe r) -> Option r a -> Option r a
-reader p = modL mainL $ \opt -> case opt of
-  OptReader names _ -> OptReader names p
-  _ -> opt
+reader :: (String -> Maybe r) -> Mod OptionFields r a a
+reader = fieldMod . setL optReader
 
-metavar :: String -> Option r a -> Option r a
-metavar = setL metaVarL
+metavar :: String -> Mod f r a a
+metavar = optionMod . setL optMetaVar
 
-hide :: Option r a -> Option r a
-hide = showL ^= False
+hide :: Mod f r a a
+hide = optionMod $ optShow^=False
 
-multi :: Option r a -> Option r [a]
-multi opt = mkOptGroup []
+multi :: Mod f r a [a]
+multi = optionMod f
   where
-    mkOptGroup xs = opt
-      { optDefault = Just xs
-      , optCont = mkCont xs }
-    mkCont xs r = do
-      p' <- optCont opt r
-      x <- evalParser p'
-      return $ liftOpt (mkOptGroup (x:xs))
+    f opt = mkOptGroup []
+      where
+        mkOptGroup xs = opt
+          { _optDefault = Just xs
+          , _optCont = mkCont xs }
+        mkCont xs r = do
+          p' <- getL optCont opt r
+          x <- evalParser p'
+          return $ liftOpt (mkOptGroup (x:xs))
 
 baseOpts :: OptReader a -> Option a a
 baseOpts opt = Option
-  { optMain = opt
-  , optMetaVar = ""
-  , optShow = True
-  , optCont = Just . pure
-  , optHelp = ""
-  , optDefault = Nothing }
+  { _optMain = opt
+  , _optMetaVar = ""
+  , _optShow = True
+  , _optCont = Just . pure
+  , _optHelp = ""
+  , _optDefault = Nothing }
 
-baseParser :: OptReader a -> (Option a a -> Option a b) -> Parser b
-baseParser opt f = liftOpt $ f (baseOpts opt)
+command :: (String -> Maybe (Parser a)) -> Mod f a a b -> Parser b
+command cmd m = liftOpt . g . baseOpts $ CmdReader cmd
+  where Mod _ g = m . metavar "COMMAND"
 
-command :: (String -> Maybe (Parser a)) -> (Option a a -> Option a b) -> Parser b
-command cmd f = baseParser (CmdReader cmd) (f . metavar "COMMAND")
+argument :: (String -> Maybe a) -> Mod f a a b -> Parser b
+argument p (Mod _ g) = liftOpt . g . baseOpts $ ArgReader p
 
-argument :: (String -> Maybe a) -> (Option a a -> Option a b) -> Parser b
-argument = baseParser . ArgReader
+arguments :: (String -> Maybe a) -> Mod f a [a] b -> Parser b
+arguments p m = argument p (m . multi)
 
-arguments :: (String -> Maybe a) -> (Option a [a] -> Option a b) -> Parser b
-arguments p f = argument p (f . multi)
+flag :: a -> Mod FlagFields a a b -> Parser b
+flag x (Mod f g) = liftOpt . g . baseOpts $ rdr
+  where
+    rdr = let fields = f (FlagFields [])
+          in FlagReader (fields^.flagNames) x
 
-flag :: a -> (Option a a -> Option a b) -> Parser b
-flag = baseParser . FlagReader []
+nullOption :: Mod OptionFields a a b -> Parser b
+nullOption (Mod f g) = liftOpt . g . baseOpts $ rdr
+  where
+    rdr = let fields = f (OptionFields [] disabled)
+          in OptReader (fields^.optNames) (fields^.optReader)
 
-nullOption :: (Option a a -> Option a b) -> Parser b
-nullOption = baseParser $ OptReader [] disabled
+strOption :: Mod OptionFields String String a -> Parser a
+strOption m = nullOption $ m . reader str
 
-strOption :: (Option String String -> Option String a) -> Parser a
-strOption f = nullOption $ f . reader str
+option :: Read a => Mod OptionFields a a b -> Parser b
+option m = nullOption $ m . reader auto
 
-option :: Read a => (Option a a -> Option a b) -> Parser b
-option f = nullOption $ f . reader auto
+idm :: Mod f r a a
+idm = id
+
+(&) :: Mod f r a b -> Mod f r b c -> Mod f r a c
+(&) = flip (.)

@@ -1,6 +1,6 @@
 import Control.Applicative
 import Data.Default
-import Options.Applicative
+import Options.Applicative.Types
 import Options.Applicative.Builder
 import Options.Applicative.Extra
 
@@ -15,7 +15,7 @@ sample :: Parser Sample
 sample = command (`lookup`
   [("hello", hello)
   ,("goodbye", pure Goodbye)])
-  id
+  idm
 
 run :: Sample -> IO ()
 run (Hello target) = putStrLn $ "Hello, " ++ target ++ "!"
