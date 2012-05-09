@@ -22,3 +22,27 @@ library
                        data-lens == 2.10.*,
                        data-lens-template == 2.1.*,
                        data-default == 0.4.*
+test-suite tests
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      tests
+  main-is:             Tests.hs
+  build-depends:       base == 4.5.*,
+                       HUnit == 1.2.*,
+                       process == 1.1.*,
+                       test-framework == 0.6.*,
+                       test-framework-hunit == 0.2.*,
+                       test-framework-th-prime == 0.0.*
+
+-- examples
+
+executable hello
+  hs-source-dirs: tests
+  main-is: hello.hs
+  build-depends:       base == 4.5.*,
+                       optparse-applicative
+
+executable modes
+  hs-source-dirs: tests
+  main-is: modes.hs
+  build-depends:       base == 4.5.*,
+                       optparse-applicative
