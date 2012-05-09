@@ -61,8 +61,8 @@ optMatches rdr arg = case rdr of
     | Just result <- f arg
     -> Just $ \args -> return (result, args)
   CmdReader f
-    | Just p <- f arg
-    -> Just $ \args -> tryP $ runParser p args
+    | Just cmdInfo <- f arg
+    -> Just $ \args -> tryP $ runParser (infoParser cmdInfo) args
   _ -> Nothing
   where
     parsed

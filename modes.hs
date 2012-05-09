@@ -12,8 +12,8 @@ hello = Hello <$> argument str (metavar "TARGET")
 
 sample :: Parser Sample
 sample = command (`lookup`
-  [("hello", hello)
-  ,("goodbye", pure Goodbye)])
+  [("hello", info hello)
+  ,("goodbye", info (pure Goodbye))])
   idm
 
 run :: Sample -> IO ()

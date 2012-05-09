@@ -12,6 +12,7 @@ data ParserInfo a = ParserInfo
   , infoProgDesc :: String
   , infoFooter :: String
   , infoFailureCode :: Int }
+  deriving Functor
 
 info :: Parser a -> ParserInfo a
 info parser = ParserInfo
@@ -39,7 +40,7 @@ data OptReader a
   = OptReader [OptName] (String -> Maybe a)
   | FlagReader [OptName] !a
   | ArgReader (String -> Maybe a)
-  | CmdReader (String -> Maybe (Parser a))
+  | CmdReader (String -> Maybe (ParserInfo a))
   deriving Functor
 
 data Parser a where

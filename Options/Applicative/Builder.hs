@@ -106,7 +106,7 @@ baseOpts opt = Option
   , _optHelp = ""
   , _optDefault = Nothing }
 
-command :: (String -> Maybe (Parser a)) -> Mod f a a b -> Parser b
+command :: (String -> Maybe (ParserInfo a)) -> Mod f a a b -> Parser b
 command cmd m = liftOpt . g . baseOpts $ CmdReader cmd
   where Mod _ g = m . metavar "COMMAND"
 
