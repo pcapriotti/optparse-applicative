@@ -1,1 +1,6 @@
 Usage: modes COMMAND
+
+Available commands:
+  goodbye                  Say goodbye
+  hello                    Print greeting
+

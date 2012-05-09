@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternGuards #-}
 module Options.Applicative.Help where
 
 import Data.Lens.Common
@@ -35,6 +36,20 @@ optDesc style opt =
         = "(" ++ text ++ ")"
   in render desc'
 
+cmdDesc :: Parser a -> String
+cmdDesc = vcat
+        . take 1
+        . filter (not . null)
+        . mapParser desc
+  where
+    desc opt
+      | CmdReader cmds p <- opt^.optMain
+      = tabulate [(cmd, d)
+                 | cmd <- cmds
+                 , d <- maybeToList . fmap infoProgDesc $ p cmd ]
+      | otherwise
+      = ""
+
 shortDesc :: Parser a -> String
 shortDesc = foldr (<+>) "" . mapParser (optDesc style)
   where
@@ -44,7 +59,7 @@ shortDesc = foldr (<+>) "" . mapParser (optDesc style)
       , descSurround = True }
 
 fullDesc :: Parser a -> String
-fullDesc = tabulate' . catMaybes . mapParser doc
+fullDesc = tabulate . catMaybes . mapParser doc
   where
     doc opt
       | null n = Nothing
@@ -63,6 +78,9 @@ parserHelpText pinfo = unlines
   ++ [ "  " ++ line | line <- nn [infoProgDesc pinfo] ]
   ++ [ line | desc <- nn [fullDesc p]
             , line <- ["", "Common options:", desc]
+            , infoFullDesc pinfo ]
+  ++ [ line | desc <- nn [cmdDesc p]
+            , line <- ["", "Available commands:", desc]
             , infoFullDesc pinfo ]
   ++ [ line | footer <- nn [infoFooter pinfo]
             , line <- ["", footer] ]
