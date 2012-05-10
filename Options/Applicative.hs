@@ -1,13 +1,43 @@
 {-# LANGUAGE Rank2Types, PatternGuards #-}
 module Options.Applicative (
+  -- * Option parsers
+  --
+  -- | A 'Parser' is composed of a list of options. Several kinds of options are supported:
+  --
+  --  * Flags: simple no-argument options. When a flag is encountered on the
+  --  command line, its value is returned.
+  --
+  --  * Options: options with an argument. An option can define a /reader/,
+  --  which converts its argument from String to the desired value, or throws a
+  --  parse error if the argument does not validate correctly.
+  --
+  --  * Arguments: positional arguments, validated in the same way as option
+  --  arguments.
+  --
+  --  * Commands. A command defines a completely independent sub-parser. When a
+  --  command is encountered, the whole command line is passed to the
+  --  corresponding parser.
+  --
   Parser,
+  liftOpt,
 
+  -- * Program descriptions
+  --
+  -- A 'ParserInfo' describes a command line program, used to generate a help
+  -- screen. Two help modes are supported: brief and full. In brief mode, only
+  -- an option and argument summary is displayed, while in full mode each
+  -- available option and command, including hidden ones, is described.
+  --
+  -- A basic 'ParserInfo' with default values for fields can be created using
+  -- the 'info' function.
   ParserInfo(..),
   info,
 
+  -- * Running parsers
   evalParser,
   runParser,
-  liftOpt,
+
+  -- * Low-level utilities
   mapParser,
   optionNames
   ) where
@@ -23,6 +53,7 @@ optionNames (OptReader names _) = names
 optionNames (FlagReader names _) = names
 optionNames _ = []
 
+-- ^ Create a parser composed of a single option.
 liftOpt :: Option r a -> Parser a
 liftOpt opt = ConsP (fmap const opt) (pure ())
 
@@ -89,6 +120,9 @@ stepParser (ConsP opt p) arg args
   = do (p', args') <- stepParser p arg args
        return (ConsP opt p', args')
 
+-- | Apply a 'Parser' to a command line, and return a result and leftover
+-- arguments.  This function returns 'Nothing' if any parsing error occurs, or
+-- if any options are missing and don't have a default value.
 runParser :: Parser a -> [String] -> Maybe (a, [String])
 runParser p args = case args of
   [] -> result
@@ -98,10 +132,14 @@ runParser p args = case args of
   where
     result = (,) <$> evalParser p <*> pure args
 
+-- | The default value of a 'Parser'.  This function returns 'Nothing' if any
+-- of the options don't have a default value.
 evalParser :: Parser a -> Maybe a
 evalParser (NilP r) = pure r
 evalParser (ConsP opt p) = opt^.optDefault <*> evalParser p
 
+-- | Map a polymorphic function over all the options of a parser, and collect
+-- the results.
 mapParser :: (forall r x . Option r x -> b)
           -> Parser a
           -> [b]

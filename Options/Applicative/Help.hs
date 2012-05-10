@@ -2,7 +2,7 @@
 module Options.Applicative.Help (
   optDesc,
   cmdDesc,
-  shortDesc,
+  briefDesc,
   fullDesc,
   parserHelpText,
   ) where
@@ -23,6 +23,7 @@ data OptDescStyle = OptDescStyle
   , descHidden :: Bool
   , descSurround :: Bool }
 
+-- | Generate description for a single option.
 optDesc :: OptDescStyle -> Option r a -> String
 optDesc style opt =
   let ns = optionNames $ opt^.optMain
@@ -42,9 +43,9 @@ optDesc style opt =
         = "(" ++ text ++ ")"
   in render desc'
 
+-- | Generate descriptions for commands.
 cmdDesc :: Parser a -> String
-cmdDesc = vcat
-        . take 1
+cmdDesc = unlines
         . filter (not . null)
         . mapParser desc
   where
@@ -56,14 +57,16 @@ cmdDesc = vcat
       | otherwise
       = ""
 
-shortDesc :: Parser a -> String
-shortDesc = foldr (<+>) "" . mapParser (optDesc style)
+-- | Generate a brief help text for a parser.
+briefDesc :: Parser a -> String
+briefDesc = foldr (<+>) "" . mapParser (optDesc style)
   where
     style = OptDescStyle
       { descSep = "|"
       , descHidden = False
       , descSurround = True }
 
+-- | Generate a full help text for a parser.
 fullDesc :: Parser a -> String
 fullDesc = tabulate . catMaybes . mapParser doc
   where
@@ -78,6 +81,7 @@ fullDesc = tabulate . catMaybes . mapParser doc
       , descHidden = True
       , descSurround = False }
 
+-- | Generate the help text for a program.
 parserHelpText :: ParserInfo a -> String
 parserHelpText pinfo = unlines
    $ nn [infoHeader pinfo]
