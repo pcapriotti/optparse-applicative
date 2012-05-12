@@ -6,7 +6,7 @@ module Options.Applicative.Builder (
   -- for individual options.
   --
   -- Each parser builder takes an option modifier, which can be specified by
-  -- composing basic combinators using '&' and 'idm' (which are just
+  -- composing basic modifiers using '&' and 'idm' (which are just
   -- specializations of the 'Category' operations 'Control.Category.>>>' and
   -- 'Control.Category.id').
   --
@@ -29,7 +29,7 @@ module Options.Applicative.Builder (
   strOption,
   option,
 
-  -- * Combinators
+  -- * Modifiers
   short,
   long,
   help,
@@ -120,7 +120,7 @@ str = Just
 disabled :: String -> Maybe a
 disabled = const Nothing
 
--- combinators --
+-- modifiers --
 
 -- | Specify a short name for an option.
 short :: HasName f => Char -> Mod f r a a
@@ -180,7 +180,7 @@ baseOpts opt = Option
   , _optHelp = ""
   , _optDefault = Nothing }
 
--- | Builder for a command parser. The 'command' combinator can be used to
+-- | Builder for a command parser. The 'command' modifier can be used to
 -- specify individual commands.
 subparser :: Mod CommandFields a a b -> Parser b
 subparser m = liftOpt . g . baseOpts $ opt
@@ -219,7 +219,7 @@ switch :: Mod FlagFields Bool Bool a -> Parser a
 switch = flag False True
 
 -- | Builder for an option with a null reader. A non-trivial reader can be
--- added using the 'reader' combinator.
+-- added using the 'reader' modifier.
 nullOption :: Mod OptionFields a a b -> Parser b
 nullOption (Mod f g) = liftOpt . g . baseOpts $ rdr
   where
@@ -238,6 +238,6 @@ option m = nullOption $ m . reader auto
 idm :: Mod f r a a
 idm = id
 
--- | Compose combinators.
+-- | Compose modifiers.
 (&) :: Mod f r a b -> Mod f r b c -> Mod f r a c
 (&) = flip (.)
