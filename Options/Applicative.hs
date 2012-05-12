@@ -2,7 +2,8 @@
 module Options.Applicative (
   -- * Option parsers
   --
-  -- | A 'Parser' is composed of a list of options. Several kinds of options are supported:
+  -- | A 'Parser' is composed of a list of options. Several kinds of options
+  -- are supported:
   --
   --  * Flags: simple no-argument options. When a flag is encountered on the
   --  command line, its value is returned.
