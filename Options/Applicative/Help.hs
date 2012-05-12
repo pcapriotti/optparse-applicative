@@ -45,7 +45,7 @@ optDesc style opt =
 
 -- | Generate descriptions for commands.
 cmdDesc :: Parser a -> String
-cmdDesc = unlines
+cmdDesc = intercalate "\n"
         . filter (not . null)
         . mapParser desc
   where
