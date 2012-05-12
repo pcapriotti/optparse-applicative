@@ -24,6 +24,7 @@ module Options.Applicative.Builder (
   argument,
   arguments,
   flag,
+  switch,
   nullOption,
   strOption,
   option,
@@ -203,6 +204,10 @@ flag x (Mod f g) = liftOpt . g . baseOpts $ rdr
   where
     rdr = let fields = f (FlagFields [])
           in FlagReader (fields^.flagNames) x
+
+-- | Builder for a boolean flag.
+switch :: Mod FlagFields Bool Bool a -> Parser a
+switch m = flag True (m . value False)
 
 -- | Builder for an option with a null reader. A non-trivial reader can be
 -- added using the 'reader' combinator.

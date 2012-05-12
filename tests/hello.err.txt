@@ -1,9 +1,10 @@
 hello - a test for optparse-applicative
 
-Usage: hello --hello TARGET
+Usage: hello --hello TARGET [--quiet]
   Print a greeting for TARGET
 
 Common options:
   -h,--help                Show this help text
   --hello TARGET           Target for the greeting
+  --quiet                  Whether to be quiet
 
