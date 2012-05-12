@@ -199,15 +199,24 @@ arguments :: (String -> Maybe a) -> Mod f a [a] b -> Parser b
 arguments p m = argument p (m . multi)
 
 -- | Builder for a flag parser.
-flag :: a -> Mod FlagFields a a b -> Parser b
-flag x (Mod f g) = liftOpt . g . baseOpts $ rdr
+--
+-- A flag that switches from a \"default value\" to an \"active value\" when
+-- encountered. For a simple boolean value, use `switch` instead.
+flag :: a                         -- ^ default value
+     -> a                         -- ^ active value
+     -> Mod FlagFields a a b      -- ^ option modifier
+     -> Parser b
+flag defv actv (Mod f g) = liftOpt . g . set_default . baseOpts $ rdr
   where
     rdr = let fields = f (FlagFields [])
-          in FlagReader (fields^.flagNames) x
+          in FlagReader (fields^.flagNames) actv
+    set_default = optDefault ^= Just defv
 
 -- | Builder for a boolean flag.
+--
+-- > switch = flag False True
 switch :: Mod FlagFields Bool Bool a -> Parser a
-switch m = flag True (m . value False)
+switch = flag False True
 
 -- | Builder for an option with a null reader. A non-trivial reader can be
 -- added using the 'reader' combinator.
