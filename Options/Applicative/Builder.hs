@@ -38,6 +38,7 @@ module Options.Applicative.Builder (
   reader,
   hide,
   multi,
+  transform,
   command,
   idm,
   (&),
@@ -59,6 +60,7 @@ module Options.Applicative.Builder (
 
 import Control.Applicative
 import Control.Category
+import Control.Monad
 import Data.Lens.Common
 import Data.Lens.Template
 
@@ -163,6 +165,17 @@ multi = optionMod f
           p' <- getL optCont opt r
           x <- evalParser p'
           return $ liftOpt (mkOptGroup (x:xs))
+
+-- | Apply a transformation to the return value of this option.
+--
+-- This can be used, for example, to provide a default value for
+-- a required option, like:
+--
+-- >strOption
+-- >( transform Just
+-- >, value Nothing )
+transform :: (a -> b) -> Mod f r a b
+transform f = optionMod $ fmap f
 
 -- | Add a command to a subparser option.
 command :: String -> ParserInfo r -> Mod CommandFields r a a
