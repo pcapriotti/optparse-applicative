@@ -254,4 +254,4 @@ help text.
 See [this blog post][blog] for a more detailed explanation based on a
 simplified implementation.
 
- [blog]: http://www.soi.city.ac.uk/~ross/papers/Applicative.html
+ [blog]: http://paolocapriotti.com/blog/2012/04/27/applicative-option-parser/
