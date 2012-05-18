@@ -24,7 +24,7 @@ greet _ = return ()
 main :: IO ()
 main = execParser opts >>= greet
   where
-    opts = (info $ helper <*> sample)
-      { infoFullDesc = True
-      , infoProgDesc = "Print a greeting for TARGET"
-      , infoHeader = "hello - a test for optparse-applicative" }
+    opts = info (helper <*> sample)
+      ( fullDesc
+      & progDesc "Print a greeting for TARGET"
+      & header "hello - a test for optparse-applicative" )

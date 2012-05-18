@@ -55,7 +55,16 @@ module Options.Applicative.Builder (
   HasName,
   OptionFields,
   FlagFields,
-  CommandFields
+  CommandFields,
+
+  -- * Builder for `ParserInfo`.
+  InfoMod,
+  fullDesc,
+  header,
+  progDesc,
+  footer,
+  failureCode,
+  info
   ) where
 
 import Control.Applicative
@@ -247,10 +256,50 @@ strOption m = nullOption $ m . reader str
 option :: Read a => Mod OptionFields a a b -> Parser b
 option m = nullOption $ m . reader auto
 
+-- | Modifier for 'ParserInfo'.
+newtype InfoMod a b = InfoMod
+  { applyInfoMod :: ParserInfo a -> ParserInfo b }
+
+instance Category InfoMod where
+  id = InfoMod id
+  m1 . m2 = InfoMod $ applyInfoMod m1 . applyInfoMod m2
+
+-- | Specify a full description for this parser.
+fullDesc :: InfoMod a a
+fullDesc = InfoMod $ infoFullDesc^=True
+
+-- | Specify a header for this parser.
+header :: String -> InfoMod a a
+header s = InfoMod $ infoHeader^=s
+
+-- | Specify a footer for this parser.
+footer :: String -> InfoMod a a
+footer s = InfoMod $ infoFooter^=s
+
+-- | Specify a short program description.
+progDesc :: String -> InfoMod a a
+progDesc s = InfoMod $ infoProgDesc^=s
+
+-- | Specify an exit code if a parse error occurs.
+failureCode :: Int -> InfoMod a a
+failureCode n = InfoMod $ infoFailureCode^=n
+
+-- | Create a 'ParserInfo' given a 'Parser' and a modifier.
+info :: Parser a -> InfoMod a a -> ParserInfo a
+info parser m = applyInfoMod m base
+  where
+    base = ParserInfo
+      { _infoParser = parser
+      , _infoFullDesc = True
+      , _infoHeader = ""
+      , _infoProgDesc = ""
+      , _infoFooter = ""
+      , _infoFailureCode = 1 }
+
 -- | Trivial option modifier.
-idm :: Mod f r a a
+idm :: Category hom => hom a a
 idm = id
 
 -- | Compose modifiers.
-(&) :: Mod f r a b -> Mod f r b c -> Mod f r a c
+(&) :: Category hom => hom a b -> hom b c -> hom a c
 (&) = flip (.)

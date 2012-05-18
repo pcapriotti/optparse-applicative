@@ -7,10 +7,12 @@ module Options.Applicative.Extra (
   usage
   ) where
 
+import Data.Lens.Common
 import Options.Applicative
 import Options.Applicative.Builder
 import Options.Applicative.Help
 import Options.Applicative.Utils
+import Options.Applicative.Types
 import System.Environment
 import System.Exit
 import System.IO
@@ -31,15 +33,14 @@ helper = nullOption
 execParser :: ParserInfo a -> IO a
 execParser pinfo = do
   args <- getArgs
-  let p = infoParser pinfo
+  let p = pinfo^.infoParser
   case runParser p args of
     Just (a, []) -> return a
     _ -> do
       prog <- getProgName
-      let pinfo' = pinfo
-            { infoHeader = vcat [infoHeader pinfo, usage p prog] }
-      hPutStr stderr $ parserHelpText pinfo'
-      exitWith (ExitFailure (infoFailureCode pinfo))
+      let add_usage = modL infoHeader $ \h -> vcat [h, usage p prog]
+      hPutStr stderr $ parserHelpText (add_usage pinfo)
+      exitWith (ExitFailure (pinfo^.infoFailureCode))
 
 -- | Generate option summary.
 usage :: Parser a -> String -> String

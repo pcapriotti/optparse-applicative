@@ -53,7 +53,7 @@ cmdDesc = intercalate "\n"
       | CmdReader cmds p <- opt^.optMain
       = tabulate [(cmd, d)
                  | cmd <- cmds
-                 , d <- maybeToList . fmap infoProgDesc $ p cmd ]
+                 , d <- maybeToList . fmap (getL infoProgDesc) $ p cmd ]
       | otherwise
       = ""
 
@@ -84,16 +84,16 @@ fullDesc = tabulate . catMaybes . mapParser doc
 -- | Generate the help text for a program.
 parserHelpText :: ParserInfo a -> String
 parserHelpText pinfo = unlines
-   $ nn [infoHeader pinfo]
-  ++ [ "  " ++ line | line <- nn [infoProgDesc pinfo] ]
+   $ nn [pinfo^.infoHeader]
+  ++ [ "  " ++ line | line <- nn [pinfo^.infoProgDesc] ]
   ++ [ line | desc <- nn [fullDesc p]
             , line <- ["", "Common options:", desc]
-            , infoFullDesc pinfo ]
+            , pinfo^.infoFullDesc ]
   ++ [ line | desc <- nn [cmdDesc p]
             , line <- ["", "Available commands:", desc]
-            , infoFullDesc pinfo ]
-  ++ [ line | footer <- nn [infoFooter pinfo]
+            , pinfo^.infoFullDesc ]
+  ++ [ line | footer <- nn [pinfo^.infoFooter]
             , line <- ["", footer] ]
   where
     nn = filter (not . null)
-    p = infoParser pinfo
+    p = pinfo^.infoParser

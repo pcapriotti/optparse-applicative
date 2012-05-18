@@ -12,10 +12,12 @@ hello = Hello <$> argument str (metavar "TARGET")
 
 sample :: Parser Sample
 sample = subparser
-       ( command "hello" (info hello)
-           { infoProgDesc = "Print greeting" }
-       & command "goodbye" (info (pure Goodbye))
-           { infoProgDesc = "Say goodbye" }
+       ( command "hello"
+         (info hello
+               (progDesc "Print greeting"))
+       & command "goodbye"
+         (info (pure Goodbye)
+               (progDesc "Say goodbye"))
        )
 
 run :: Sample -> IO ()
@@ -23,4 +25,4 @@ run (Hello target) = putStrLn $ "Hello, " ++ target ++ "!"
 run Goodbye = putStrLn "Goodbye."
 
 main :: IO ()
-main = execParser (info sample) >>= run
+main = execParser (info sample idm) >>= run

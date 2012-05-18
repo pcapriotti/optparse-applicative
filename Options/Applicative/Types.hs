@@ -1,7 +1,13 @@
 {-# LANGUAGE GADTs, DeriveFunctor, TemplateHaskell #-}
 module Options.Applicative.Types (
   ParserInfo(..),
-  info,
+
+  infoParser,
+  infoFullDesc,
+  infoProgDesc,
+  infoHeader,
+  infoFooter,
+  infoFailureCode,
 
   Option(..),
   OptName(..),
@@ -23,23 +29,14 @@ import Data.Lens.Template
 
 -- | A full description for a runnable 'Parser' for a program.
 data ParserInfo a = ParserInfo
-  { infoParser :: Parser a            -- ^ the option parser for the program
-  , infoFullDesc :: Bool              -- ^ whether the help text should contain full documentation
-  , infoProgDesc :: String            -- ^ brief parser description
-  , infoHeader :: String              -- ^ header of the full parser description
-  , infoFooter :: String              -- ^ footer of the full parser description
-  , infoFailureCode :: Int            -- ^ exit code for a parser failure
+  { _infoParser :: Parser a            -- ^ the option parser for the program
+  , _infoFullDesc :: Bool              -- ^ whether the help text should contain full documentation
+  , _infoProgDesc :: String            -- ^ brief parser description
+  , _infoHeader :: String              -- ^ header of the full parser description
+  , _infoFooter :: String              -- ^ footer of the full parser description
+  , _infoFailureCode :: Int            -- ^ exit code for a parser failure
   } deriving Functor
 
--- | Create a default 'ParserInfo' for a given 'Parser'.
-info :: Parser a -> ParserInfo a
-info parser = ParserInfo
-  { infoParser = parser
-  , infoFullDesc = True
-  , infoHeader = ""
-  , infoProgDesc = ""
-  , infoFooter = ""
-  , infoFailureCode = 1 }
 
 data OptName = OptShort !Char
              | OptLong !String
@@ -95,4 +92,4 @@ instance Applicative P where
   pure = return
   (<*>) = ap
 
-$( makeLenses [''Option] )
+$( makeLenses [''Option, ''ParserInfo] )

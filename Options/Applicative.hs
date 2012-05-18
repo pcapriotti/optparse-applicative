@@ -32,7 +32,6 @@ module Options.Applicative (
   -- A basic 'ParserInfo' with default values for fields can be created using
   -- the 'info' function.
   ParserInfo(..),
-  info,
 
   -- * Running parsers
   evalParser,
@@ -92,7 +91,7 @@ optMatches rdr arg = case rdr of
     -> Just $ \args -> return (result, args)
   CmdReader _ f
     | Just cmdInfo <- f arg
-    -> Just $ \args -> tryP $ runParser (infoParser cmdInfo) args
+    -> Just $ \args -> tryP $ runParser (cmdInfo^.infoParser) args
   _ -> Nothing
   where
     parsed
