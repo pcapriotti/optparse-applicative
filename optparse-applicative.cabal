@@ -89,21 +89,7 @@ test-suite tests
   main-is:             Tests.hs
   build-depends:       base == 4.5.*,
                        HUnit == 1.2.*,
-                       process == 1.1.*,
+                       optparse-applicative == 0.0.*,
                        test-framework == 0.6.*,
                        test-framework-hunit == 0.2.*,
                        test-framework-th-prime == 0.0.*
-
--- examples
-
-executable hello
-  hs-source-dirs: tests
-  main-is: hello.hs
-  build-depends:       base == 4.5.*,
-                       optparse-applicative
-
-executable modes
-  hs-source-dirs: tests
-  main-is: modes.hs
-  build-depends:       base == 4.5.*,
-                       optparse-applicative

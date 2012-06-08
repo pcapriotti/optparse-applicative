@@ -1,4 +1,4 @@
-Usage: modes COMMAND
+Usage: commands COMMAND
 
 Available commands:
   goodbye                  Say goodbye

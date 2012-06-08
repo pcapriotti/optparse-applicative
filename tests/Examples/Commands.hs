@@ -1,8 +1,11 @@
+module Examples.Commands where
+
 import Options.Applicative
 
 data Sample
   = Hello String
   | Goodbye
+  deriving Show
 
 hello :: Parser Sample
 hello = Hello <$> argument str (metavar "TARGET")
@@ -21,5 +24,8 @@ run :: Sample -> IO ()
 run (Hello target) = putStrLn $ "Hello, " ++ target ++ "!"
 run Goodbye = putStrLn "Goodbye."
 
+opts :: ParserInfo Sample
+opts = info sample idm
+
 main :: IO ()
-main = execParser (info sample idm) >>= run
+main = execParser opts >>= run
