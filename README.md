@@ -34,10 +34,10 @@ A parser can be used like this:
     main :: IO ()
     main = execParser opts >>= greet
       where
-        opts = (info $ helper <*> sample)
-          { infoFullDesc = True
-          , infoProgDesc = "Print a greeting for TARGET"
-          , infoHeader = "hello - a test for optparse-applicative" }
+        opts = info (helper <*> sample)
+          ( fullDesc
+          & progDesc "Print a greeting for TARGET"
+          & header "hello - a test for optparse-applicative" )
 
 The `greet` function is the entry point of the program, while `opts` is a
 complete description of the program, used when generating a help text. The
@@ -198,9 +198,9 @@ added with the `command` modifier. For example
 
     subparser
     ( command "add" (info addOptions)
-        { infoProgDesc = "Add a file to the repository" }
+        ( progDesc "Add a file to the repository" )
     & command "commit") (info commitOptions)
-        { infoProgDesc = "Record changes to the repository" }
+        ( progDesc "Record changes to the repository" )
     )
 
 Each command takes a full `ParserInfo` structure, which will be used to extract
