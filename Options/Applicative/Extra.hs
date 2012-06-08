@@ -8,7 +8,7 @@ module Options.Applicative.Extra (
   ) where
 
 import Data.Lens.Common
-import Options.Applicative
+import Options.Applicative.Common
 import Options.Applicative.Builder
 import Options.Applicative.Help
 import Options.Applicative.Utils

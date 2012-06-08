@@ -73,7 +73,7 @@ import Control.Monad
 import Data.Lens.Common
 import Data.Lens.Template
 
-import Options.Applicative
+import Options.Applicative.Common
 import Options.Applicative.Types
 
 import Prelude hiding (id, (.))

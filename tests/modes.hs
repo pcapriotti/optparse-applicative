@@ -1,7 +1,4 @@
-import Control.Applicative
 import Options.Applicative
-import Options.Applicative.Builder
-import Options.Applicative.Extra
 
 data Sample
   = Hello String

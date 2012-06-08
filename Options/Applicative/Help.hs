@@ -1,6 +1,5 @@
 {-# LANGUAGE PatternGuards #-}
 module Options.Applicative.Help (
-  optDesc,
   cmdDesc,
   briefDesc,
   fullDesc,
@@ -10,7 +9,7 @@ module Options.Applicative.Help (
 import Data.Lens.Common
 import Data.List
 import Data.Maybe
-import Options.Applicative
+import Options.Applicative.Common
 import Options.Applicative.Types
 import Options.Applicative.Utils
 
@@ -18,6 +17,7 @@ showOption :: OptName -> String
 showOption (OptLong n) = "--" ++ n
 showOption (OptShort n) = '-' : [n]
 
+-- | Style for rendering an option.
 data OptDescStyle = OptDescStyle
   { descSep :: String
   , descHidden :: Bool
