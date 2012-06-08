@@ -3,6 +3,8 @@
 This package contains utilities and combinators to define command line option
 parsers.
 
+[![Continuous Integration status][status-png]][status]
+
 ## Getting started
 
 Here is a simple example of an applicative option parser:
@@ -254,4 +256,6 @@ help text.
 See [this blog post][blog] for a more detailed explanation based on a
 simplified implementation.
 
+ [status-png]: https://secure.travis-ci.org/pcapriotti/optparse-applicative.png?branch=master
+ [status]: http://travis-ci.org/pcapriotti/optparse-applicative?branch=master
  [blog]: http://paolocapriotti.com/blog/2012/04/27/applicative-option-parser/

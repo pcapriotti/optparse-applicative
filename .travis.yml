@@ -1,0 +1,3 @@
+language: haskell
+before_install:
+    - "cabal install hunit test-framework-hunit test-framework-th-prime process"
