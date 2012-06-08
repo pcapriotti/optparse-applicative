@@ -9,19 +9,21 @@ parsers.
 
 Here is a simple example of an applicative option parser:
 
-    data Sample = Sample
-      { hello :: String
-      , quiet :: Bool }
+```haskell
+data Sample = Sample
+  { hello :: String
+  , quiet :: Bool }
 
-    sample :: Parser Sample
-    sample = Sample
-         <$> strOption
-             ( long "hello"
-             & metavar "TARGET"
-             & help "Target for the greeting" )
-         <*> switch
-             ( long "quiet"
-             & help "Whether to be quiet" )
+sample :: Parser Sample
+sample = Sample
+     <$> strOption
+         ( long "hello"
+         & metavar "TARGET"
+         & help "Target for the greeting" )
+     <*> switch
+         ( long "quiet"
+         & help "Whether to be quiet" )
+```
 
 The parser is built using [applicative style][applicative] starting from a set
 of basic combinators. In this example, `hello` is defined as an option with a
@@ -29,17 +31,19 @@ of basic combinators. In this example, `hello` is defined as an option with a
 
 A parser can be used like this:
 
-    greet :: Sample -> IO ()
-    greet (Sample h True) = putStrLn $ "Hello, " ++ h
-    greet _ = return ()
+```haskell
+greet :: Sample -> IO ()
+greet (Sample h True) = putStrLn $ "Hello, " ++ h
+greet _ = return ()
 
-    main :: IO ()
-    main = execParser opts >>= greet
-      where
-        opts = info (helper <*> sample)
-          ( fullDesc
-          & progDesc "Print a greeting for TARGET"
-          & header "hello - a test for optparse-applicative" )
+main :: IO ()
+main = execParser opts >>= greet
+  where
+    opts = info (helper <*> sample)
+      ( fullDesc
+      & progDesc "Print a greeting for TARGET"
+      & header "hello - a test for optparse-applicative" )
+```
 
 The `greet` function is the entry point of the program, while `opts` is a
 complete description of the program, used when generating a help text. The
@@ -105,11 +109,13 @@ names.
 Regular options returning strings are the most common, and they can be created
 using the `strOption` builder. For example,
 
-    strOption
-    ( long "output"
-    & short 'o'
-    & metavar "FILE"
-    & help "Write output to FILE" )
+```haskell
+strOption
+( long "output"
+& short 'o'
+& metavar "FILE"
+& help "Write output to FILE" )
+```
 
 creates a regular option with a string argument (which can be referred to as
 `FILE` in the help text and documentation), a long name "option" and a short
@@ -120,12 +126,14 @@ A regular option can return an object of any type, provided you specify a
 which assumes a `Read` instance for the return type and uses it to parse its
 argument. For example:
 
-    lineCount :: Parser Int
-    lineCount = option
-                ( long "lines"
-                & short 'n'
-                & metavar "K"
-                & help "Output the last K lines" )
+```haskell
+lineCount :: Parser Int
+lineCount = option
+            ( long "lines"
+            & short 'n'
+            & metavar "K"
+            & help "Output the last K lines" )
+```
 
 specifies a regular option with an `Int` argument. We added an explicit type
 annotation here, since without it the parser would have been polymorphic in the
@@ -137,13 +145,15 @@ You can also create a custom reader without using the `Read` typeclass, and set
 it as the reader for an option using the `reader` modifier and the `nullOption`
 builder:
 
-    data FluxCapacitor = ...
+```haskell
+data FluxCapacitor = ...
 
-    parseFluxCapacitor :: String -> Maybe FluxCapacitor
+parseFluxCapacitor :: String -> Maybe FluxCapacitor
 
-    option
-    ( long "flux-capacitor"
-    & reader parseFluxCapacitor )
+option
+( long "flux-capacitor"
+& reader parseFluxCapacitor )
+```
 
 ### Flags
 
@@ -154,20 +164,24 @@ A flag has a default value and an **active value**. If the flag is found on the
 command line, the active value is returned, otherwise the default value is
 used. For example:
 
-    data Verbosity = Normal | Verbose
+```haskell
+data Verbosity = Normal | Verbose
 
-    flag Normal Verbose
-    ( long "verbose"
-    & short 'v'
-    & help "Enable verbose mode"
+flag Normal Verbose
+( long "verbose"
+& short 'v'
+& help "Enable verbose mode"
+```
 
 is a flag parser returning a `Verbosity` value.
 
 Simple boolean flags can be specified using the `switch` builder, like so:
 
-    switch
-    ( long "keep-tmp-files"
-    , help "Retain all intermediate temporary files" )
+```haskell
+switch
+( long "keep-tmp-files"
+, help "Retain all intermediate temporary files" )
+```
 
 ### Arguments
 
@@ -177,7 +191,9 @@ The `argument` builder takes a reader parameter, and creates a parser which
 will return the parsed value every time it is passed a command line argument
 for which the reader succeeds. For example
 
-    argument str ( metavar "FILE" )
+```haskell
+argument str ( metavar "FILE" )
+```
 
 creates an argument accepting any string.
 
@@ -198,12 +214,14 @@ build tools like `cabal`.
 A command can be created using the `subparser` builder, and commands can be
 added with the `command` modifier. For example
 
-    subparser
-    ( command "add" (info addOptions)
-        ( progDesc "Add a file to the repository" )
-    & command "commit") (info commitOptions)
-        ( progDesc "Record changes to the repository" )
-    )
+```haskell
+subparser
+( command "add" (info addOptions)
+    ( progDesc "Add a file to the repository" )
+& command "commit") (info commitOptions)
+    ( progDesc "Record changes to the repository" )
+)
+```
 
 Each command takes a full `ParserInfo` structure, which will be used to extract
 a description for this command when generating a help text.
@@ -213,16 +231,18 @@ For this reason, it is often best to use a sum type which has the same
 structure as the command itself. For example, for the parser above, you would
 define a type like:
 
-    data Options = Options
-      { globalOpt :: String
-      , globalFlag :: Bool
-      ...
-      , commandOpts :: CommandOptions }
+```haskell
+data Options = Options
+  { globalOpt :: String
+  , globalFlag :: Bool
+  ...
+  , commandOpts :: CommandOptions }
 
-    data CommandOptions
-      = AddOptions { ... }
-      | CommitOptions { ... }
-      ...
+data CommandOptions
+  = AddOptions { ... }
+  | CommitOptions { ... }
+  ...
+```
 
 # Option builders
 
