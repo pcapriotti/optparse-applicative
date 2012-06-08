@@ -79,7 +79,7 @@ library
                        Options.Applicative.Utils,
                        Options.Applicative.Extra,
                        Options.Applicative.Help
-  build-depends:       base == 4.5.*,
+  build-depends:       base == 4.*,
                        data-lens == 2.10.*,
                        data-lens-template == 2.1.*,
                        data-default == 0.4.*
@@ -87,7 +87,7 @@ test-suite tests
   type:                exitcode-stdio-1.0
   hs-source-dirs:      tests
   main-is:             Tests.hs
-  build-depends:       base == 4.5.*,
+  build-depends:       base == 4.*,
                        HUnit == 1.2.*,
                        optparse-applicative == 0.0.*,
                        test-framework == 0.6.*,
