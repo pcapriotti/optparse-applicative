@@ -6,8 +6,8 @@ module Options.Applicative.Builder (
   -- for individual options.
   --
   -- Each parser builder takes an option modifier, which can be specified by
-  -- composing basic modifiers using '&' and 'idm' (which are just
-  -- specializations of the 'Category' operations 'Control.Category.>>>' and
+  -- composing basic modifiers using '&' and 'idm' (which are just convenient
+  -- synonyms for the 'Category' operations 'Control.Category.>>>' and
   -- 'Control.Category.id').
   --
   -- For example:
@@ -57,7 +57,7 @@ module Options.Applicative.Builder (
   FlagFields,
   CommandFields,
 
-  -- * Builder for `ParserInfo`.
+  -- * Builder for `ParserInfo`
   InfoMod,
   fullDesc,
   header,
