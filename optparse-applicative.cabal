@@ -34,10 +34,10 @@ description:
     main :: IO ()
     main = execParser opts \>\>= greet
     &#x20; where
-    &#x20;   opts = (info $ helper \<*\> sample)
-    &#x20;     &#x7b; infoFullDesc = True
-    &#x20;     , infoProgDesc = \"Print a greeting for TARGET\"
-    &#x20;     , infoHeader = \"hello - a test for optparse-applicative\" &#x7d;
+    &#x20;   opts = info (helper \<*\> sample)
+    &#x20;     ( fullDesc
+    &#x20;     & progDesc \"Print a greeting for TARGET\"
+    &#x20;     & header \"hello - a test for optparse-applicative\" )
     @
     .
     The @greet@ function is the entry point of the program, while @opts@ is a
