@@ -18,7 +18,7 @@ sample = Sample
          & help "Whether to be quiet" )
 
 greet :: Sample -> IO ()
-greet (Sample h True) = putStrLn $ "Hello, " ++ h
+greet (Sample h False) = putStrLn $ "Hello, " ++ h
 greet _ = return ()
 
 main :: IO ()
