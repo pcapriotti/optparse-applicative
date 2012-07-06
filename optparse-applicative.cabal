@@ -81,7 +81,6 @@ library
                        Options.Applicative.Help
   build-depends:       base == 4.*,
                        data-lens == 2.10.*,
-                       data-lens-template == 2.1.*,
                        data-default == 0.4.*
 test-suite tests
   type:                exitcode-stdio-1.0

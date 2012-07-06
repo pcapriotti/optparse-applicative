@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell, ScopedTypeVariables #-}
 module Options.Applicative.Builder (
   -- * Parser builders
   --
@@ -71,7 +70,6 @@ import Control.Applicative
 import Control.Category
 import Control.Monad
 import Data.Lens.Common
-import Data.Lens.Template
 
 import Options.Applicative.Common
 import Options.Applicative.Types
@@ -88,9 +86,17 @@ data FlagFields a = FlagFields
 data CommandFields a = CommandFields
   { _cmdCommands :: [(String, ParserInfo a)] }
 
-$( makeLenses [ ''OptionFields
-              , ''FlagFields
-              , ''CommandFields ] )
+optNames :: Lens (OptionFields a) [OptName]
+optNames = lens _optNames $ \x o -> o { _optNames = x }
+
+optReader :: Lens (OptionFields a) (String -> Maybe a)
+optReader = lens _optReader $ \x o -> o { _optReader = x }
+
+flagNames :: Lens (FlagFields a) [OptName]
+flagNames = lens _flagNames $ \x o -> o { _flagNames = x }
+
+cmdCommands :: Lens (CommandFields a) [(String, ParserInfo a)]
+cmdCommands = lens _cmdCommands $ \x o -> o { _cmdCommands = x }
 
 class HasName f where
   name :: OptName -> f a -> f a

@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, DeriveFunctor, TemplateHaskell #-}
+{-# LANGUAGE GADTs, DeriveFunctor #-}
 module Options.Applicative.Types (
   ParserInfo(..),
 
@@ -25,7 +25,7 @@ module Options.Applicative.Types (
 
 import Control.Applicative
 import Control.Monad
-import Data.Lens.Template
+import Data.Lens.Common
 
 -- | A full description for a runnable 'Parser' for a program.
 data ParserInfo a = ParserInfo
@@ -92,4 +92,40 @@ instance Applicative P where
   pure = return
   (<*>) = ap
 
-$( makeLenses [''Option, ''ParserInfo] )
+-- lenses
+
+optMain :: Lens (Option r a) (OptReader r)
+optMain = lens _optMain $ \x o -> o { _optMain = x }
+
+optDefault :: Lens (Option r a) (Maybe a)
+optDefault = lens _optDefault $ \x o -> o { _optDefault = x }
+
+optShow :: Lens (Option r a) Bool
+optShow = lens _optShow $ \x o -> o { _optShow = x }
+
+optHelp :: Lens (Option r a) String
+optHelp = lens _optHelp $ \x o -> o { _optHelp = x }
+
+optMetaVar :: Lens (Option r a) String
+optMetaVar = lens _optMetaVar $ \x o -> o { _optMetaVar = x }
+
+optCont :: Lens (Option r a) (r -> Maybe (Parser a))
+optCont = lens _optCont $ \x o -> o { _optCont = x }
+
+infoParser :: Lens (ParserInfo a) (Parser a)
+infoParser = lens _infoParser $ \x p -> p { _infoParser = x }
+
+infoFullDesc :: Lens (ParserInfo a) Bool
+infoFullDesc = lens _infoFullDesc $ \x p -> p { _infoFullDesc = x }
+
+infoProgDesc :: Lens (ParserInfo a) String
+infoProgDesc = lens _infoProgDesc $ \x p -> p { _infoProgDesc = x }
+
+infoHeader :: Lens (ParserInfo a) String
+infoHeader = lens _infoHeader $ \x p -> p { _infoHeader = x }
+
+infoFooter :: Lens (ParserInfo a) String
+infoFooter = lens _infoFooter $ \x p -> p { _infoFooter = x }
+
+infoFailureCode :: Lens (ParserInfo a) Int
+infoFailureCode = lens _infoFailureCode $ \x p -> p { _infoFailureCode = x }
