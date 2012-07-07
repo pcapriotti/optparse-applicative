@@ -73,6 +73,7 @@ extra-source-files:  README.md
 
 library
   exposed-modules:     Options.Applicative,
+                       Options.Applicative.Arrows,
                        Options.Applicative.Common,
                        Options.Applicative.Types,
                        Options.Applicative.Builder,
