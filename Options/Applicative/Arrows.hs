@@ -2,7 +2,8 @@ module Options.Applicative.Arrows (
   A(..),
   asA,
   runA,
-  ParserA
+  ParserA,
+  module Control.Arrow
   ) where
 
 import Control.Arrow

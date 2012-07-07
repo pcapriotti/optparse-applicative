@@ -25,7 +25,7 @@ main :: IO ()
 main = execParser opts >>= greet
 
 opts :: ParserInfo Sample
-opts = info (helper <*> sample)
+opts = info (sample <**> helper)
   ( fullDesc
   & progDesc "Print a greeting for TARGET"
   & header "hello - a test for optparse-applicative" )

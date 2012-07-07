@@ -1,6 +1,8 @@
+{-# LANGUAGE Arrows #-}
 module Examples.Cabal where
 
 import Options.Applicative
+import Options.Applicative.Arrows
 
 data Args = Args CommonOpts Command
   deriving Show
@@ -30,23 +32,23 @@ data BuildOpts = BuildOpts
   { buildDir :: FilePath }
   deriving Show
 
-withHelp :: Parser a -> Parser a
-withHelp = (helper <*>)
-
 parser :: Parser Args
-parser = withHelp $ Args <$> commonOpts <*> subparser
-  ( command "install"
-    (info installParser
-          (progDesc "Installs a list of packages"))
-  & command "update"
-    (info updateParser
-          (progDesc "Updates list of known packages"))
-  & command "configure"
-    (info configureParser
-          (progDesc "Prepare to build the package"))
-  & command "build"
-    (info buildParser
-          (progDesc "Make this package ready for installation")) )
+parser = runA $ proc () -> do
+  opts <- asA commonOpts -< ()
+  cmds <- (asA . subparser)
+            ( command "install"
+              (info installParser
+                    (progDesc "Installs a list of packages"))
+            & command "update"
+              (info updateParser
+                    (progDesc "Updates list of known packages"))
+            & command "configure"
+              (info configureParser
+                    (progDesc "Prepare to build the package"))
+            & command "build"
+              (info buildParser
+                    (progDesc "Make this package ready for installation")) ) -< ()
+  A helper -< Args opts cmds
 
 commonOpts :: Parser CommonOpts
 commonOpts = CommonOpts
@@ -58,41 +60,53 @@ commonOpts = CommonOpts
       & value 0 )
 
 installParser :: Parser Command
-installParser = withHelp
-  $ Install <$> configureOpts <*> installOpts
+installParser = runA $ proc () -> do
+  config <- asA configureOpts -< ()
+  inst <- asA installOpts -< ()
+  A helper -< Install config inst
 
 installOpts :: Parser InstallOpts
-installOpts = InstallOpts
-  <$> switch ( long "reinstall" )
-  <*> switch ( long "force-reinstall" )
+installOpts = runA $ proc () -> do
+  reinst <- asA (switch (long "reinstall")) -< ()
+  force <- asA (switch (long "force-reinstall")) -< ()
+  returnA -< InstallOpts
+             { instReinstall = reinst
+             , instForce = force }
 
 updateParser :: Parser Command
-updateParser = withHelp
-  $ pure Update
+updateParser = runA $ proc () ->
+  A helper -< Update
 
 configureParser :: Parser Command
-configureParser = withHelp
-  $ Configure <$> configureOpts
+configureParser = runA $ proc () -> do
+  config <- asA configureOpts -< ()
+  A helper -< Configure config
 
 configureOpts :: Parser ConfigureOpts
-configureOpts = ConfigureOpts
-  <$> switch ( long "enable-tests"
-             & help "Enable compilation of test suites" )
-  <*> strOption ( short 'f'
-                & long "flags"
-                & metavar "FLAGS"
-                & help "Enable the given flag"
-                & multi )
+configureOpts = runA $ proc () -> do
+  tests <- (asA . switch)
+             ( long "enable-tests"
+             & help "Enable compilation of test suites" ) -< ()
+  flags <- (asA . strOption)
+             ( short 'f'
+             & long "flags"
+             & metavar "FLAGS"
+             & help "Enable the given flag"
+             & multi ) -< ()
+  returnA -< ConfigureOpts tests flags
 
 buildParser :: Parser Command
-buildParser = helper <*> (Build <$> buildOpts)
+buildParser = runA $ proc () -> do
+  opts <- asA buildOpts -< ()
+  A helper -< Build opts
 
 buildOpts :: Parser BuildOpts
-buildOpts = BuildOpts
-  <$> strOption
-      ( long "builddir"
-      & metavar "DIR"
-      & value "dist" )
+buildOpts = runA $ proc () -> do
+  bdir <- (asA . strOption)
+            ( long "builddir"
+            & metavar "DIR"
+            & value "dist" ) -< ()
+  returnA -< BuildOpts bdir
 
 pinfo :: ParserInfo Args
 pinfo = info parser idm
