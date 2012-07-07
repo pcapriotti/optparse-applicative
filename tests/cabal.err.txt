@@ -5,4 +5,3 @@ Common options:
   -h,--help                Show this help text
   --enable-tests           Enable compilation of test suites
   -f,--flags FLAGS         Enable the given flag
-

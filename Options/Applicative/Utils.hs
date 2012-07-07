@@ -17,13 +17,13 @@ s1 <+> s2 = s1 ++ " " ++ s2
 vcat :: [String] -> String
 vcat = intercalate "\n\n" . filter (not . null)
 
-tabulate' :: Int -> [(String, String)] -> String
-tabulate' size table = unlines
+tabulate' :: Int -> [(String, String)] -> [String]
+tabulate' size table =
   [ "  " ++ pad size key ++ " " ++ value
   | (key, value) <- table ]
 
 -- | Display pairs of strings in a table.
-tabulate :: [(String, String)] -> String
+tabulate :: [(String, String)] -> [String]
 tabulate = tabulate' 24
 
 -- | Pad a string to a fixed size with whitespace.

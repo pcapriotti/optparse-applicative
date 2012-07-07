@@ -44,10 +44,8 @@ optDesc style opt =
   in render desc'
 
 -- | Generate descriptions for commands.
-cmdDesc :: Parser a -> String
-cmdDesc = intercalate "\n"
-        . filter (not . null)
-        . mapParser desc
+cmdDesc :: Parser a -> [String]
+cmdDesc = concat . mapParser desc
   where
     desc opt
       | CmdReader cmds p <- opt^.optMain
@@ -55,7 +53,7 @@ cmdDesc = intercalate "\n"
                  | cmd <- cmds
                  , d <- maybeToList . fmap (getL infoProgDesc) $ p cmd ]
       | otherwise
-      = ""
+      = []
 
 -- | Generate a brief help text for a parser.
 briefDesc :: Parser a -> String
@@ -67,7 +65,7 @@ briefDesc = foldr (<+>) "" . mapParser (optDesc style)
       , descSurround = True }
 
 -- | Generate a full help text for a parser.
-fullDesc :: Parser a -> String
+fullDesc :: Parser a -> [String]
 fullDesc = tabulate . catMaybes . mapParser doc
   where
     doc opt
@@ -86,11 +84,13 @@ parserHelpText :: ParserInfo a -> String
 parserHelpText pinfo = unlines
    $ nn [pinfo^.infoHeader]
   ++ [ "  " ++ line | line <- nn [pinfo^.infoProgDesc] ]
-  ++ [ line | desc <- nn [fullDesc p]
-            , line <- ["", "Common options:", desc]
+  ++ [ line | let opts = fullDesc p
+            , not (null opts)
+            , line <- ["", "Common options:"] ++ opts
             , pinfo^.infoFullDesc ]
-  ++ [ line | desc <- nn [cmdDesc p]
-            , line <- ["", "Available commands:", desc]
+  ++ [ line | let cmds = cmdDesc p
+            , not (null cmds)
+            , line <- ["", "Available commands:"] ++ cmds
             , pinfo^.infoFullDesc ]
   ++ [ line | footer <- nn [pinfo^.infoFooter]
             , line <- ["", footer] ]
