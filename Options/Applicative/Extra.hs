@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 module Options.Applicative.Extra (
   -- * Extra parser utilities
   --
@@ -49,20 +50,31 @@ execParserPure :: ParserInfo a      -- ^ Description of the program to run
 execParserPure pinfo args =
   case runP p of
     (Right a, _) -> Right a
-    (Left msg, desc) -> Left ParserFailure
+    (Left msg, ctx) -> Left ParserFailure
       { errMessage = \progn
-          -> parserHelpText
-           . add_error msg
-           . add_usage progn
-           . (infoDesc^=desc)
-           $ pinfo
+          -> with_context ctx pinfo $ \name ->
+                 parserHelpText
+               . add_error msg
+               . add_usage name progn
       , errExitCode = ExitFailure (pinfo^.infoFailureCode) }
   where
     parser = pinfo^.infoParser
-    add_usage progn = modL infoHeader $ \h -> vcat [h, usage parser progn]
+    add_usage name progn i =
+      modL infoHeader
+           (\h -> vcat [h, usage (i^.infoParser) ename])
+           i
+      where
+        ename = maybe progn (\n -> progn ++ " " ++ n) name
     add_error msg = modL infoHeader $ \h -> vcat [msg, h]
-    p = do setDesc $ pinfo^.infoDesc
-           runParserFully parser args
+
+    with_context :: Context
+                 -> ParserInfo a
+                 -> (forall b . Maybe String -> ParserInfo b -> c)
+                 -> c
+    with_context NullContext i f = f Nothing i
+    with_context (Context n i) _ f = f n i
+
+    p = runParserFully parser args
 
 -- | Generate option summary.
 usage :: Parser a -> String -> String

@@ -40,12 +40,13 @@ module Options.Applicative.Common (
 
   -- * Low-level utilities
   runP,
-  setDesc,
+  setContext,
   mapParser,
   optionNames
   ) where
 
 import Control.Applicative
+import Control.Monad
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Error
 import Control.Monad.Trans.Writer
@@ -96,10 +97,10 @@ optMatches rdr arg = case rdr of
     | Just result <- f arg
     -> Just $ \args -> return (result, args)
   CmdReader _ f
-    | Just cmdInfo <- f arg
-    -> Just $ \args -> censorP $ do
-          setDesc $ cmdInfo^.infoDesc
-          runParser (cmdInfo^.infoParser) args
+    | Just subp <- f arg
+    -> Just $ \args -> do
+          setContext (Just arg) subp
+          runParser (subp^.infoParser) args
   _ -> Nothing
   where
     parsed
@@ -117,16 +118,11 @@ optMatches rdr arg = case rdr of
 tryP :: Maybe a -> P a
 tryP = maybe empty return
 
-runP :: P a -> (Either String a, ParserDesc)
+runP :: P a -> (Either String a, Context)
 runP = runWriter . runErrorT
 
-setDesc :: ParserDesc -> P ()
-setDesc = lift . tell
-
-censorP :: P a -> P a
-censorP p = case runWriter (runErrorT p) of
-  (Left e, desc) -> setDesc desc >> throwError e
-  (Right x, _) -> return x
+setContext :: Maybe String -> ParserInfo a -> P ()
+setContext name = lift . tell . Context name
 
 stepParser :: Parser a -> String -> [String] -> P (Parser a, [String])
 stepParser (NilP _) _ _ = empty
@@ -157,10 +153,8 @@ runParser p args = case args of
 runParserFully :: Parser a -> [String] -> P a
 runParserFully p args = do
   (r, args') <- runParser p args
-  case args' of
-    (arg : _) -> throwError $ "Unrecognized option or argument: " ++ arg
-    _ -> return r
-
+  guard $ null args'
+  return r
 
 -- | The default value of a 'Parser'.  This function returns an error if any of
 -- the options don't have a default value.

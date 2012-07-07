@@ -2,6 +2,7 @@
 module Options.Applicative.Types (
   ParserInfo(..),
   ParserDesc(..),
+  Context(..),
   P,
 
   infoParser,
@@ -57,11 +58,16 @@ data ParserDesc = ParserDesc
   , _descFailureCode :: Int       -- ^ exit code for a parser failure
   }
 
-instance Monoid ParserDesc where
-  mempty = ParserDesc False "" "" "" 1
-  mappend desc _ = desc
+data Context where
+  Context :: Maybe String -> ParserInfo a -> Context
+  NullContext :: Context
 
-type P = ErrorT String (Writer ParserDesc)
+instance Monoid Context where
+  mempty = NullContext
+  mappend _ c@(Context _ _) = c
+  mappend c _ = c
+
+type P = ErrorT String (Writer Context)
 
 data OptName = OptShort !Char
              | OptLong !String
