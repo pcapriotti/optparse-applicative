@@ -1,0 +1,12 @@
+## Version 0.1.0 (07 Jul 2012)
+
+- Improved error reporting internals
+- Removed template-haskell dependency
+- Fixed bugs:
+      * \#3 - No help for subparsers
+      * \#4 - Extra empty lines around command list
+
+## Version 0.0.1 (09 Jun 2012)
+
+- Initial release.
+
