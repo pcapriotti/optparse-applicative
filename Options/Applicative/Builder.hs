@@ -204,7 +204,7 @@ baseOpts opt = Option
   { _optMain = opt
   , _optMetaVar = ""
   , _optShow = True
-  , _optCont = Just . pure
+  , _optCont = return . pure
   , _optHelp = ""
   , _optDefault = Nothing }
 

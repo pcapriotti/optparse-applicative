@@ -2,19 +2,27 @@
 module Options.Applicative.Types (
   ParserInfo(..),
   ParserDesc(..),
+  P,
 
   infoParser,
+  infoDesc,
   infoFullDesc,
   infoProgDesc,
   infoHeader,
   infoFooter,
   infoFailureCode,
 
+  descFull,
+  descProg,
+  descHeader,
+  descFooter,
+  descFailureCode,
+
   Option(..),
   OptName(..),
   OptReader(..),
   Parser(..),
-  P(..),
+  ParserFailure(..),
 
   optMain,
   optDefault,
@@ -27,8 +35,12 @@ module Options.Applicative.Types (
 import Control.Applicative
 import Control.Category
 import Control.Monad
+import Control.Monad.Trans.Error
+import Control.Monad.Trans.Writer
 import Data.Lens.Common
+import Data.Monoid
 import Prelude hiding ((.), id)
+import System.Exit
 
 -- | A full description for a runnable 'Parser' for a program.
 data ParserInfo a = ParserInfo
@@ -45,6 +57,12 @@ data ParserDesc = ParserDesc
   , _descFailureCode :: Int       -- ^ exit code for a parser failure
   }
 
+instance Monoid ParserDesc where
+  mempty = ParserDesc False "" "" "" 1
+  mappend desc _ = desc
+
+type P = ErrorT String (Writer ParserDesc)
+
 data OptName = OptShort !Char
              | OptLong !String
   deriving (Eq, Ord)
@@ -56,7 +74,7 @@ data Option r a = Option
   , _optShow :: Bool                      -- ^ whether this flag is shown is the brief description
   , _optHelp :: String                    -- ^ help text for this option
   , _optMetaVar :: String                 -- ^ metavariable for this option
-  , _optCont :: r -> Maybe (Parser a) }   -- ^ option continuation
+  , _optCont :: r -> P (Parser a) }       -- ^ option continuation
   deriving Functor
 
 -- | An 'OptReader' defines whether an option matches an command line argument.
@@ -84,20 +102,17 @@ instance Applicative Parser where
   ConsP opt p1 <*> p2 =
     ConsP (fmap uncurry opt) $ (,) <$> p1 <*> p2
 
-data P a
-  = ParseError
-  | ParseResult a
-  deriving Functor
+-- | Result after a parse error.
+data ParserFailure = ParserFailure
+  { errMessage :: String -> String -- ^ Function which takes the program name
+                                   -- as input and returns an error message
+  , errExitCode :: ExitCode        -- ^ Exit code to use for this error
+  }
 
-instance Monad P where
-  return = ParseResult
-  ParseError >>= _ = ParseError
-  ParseResult a >>= f = f a
-  fail _ = ParseError
-
-instance Applicative P where
-  pure = return
-  (<*>) = ap
+instance Error ParserFailure where
+  strMsg msg = ParserFailure
+    { errMessage = \_ -> msg
+    , errExitCode = ExitFailure 1 }
 
 -- lenses
 
@@ -116,7 +131,7 @@ optHelp = lens _optHelp $ \x o -> o { _optHelp = x }
 optMetaVar :: Lens (Option r a) String
 optMetaVar = lens _optMetaVar $ \x o -> o { _optMetaVar = x }
 
-optCont :: Lens (Option r a) (r -> Maybe (Parser a))
+optCont :: Lens (Option r a) (r -> P (Parser a))
 optCont = lens _optCont $ \x o -> o { _optCont = x }
 
 descFull :: Lens ParserDesc Bool

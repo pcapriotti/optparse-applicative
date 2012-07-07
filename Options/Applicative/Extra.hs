@@ -28,13 +28,6 @@ helper = nullOption
        & value id
        & hide )
 
--- | Result after a parse error.
-data ParserFailure = ParserFailure
-  { errMessage :: String -> String -- ^ Function which takes the program name
-                                   -- as input and returns an error message
-  , errExitCode :: ExitCode        -- ^ Exit code to use for this error
-  }
-
 -- | Run a program description.
 --
 -- Parse command line arguments. Display help text and exit if any parse error
@@ -54,15 +47,22 @@ execParserPure :: ParserInfo a      -- ^ Description of the program to run
                -> [String]          -- ^ Program arguments
                -> Either ParserFailure a
 execParserPure pinfo args =
-  case runParser parser args of
-    Just (a, []) -> Right a
-    _ -> Left ParserFailure
-      { errMessage = \progn -> parserHelpText (add_usage progn pinfo)
+  case runP p of
+    (Right a, _) -> Right a
+    (Left msg, desc) -> Left ParserFailure
+      { errMessage = \progn
+          -> parserHelpText
+           . add_error msg
+           . add_usage progn
+           . (infoDesc^=desc)
+           $ pinfo
       , errExitCode = ExitFailure (pinfo^.infoFailureCode) }
   where
     parser = pinfo^.infoParser
     add_usage progn = modL infoHeader $ \h -> vcat [h, usage parser progn]
-
+    add_error msg = modL infoHeader $ \h -> vcat [msg, h]
+    p = do setDesc $ pinfo^.infoDesc
+           runParserFully parser args
 
 -- | Generate option summary.
 usage :: Parser a -> String -> String

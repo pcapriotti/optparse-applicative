@@ -34,15 +34,21 @@ module Options.Applicative.Common (
   ParserInfo(..),
 
   -- * Running parsers
-  evalParser,
   runParser,
+  runParserFully,
+  evalParser,
 
   -- * Low-level utilities
+  runP,
+  setDesc,
   mapParser,
   optionNames
   ) where
 
 import Control.Applicative
+import Control.Monad.Trans.Class
+import Control.Monad.Trans.Error
+import Control.Monad.Trans.Writer
 import Data.Lens.Common
 import Data.Maybe
 import Data.Monoid
@@ -91,7 +97,9 @@ optMatches rdr arg = case rdr of
     -> Just $ \args -> return (result, args)
   CmdReader _ f
     | Just cmdInfo <- f arg
-    -> Just $ \args -> tryP $ runParser (cmdInfo^.infoParser) args
+    -> Just $ \args -> censorP $ do
+          setDesc $ cmdInfo^.infoDesc
+          runParser (cmdInfo^.infoParser) args
   _ -> Nothing
   where
     parsed
@@ -107,36 +115,58 @@ optMatches rdr arg = case rdr of
       | otherwise = Nothing
 
 tryP :: Maybe a -> P a
-tryP = maybe ParseError return
+tryP = maybe empty return
+
+runP :: P a -> (Either String a, ParserDesc)
+runP = runWriter . runErrorT
+
+setDesc :: ParserDesc -> P ()
+setDesc = lift . tell
+
+censorP :: P a -> P a
+censorP p = case runWriter (runErrorT p) of
+  (Left e, desc) -> setDesc desc >> throwError e
+  (Right x, _) -> return x
 
 stepParser :: Parser a -> String -> [String] -> P (Parser a, [String])
-stepParser (NilP _) _ _ = ParseError
+stepParser (NilP _) _ _ = empty
 stepParser (ConsP opt p) arg args
   | Just matcher <- optMatches (opt^.optMain) arg
   = do (r, args') <- matcher args
-       liftOpt' <- tryP $ getL optCont opt r
+       liftOpt' <- getL optCont opt r
        return (liftOpt' <*> p, args')
   | otherwise
   = do (p', args') <- stepParser p arg args
        return (ConsP opt p', args')
 
 -- | Apply a 'Parser' to a command line, and return a result and leftover
--- arguments.  This function returns 'Nothing' if any parsing error occurs, or
+-- arguments.  This function returns an error if any parsing error occurs, or
 -- if any options are missing and don't have a default value.
-runParser :: Parser a -> [String] -> Maybe (a, [String])
+runParser :: Parser a -> [String] -> P (a, [String])
 runParser p args = case args of
   [] -> result
-  (arg : argt) -> case stepParser p arg argt of
-    ParseError -> result
-    ParseResult (p', args') -> runParser p' args'
+  (arg : argt) -> do
+    x <- catchError (Right <$> stepParser p arg argt)
+                    (return . Left)
+    case x of
+      Left e -> result <|> throwError e
+      Right (p', args') -> runParser p' args'
   where
     result = (,) <$> evalParser p <*> pure args
 
--- | The default value of a 'Parser'.  This function returns 'Nothing' if any
--- of the options don't have a default value.
-evalParser :: Parser a -> Maybe a
+runParserFully :: Parser a -> [String] -> P a
+runParserFully p args = do
+  (r, args') <- runParser p args
+  case args' of
+    (arg : _) -> throwError $ "Unrecognized option or argument: " ++ arg
+    _ -> return r
+
+
+-- | The default value of a 'Parser'.  This function returns an error if any of
+-- the options don't have a default value.
+evalParser :: Parser a -> P a
 evalParser (NilP r) = pure r
-evalParser (ConsP opt p) = opt^.optDefault <*> evalParser p
+evalParser (ConsP opt p) = tryP (opt^.optDefault) <*> evalParser p
 
 -- | Map a polymorphic function over all the options of a parser, and collect
 -- the results.
