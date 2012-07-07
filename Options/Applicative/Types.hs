@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs, DeriveFunctor #-}
 module Options.Applicative.Types (
   ParserInfo(..),
+  ParserDesc(..),
 
   infoParser,
   infoFullDesc,
@@ -24,19 +25,25 @@ module Options.Applicative.Types (
   ) where
 
 import Control.Applicative
+import Control.Category
 import Control.Monad
 import Data.Lens.Common
+import Prelude hiding ((.), id)
 
 -- | A full description for a runnable 'Parser' for a program.
 data ParserInfo a = ParserInfo
   { _infoParser :: Parser a            -- ^ the option parser for the program
-  , _infoFullDesc :: Bool              -- ^ whether the help text should contain full documentation
-  , _infoProgDesc :: String            -- ^ brief parser description
-  , _infoHeader :: String              -- ^ header of the full parser description
-  , _infoFooter :: String              -- ^ footer of the full parser description
-  , _infoFailureCode :: Int            -- ^ exit code for a parser failure
+  , _infoDesc :: ParserDesc            -- ^ description of the parser
   } deriving Functor
 
+-- | Attributes that can be associated to a 'Parser'.
+data ParserDesc = ParserDesc
+  { _descFull:: Bool              -- ^ whether the help text should contain full documentation
+  , _descProg:: String            -- ^ brief parser description
+  , _descHeader :: String         -- ^ header of the full parser description
+  , _descFooter :: String         -- ^ footer of the full parser description
+  , _descFailureCode :: Int       -- ^ exit code for a parser failure
+  }
 
 data OptName = OptShort !Char
              | OptLong !String
@@ -112,20 +119,38 @@ optMetaVar = lens _optMetaVar $ \x o -> o { _optMetaVar = x }
 optCont :: Lens (Option r a) (r -> Maybe (Parser a))
 optCont = lens _optCont $ \x o -> o { _optCont = x }
 
+descFull :: Lens ParserDesc Bool
+descFull = lens _descFull $ \x p -> p { _descFull = x }
+
+descProg :: Lens ParserDesc String
+descProg = lens _descProg $ \x p -> p { _descProg = x }
+
+descHeader :: Lens ParserDesc String
+descHeader = lens _descHeader $ \x p -> p { _descHeader = x }
+
+descFooter :: Lens ParserDesc String
+descFooter = lens _descFooter $ \x p -> p { _descFooter = x }
+
+descFailureCode :: Lens ParserDesc Int
+descFailureCode = lens _descFailureCode $ \x p -> p { _descFailureCode = x }
+
 infoParser :: Lens (ParserInfo a) (Parser a)
 infoParser = lens _infoParser $ \x p -> p { _infoParser = x }
 
+infoDesc :: Lens (ParserInfo a) ParserDesc
+infoDesc = lens _infoDesc $ \x p -> p { _infoDesc = x }
+
 infoFullDesc :: Lens (ParserInfo a) Bool
-infoFullDesc = lens _infoFullDesc $ \x p -> p { _infoFullDesc = x }
+infoFullDesc = descFull . infoDesc
 
 infoProgDesc :: Lens (ParserInfo a) String
-infoProgDesc = lens _infoProgDesc $ \x p -> p { _infoProgDesc = x }
+infoProgDesc = descProg . infoDesc
 
 infoHeader :: Lens (ParserInfo a) String
-infoHeader = lens _infoHeader $ \x p -> p { _infoHeader = x }
+infoHeader = descHeader . infoDesc
 
 infoFooter :: Lens (ParserInfo a) String
-infoFooter = lens _infoFooter $ \x p -> p { _infoFooter = x }
+infoFooter = descFooter . infoDesc
 
 infoFailureCode :: Lens (ParserInfo a) Int
-infoFailureCode = lens _infoFailureCode $ \x p -> p { _infoFailureCode = x }
+infoFailureCode = descFailureCode . infoDesc

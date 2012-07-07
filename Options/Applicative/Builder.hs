@@ -296,11 +296,14 @@ info parser m = applyInfoMod m base
   where
     base = ParserInfo
       { _infoParser = parser
-      , _infoFullDesc = True
-      , _infoHeader = ""
-      , _infoProgDesc = ""
-      , _infoFooter = ""
-      , _infoFailureCode = 1 }
+      , _infoDesc = ParserDesc
+        { _descFull = True
+        , _descProg = ""
+        , _descHeader = ""
+        , _descFooter = ""
+        , _descFailureCode = 1
+        }
+      }
 
 -- | Trivial option modifier.
 idm :: Category hom => hom a a
