@@ -171,7 +171,7 @@ hide = optionMod $ optShow^=False
 multi :: Mod f r a [a]
 multi = optionMod f
   where
-    f opt = mkOptGroup []
+    f opt = optCont ^%= (fmap (fmap reverse) . ) $ mkOptGroup []
       where
         mkOptGroup xs = opt
           { _optDefault = Just xs

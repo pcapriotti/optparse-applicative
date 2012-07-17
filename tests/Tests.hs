@@ -34,5 +34,16 @@ case_modes = checkHelpText "commands" Commands.opts ["--help"]
 case_cabal :: Assertion
 case_cabal = checkHelpText "cabal" Cabal.pinfo ["configure", "--help"]
 
+case_args :: Assertion
+case_args = do
+  let result = execParserPure Commands.opts ["hello", "foo", "bar"]
+  case result of
+    Left _ ->
+      assertFailure "unexpected parse error"
+    Right (Commands.Hello args) ->
+      ["foo", "bar"] @=? args
+    Right Commands.Goodbye ->
+      assertFailure "unexpected result: Goodbye"
+
 main :: IO ()
 main = $(defaultMainGenerator)

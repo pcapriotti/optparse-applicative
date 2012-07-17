@@ -1,14 +1,15 @@
 module Examples.Commands where
 
+import Data.List
 import Options.Applicative
 
 data Sample
-  = Hello String
+  = Hello [String]
   | Goodbye
   deriving Show
 
 hello :: Parser Sample
-hello = Hello <$> argument str (metavar "TARGET")
+hello = Hello <$> arguments str (metavar "TARGET...")
 
 sample :: Parser Sample
 sample = subparser
@@ -21,7 +22,7 @@ sample = subparser
        )
 
 run :: Sample -> IO ()
-run (Hello target) = putStrLn $ "Hello, " ++ target ++ "!"
+run (Hello targets) = putStrLn $ "Hello, " ++ intercalate ", " targets ++ "!"
 run Goodbye = putStrLn "Goodbye."
 
 opts :: ParserInfo Sample
