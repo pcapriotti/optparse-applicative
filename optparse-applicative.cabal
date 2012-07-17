@@ -90,7 +90,7 @@ test-suite tests
   main-is:             Tests.hs
   build-depends:       base == 4.*,
                        HUnit == 1.2.*,
-                       optparse-applicative == 0.1.*,
+                       optparse-applicative == 0.2.*,
                        test-framework == 0.6.*,
                        test-framework-hunit == 0.2.*,
                        test-framework-th-prime == 0.0.*
