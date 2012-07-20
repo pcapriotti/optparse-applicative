@@ -264,6 +264,33 @@ need to import the `Category` module and hide the `(.)` operator from the
 See the haddock documentation for `Options.Applicative.Builder` for a full list
 of builders and modifiers.
 
+# Arrow interface
+
+It is also possible to use the [Arrow syntax][arrows] to combine basic parsers.
+
+This can be particularly useful when the structure holding parse results is
+deeply nested, or when the order of fields differs from the order in which the
+parsers should be applied.
+
+Using functions from the `Options.Applicative.Arrows` module, one can write,
+for example:
+
+```haskell
+data Options = Options
+  { optArgs :: [String]
+  , optVerbose :: Bool }
+
+opts :: Parser Options
+opts = runA $ proc () -> do
+  verbosity <- asA (option (short 'v' & value 0)) -< ()
+  let verbose = verbosity > 0
+  args <- asA (arguments str idm) -< ()
+  returnA -< Options args verbose
+```
+
+where parsers can be converted to arrows using `asA`, and the resulting
+composed arrow is converted back to a `Parser` with `runA`.
+
 ## How it works
 
 A `Parser a` is essentially a heterogeneous list of `Option`s, implemented with
@@ -279,3 +306,4 @@ simplified implementation.
  [status-png]: https://secure.travis-ci.org/pcapriotti/optparse-applicative.png?branch=master
  [status]: http://travis-ci.org/pcapriotti/optparse-applicative?branch=master
  [blog]: http://paolocapriotti.com/blog/2012/04/27/applicative-option-parser/
+ [arrows]: http://www.haskell.org/arrows/syntax.html

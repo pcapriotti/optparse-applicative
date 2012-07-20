@@ -18,7 +18,7 @@
 -- >
 -- > opts :: Parser Options
 -- > opts = runA $ proc () -> do
--- >   verbose <- asA (switch idm) -< ()
+-- >   verbose <- asA (switch (short 'v')) -< ()
 -- >   args <- asA (arguments str idm) -< ()
 -- >   returnA -< Options args verbose
 --
