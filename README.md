@@ -180,7 +180,7 @@ Simple boolean flags can be specified using the `switch` builder, like so:
 ```haskell
 switch
 ( long "keep-tmp-files"
-, help "Retain all intermediate temporary files" )
+& help "Retain all intermediate temporary files" )
 ```
 
 ### Arguments
