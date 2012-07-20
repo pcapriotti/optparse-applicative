@@ -1,3 +1,9 @@
+## Version 0.1.1 (21 Jul 2012)
+
+- New arrow interface
+- Fixed bugs
+      * \#7 - "arguments" reads positional arguments in reverse
+
 ## Version 0.1.0 (07 Jul 2012)
 
 - Improved error reporting internals
@@ -9,4 +15,3 @@
 ## Version 0.0.1 (09 Jun 2012)
 
 - Initial release.
-
