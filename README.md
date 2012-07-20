@@ -288,8 +288,11 @@ opts = runA $ proc () -> do
   returnA -< Options args verbose
 ```
 
-where parsers can be converted to arrows using `asA`, and the resulting
-composed arrow is converted back to a `Parser` with `runA`.
+where parsers are converted to arrows using `asA`, and the resulting composed
+arrow is converted back to a `Parser` with `runA`.
+
+See `tests/Examples/Cabal.hs` for a slightly more elaborate example using the
+arrow syntax for defining parsers.
 
 ## How it works
 
