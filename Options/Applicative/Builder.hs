@@ -35,7 +35,8 @@ module Options.Applicative.Builder (
   value,
   metavar,
   reader,
-  hide,
+  hidden,
+  internal,
   multi,
   transform,
   command,
@@ -163,9 +164,13 @@ reader = fieldMod . setL optReader
 metavar :: String -> Mod f r a a
 metavar = optionMod . setL optMetaVar
 
--- | Hide this option.
-hide :: Mod f r a a
-hide = optionMod $ optShow^=False
+-- | Hide this option from the brief description.
+hidden :: Mod f r a a
+hidden = optionMod $ optVisibility ^%= min Hidden
+
+-- | Hide this option from the help text
+internal :: Mod f r a a
+internal = optionMod $ optVisibility ^= Internal
 
 -- | Create a multi-valued option.
 multi :: Mod f r a [a]
@@ -203,7 +208,7 @@ baseOpts :: OptReader a -> Option a a
 baseOpts opt = Option
   { _optMain = opt
   , _optMetaVar = ""
-  , _optShow = True
+  , _optVisibility = Visible
   , _optCont = return . pure
   , _optHelp = ""
   , _optDefault = Nothing }

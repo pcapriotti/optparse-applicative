@@ -22,12 +22,13 @@ module Options.Applicative.Types (
   Option(..),
   OptName(..),
   OptReader(..),
+  OptVisibility(..),
   Parser(..),
   ParserFailure(..),
 
   optMain,
   optDefault,
-  optShow,
+  optVisibility,
   optHelp,
   optMetaVar,
   optCont
@@ -73,11 +74,18 @@ data OptName = OptShort !Char
              | OptLong !String
   deriving (Eq, Ord)
 
+-- | Visibility of an option in the help text.
+data OptVisibility
+  = Internal          -- ^ does not appear in the help text at all
+  | Hidden            -- ^ only visible in the full description
+  | Visible           -- ^ visible both in the full and brief descriptions
+  deriving (Eq, Ord)
+
 -- | Specification for an individual parser option.
 data Option r a = Option
   { _optMain :: OptReader r               -- ^ reader for this option
   , _optDefault :: Maybe a                -- ^ default value
-  , _optShow :: Bool                      -- ^ whether this flag is shown is the brief description
+  , _optVisibility :: OptVisibility       -- ^ whether this flag is shown is the brief description
   , _optHelp :: String                    -- ^ help text for this option
   , _optMetaVar :: String                 -- ^ metavariable for this option
   , _optCont :: r -> P (Parser a) }       -- ^ option continuation
@@ -128,8 +136,8 @@ optMain = lens _optMain $ \x o -> o { _optMain = x }
 optDefault :: Lens (Option r a) (Maybe a)
 optDefault = lens _optDefault $ \x o -> o { _optDefault = x }
 
-optShow :: Lens (Option r a) Bool
-optShow = lens _optShow $ \x o -> o { _optShow = x }
+optVisibility :: Lens (Option r a) OptVisibility
+optVisibility = lens _optVisibility $ \x o -> o { _optVisibility = x }
 
 optHelp :: Lens (Option r a) String
 optHelp = lens _optHelp $ \x o -> o { _optHelp = x }

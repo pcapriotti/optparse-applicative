@@ -30,8 +30,13 @@ optDesc style opt =
       mv = opt^.optMetaVar
       descs = map showOption (sort ns)
       desc' = intercalate (descSep style) descs <+> mv
+      show_opt
+        | opt^.optVisibility == Hidden
+        = descHidden style
+        | otherwise
+        = opt^.optVisibility == Visible
       render text
-        | not (opt^.optShow) && not (descHidden style)
+        | not show_opt
         = ""
         | null text || not (descSurround style)
         = text

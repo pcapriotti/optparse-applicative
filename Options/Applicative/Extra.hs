@@ -27,7 +27,7 @@ helper = nullOption
        & short 'h'
        & help "Show this help text"
        & value id
-       & hide )
+       & hidden )
 
 -- | Run a program description.
 --
