@@ -23,6 +23,7 @@ module Options.Applicative.Builder (
   argument,
   arguments,
   flag,
+  flag',
   switch,
   nullOption,
   strOption,
@@ -239,11 +240,25 @@ flag :: a                         -- ^ default value
      -> a                         -- ^ active value
      -> Mod FlagFields a a b      -- ^ option modifier
      -> Parser b
-flag defv actv (Mod f g) = liftOpt . g . set_default . baseOpts $ rdr
+flag defv actv m = flag' actv (m . value defv)
+
+-- | Builder for a flag parser without a default value.
+--
+-- Same as 'flag', but with no default value. In particular, this flag will
+-- never parse successfully by itself.
+--
+-- It still makes sense to use it as part of a composite parser. For example
+--
+-- > length <$> multiP (flag' () (short 't'))
+--
+-- is a parser that counts the number of "-t" arguments on the command line.
+flag' :: a                         -- ^ active value
+     -> Mod FlagFields a a b      -- ^ option modifier
+     -> Parser b
+flag' actv (Mod f g) = liftOpt . g . baseOpts $ rdr
   where
     rdr = let fields = f (FlagFields [])
           in FlagReader (fields^.flagNames) actv
-    set_default = optDefault ^= Just defv
 
 -- | Builder for a boolean flag.
 --
