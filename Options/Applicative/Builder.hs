@@ -46,7 +46,7 @@ module Options.Applicative.Builder (
 
   -- * Readers
   --
-  -- | A collection of basic Optioneaders.
+  -- | A collection of basic 'Option' readers.
   auto,
   str,
   disabled,
@@ -130,17 +130,17 @@ instance Category (Mod f) where
 
 -- readers --
 
--- | Optioneader based on the 'Read' type class.
+-- | 'Option' reader based on the 'Read' type class.
 auto :: Read a => String -> Maybe a
 auto arg = case reads arg of
   [(r, "")] -> Just r
   _         -> Nothing
 
--- | String Optioneader.
+-- | String 'Option' reader.
 str :: String -> Maybe String
 str = Just
 
--- | Null Optioneader. All arguments will fail validation.
+-- | Null 'Option' reader. All arguments will fail validation.
 disabled :: String -> Maybe a
 disabled = const Nothing
 
@@ -162,7 +162,7 @@ value = optionMod . setL propDefault . Just
 help :: String -> Mod f a a
 help = optionMod . setL propHelp
 
--- | Specify the Optioneader.
+-- | Specify the 'Option' reader.
 reader :: (String -> Maybe a) -> Mod OptionFields a a
 reader = fieldMod . setL optReader
 
