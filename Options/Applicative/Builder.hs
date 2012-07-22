@@ -239,7 +239,7 @@ arguments p m = args
     arg' = argument p' m
     arg = argument p m
 
-    ddash = argument (guard . (== "--")) idm
+    ddash = argument (guard . (== "--")) internal
 
 -- | Builder for a flag parser.
 --
