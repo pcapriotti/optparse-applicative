@@ -1,4 +1,4 @@
-## Version 0.2.2 (unreleased)
+## Version 0.2.2 (23 Jul 2012)
 
 - Parser is now an instance of Alternative. This makes it possible to build
 certain complex parsers that were not definable before. See
@@ -15,10 +15,10 @@ of `Alternative` combinators, they do have valid use cases.
 - Added new `internal` modifier for options. An internal option is completely
 invisible in the help text.
 
-- Added a new `customExecParser` function, which takes a `ParserPrefs`
-parameter. At the moment, `ParserPrefs` can only be used to control how
-many-valued option metavars are displayed in the help text. Setting its
-`multiSuffix` field to e.g. `...` will result in an `arguments` parser
+- Added a new `customExecParser` function, which takes an additional
+`ParserPrefs` parameter. At the moment, `ParserPrefs` can only be used to
+control how many-valued option metavars are displayed in the help text. Setting
+its `multiSuffix` field to e.g. `...` will result in an `arguments` parser
 description like `[METAVAR]...`.
 
 - Fixed bugs
