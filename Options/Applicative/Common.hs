@@ -171,7 +171,7 @@ runParserFully p args = do
 -- the options don't have a default value.
 evalParser :: Parser a -> P a
 evalParser (NilP r) = tryP r
-evalParser (OptP opt) = tryP (opt ^. optDefault)
+evalParser (OptP _) = empty
 evalParser (MultP p1 p2) = evalParser p1 <*> evalParser p2
 evalParser (AltP p1 p2) = evalParser p1 <|> evalParser p2
 evalParser (BindP p k) = evalParser p >>= evalParser . k
@@ -192,8 +192,7 @@ mapParser = go False False
        -> (forall x . OptHelpInfo -> Option x -> b)
        -> Parser a -> [b]
     go _ _ _ (NilP _) = []
-    go m d f (OptP opt) = [f (OptHelpInfo m d') opt]
-      where d' = d || isJust (opt^.optDefault)
+    go m d f (OptP opt) = [f (OptHelpInfo m d) opt]
     go m d f (MultP p1 p2) = go m d f p1 ++ go m d f p2
     go m d f (AltP p1 p2) = go m d' f p1 ++ go m d' f p2
       where d' = d || has_default p1 || has_default p2

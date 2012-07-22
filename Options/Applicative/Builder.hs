@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFunctor, EmptyDataDecls #-}
 module Options.Applicative.Builder (
   -- * Parser builders
   --
@@ -39,7 +39,6 @@ module Options.Applicative.Builder (
   reader,
   hidden,
   internal,
-  transform,
   command,
   idm,
   (&),
@@ -74,15 +73,13 @@ module Options.Applicative.Builder (
   ) where
 
 import Control.Applicative
-import Control.Category
 import Control.Monad
-import Data.Functor.Identity
 import Data.Lens.Common
+import Data.Maybe
+import Data.Monoid
 
 import Options.Applicative.Common
 import Options.Applicative.Types
-
-import Prelude hiding (id, (.))
 
 data OptionFields a = OptionFields
   { _optNames :: [OptName]
@@ -96,6 +93,9 @@ data FlagFields a = FlagFields
 
 data CommandFields a = CommandFields
   { _cmdCommands :: [(String, ParserInfo a)] }
+  deriving Functor
+
+data ArgumentFields a
   deriving Functor
 
 optNames :: Lens (OptionFields a) [OptName]
@@ -121,17 +121,20 @@ instance HasName FlagFields where
 
 -- mod --
 
-data Mod f a b = Mod (f a -> f b) (OptProperties a -> OptProperties b)
+data Mod f a = Mod (f a -> f a)
+                   (Maybe a)
+                   (OptProperties -> OptProperties)
 
-optionMod :: (OptProperties a -> OptProperties a) -> Mod f a a
-optionMod = Mod id
+optionMod :: (OptProperties -> OptProperties) -> Mod f a
+optionMod = Mod id Nothing
 
-fieldMod :: (f a -> f a) -> Mod f a a
-fieldMod f = Mod f id
+fieldMod :: (f a -> f a) -> Mod f a
+fieldMod f = Mod f Nothing id
 
-instance Category (Mod f) where
-  id = Mod id id
-  Mod f1 g1 . Mod f2 g2 = Mod (f1 . f2) (g1 . g2)
+instance Monoid (Mod f a) where
+  mempty = Mod id Nothing id
+  Mod f1 d1 g1 `mappend` Mod f2 d2 g2
+    = Mod (f2 . f1) (d2 `mplus` d1) (g2 . g1)
 
 -- readers --
 
@@ -152,75 +155,65 @@ disabled = const Nothing
 -- modifiers --
 
 -- | Specify a short name for an option.
-short :: HasName f => Char -> Mod f a a
+short :: HasName f => Char -> Mod f a
 short = fieldMod . name . OptShort
 
 -- | Specify a long name for an option.
-long :: HasName f => String -> Mod f a a
+long :: HasName f => String -> Mod f a
 long = fieldMod . name . OptLong
 
--- | Specify a default value for an option.
-value :: a -> Mod f a a
-value = optionMod . setL propDefault . Just
+---- | Specify a default value for an option.
+value :: a -> Mod f a
+value x = Mod id (Just x) id
 
 -- | Specify the help text for an option.
-help :: String -> Mod f a a
+help :: String -> Mod f a
 help = optionMod . setL propHelp
 
 -- | Specify the 'Option' reader.
-reader :: (String -> Maybe a) -> Mod OptionFields a a
+reader :: (String -> Maybe a) -> Mod OptionFields a
 reader = fieldMod . setL optReader
 
 -- | Specify the metavariable.
-metavar :: String -> Mod f a a
+metavar :: String -> Mod f a
 metavar = optionMod . setL propMetaVar
 
 -- | Hide this option from the brief description.
-hidden :: Mod f a a
+hidden :: Mod f a
 hidden = optionMod $ propVisibility ^%= min Hidden
 
 -- | Hide this option from the help text
-internal :: Mod f a a
+internal :: Mod f a
 internal = optionMod $ propVisibility ^= Internal
 
--- | Apply a transformation to the return value of this option.
---
--- This can be used, for example, to provide a default value for
--- a required option, like:
---
--- >strOption
--- >( transform Just
--- >& value Nothing )
-transform :: Functor f => (a -> b) -> Mod f a b
-transform f = Mod (fmap f) (fmap f)
-
 -- | Add a command to a subparser option.
-command :: String -> ParserInfo a -> Mod CommandFields a a
+command :: String -> ParserInfo a -> Mod CommandFields a
 command cmd pinfo = fieldMod $ cmdCommands^%=((cmd, pinfo):)
 
 -- parsers --
 
 -- | Base default properties.
-baseProps :: OptProperties a
+baseProps :: OptProperties
 baseProps = OptProperties
   { _propMetaVar = ""
   , _propVisibility = Visible
-  , _propHelp = ""
-  , _propDefault = Nothing }
+  , _propHelp = "" }
+
+mkOption :: Maybe a -> Option a -> Parser a
+mkOption def opt = liftOpt opt <|> maybe empty pure def
 
 -- | Builder for a command parser. The 'command' modifier can be used to
 -- specify individual commands.
-subparser :: Mod CommandFields a b -> Parser b
-subparser m = liftOpt $ Option rdr (g baseProps)
+subparser :: Mod CommandFields a -> Parser a
+subparser m = mkOption def $ Option rdr (g baseProps)
   where
-    Mod f g = m . metavar "COMMAND"
+    Mod f def g = m & metavar "COMMAND"
     CommandFields cmds = f (CommandFields [])
     rdr = CmdReader (map fst cmds) (`lookup` cmds)
 
 -- | Builder for an argument parser.
-argument :: (String -> Maybe a) -> Mod Identity a b -> Parser b
-argument p (Mod f g) = liftOpt $ Option (ArgReader p') (g baseProps)
-  where p' s = fmap (runIdentity . f . Identity) (p s)
+argument :: (String -> Maybe a) -> Mod ArgumentFields a -> Parser a
+argument p (Mod _ def g) = mkOption def $ Option (ArgReader p) (g baseProps)
 
 -- | Builder for an argument list parser. All arguments are collected and
 -- returned as a list.
@@ -230,19 +223,21 @@ argument p (Mod f g) = liftOpt $ Option (ArgReader p') (g baseProps)
 -- This parser accepts a special argument: @--@. When a @--@ is found on the
 -- command line, all following arguments are included in the result, even if
 -- they start with @'-'@.
-arguments :: (String -> Maybe a) -> Mod Identity a b -> Parser [b]
+arguments :: (String -> Maybe a) -> Mod ArgumentFields [a] -> Parser [a]
 arguments p m = args
   where
+    Mod _ def g = m
+
     p' ('-':_) = Nothing
     p' s = p s
 
     args1 = ((Just <$> arg') <|> (ddash *> pure Nothing)) `BindP` \x -> case x of
       Nothing -> many arg
       Just a -> fmap (a:) args
-    args = args1 <|> pure []
+    args = args1 <|> pure (fromMaybe [] def)
 
-    arg' = argument p' m
-    arg = argument p m
+    arg' = argument p' (optionMod g)
+    arg = argument p (optionMod g)
 
     ddash = argument (guard . (== "--")) internal
 
@@ -252,9 +247,9 @@ arguments p m = args
 -- encountered. For a simple boolean value, use `switch` instead.
 flag :: a                         -- ^ default value
      -> a                         -- ^ active value
-     -> Mod FlagFields a b        -- ^ option modifier
-     -> Parser b
-flag defv actv m = flag' actv (m . value defv)
+     -> Mod FlagFields a          -- ^ option modifier
+     -> Parser a
+flag defv actv m = flag' actv m <|> pure defv
 
 -- | Builder for a flag parser without a default value.
 --
@@ -267,9 +262,9 @@ flag defv actv m = flag' actv (m . value defv)
 --
 -- is a parser that counts the number of "-t" arguments on the command line.
 flag' :: a                         -- ^ active value
-      -> Mod FlagFields a b        -- ^ option modifier
-      -> Parser b
-flag' actv (Mod f g) = liftOpt $ Option rdr (g baseProps)
+      -> Mod FlagFields a          -- ^ option modifier
+      -> Parser a
+flag' actv (Mod f def g) = mkOption def $ Option rdr (g baseProps)
   where
     rdr = let FlagFields ns actv' = f (FlagFields [] actv)
           in FlagReader ns actv'
@@ -277,55 +272,55 @@ flag' actv (Mod f g) = liftOpt $ Option rdr (g baseProps)
 -- | Builder for a boolean flag.
 --
 -- > switch = flag False True
-switch :: Mod FlagFields Bool a -> Parser a
+switch :: Mod FlagFields Bool -> Parser Bool
 switch = flag False True
 
 -- | Builder for an option with a null reader. A non-trivial reader can be
 -- added using the 'reader' modifier.
-nullOption :: Mod OptionFields a b -> Parser b
-nullOption (Mod f g) = liftOpt $ Option rdr (g baseProps)
+nullOption :: Mod OptionFields a -> Parser a
+nullOption (Mod f def g) = mkOption def $ Option rdr (g baseProps)
   where
     rdr = let fields = f (OptionFields [] disabled)
           in OptReader (fields^.optNames) (fields^.optReader)
 
 -- | Builder for an option taking a 'String' argument.
-strOption :: Mod OptionFields String a -> Parser a
-strOption m = nullOption $ m . reader str
+strOption :: Mod OptionFields String -> Parser String
+strOption m = nullOption $ m & reader str
 
 -- | Builder for an option using the 'auto' reader.
-option :: Read a => Mod OptionFields a b -> Parser b
-option m = nullOption $ m . reader auto
+option :: Read a => Mod OptionFields a -> Parser a
+option m = nullOption $ m & reader auto
 
 -- | Modifier for 'ParserInfo'.
-newtype InfoMod a b = InfoMod
-  { applyInfoMod :: ParserInfo a -> ParserInfo b }
+newtype InfoMod a = InfoMod
+  { applyInfoMod :: ParserInfo a -> ParserInfo a }
 
-instance Category InfoMod where
-  id = InfoMod id
-  m1 . m2 = InfoMod $ applyInfoMod m1 . applyInfoMod m2
+instance Monoid (InfoMod a) where
+  mempty = InfoMod id
+  mappend m1 m2 = InfoMod $ applyInfoMod m2 . applyInfoMod m1
 
 -- | Specify a full description for this parser.
-fullDesc :: InfoMod a a
+fullDesc :: InfoMod a
 fullDesc = InfoMod $ infoFullDesc^=True
 
 -- | Specify a header for this parser.
-header :: String -> InfoMod a a
+header :: String -> InfoMod a
 header s = InfoMod $ infoHeader^=s
 
 -- | Specify a footer for this parser.
-footer :: String -> InfoMod a a
+footer :: String -> InfoMod a
 footer s = InfoMod $ infoFooter^=s
 
 -- | Specify a short program description.
-progDesc :: String -> InfoMod a a
+progDesc :: String -> InfoMod a
 progDesc s = InfoMod $ infoProgDesc^=s
 
 -- | Specify an exit code if a parse error occurs.
-failureCode :: Int -> InfoMod a a
+failureCode :: Int -> InfoMod a
 failureCode n = InfoMod $ infoFailureCode^=n
 
 -- | Create a 'ParserInfo' given a 'Parser' and a modifier.
-info :: Parser a -> InfoMod a a -> ParserInfo a
+info :: Parser a -> InfoMod a -> ParserInfo a
 info parser m = applyInfoMod m base
   where
     base = ParserInfo
@@ -339,17 +334,12 @@ info parser m = applyInfoMod m base
         }
       }
 
-newtype PrefsModC a b = PrefsMod
-  { applyPrefsMod :: a -> b }
-  -- this newtype is just to define a Category instance, for consistency with
-  -- the other modifiers; we're only going to use it with a = b = ParserPrefs
+newtype PrefsMod = PrefsMod
+  { applyPrefsMod :: ParserPrefs -> ParserPrefs }
 
--- | Modifier for 'ParserPrefs'.
-type PrefsMod = PrefsModC ParserPrefs ParserPrefs
-
-instance Category PrefsModC where
-  id = PrefsMod id
-  m1 . m2 = PrefsMod $ applyPrefsMod m1 . applyPrefsMod m2
+instance Monoid PrefsMod where
+  mempty = PrefsMod id
+  mappend m1 m2 = PrefsMod $ applyPrefsMod m2 . applyPrefsMod m1
 
 multiSuffix :: String -> PrefsMod
 multiSuffix s = PrefsMod $ prefMultiSuffix ^= s
@@ -360,10 +350,10 @@ prefs m = applyPrefsMod m base
     base = ParserPrefs
       { _prefMultiSuffix = "" }
 
--- | Trivial option modifier.
-idm :: Category hom => hom a a
-idm = id
+-- convenience shortcuts
 
--- | Compose modifiers.
-(&) :: Category hom => hom a b -> hom b c -> hom a c
-(&) = flip (.)
+idm :: Monoid m => m
+idm = mempty
+
+(&) :: Monoid m => m -> m -> m
+(&) = mappend

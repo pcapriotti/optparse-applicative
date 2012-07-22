@@ -30,11 +30,9 @@ module Options.Applicative.Types (
   OptHelpInfo(..),
 
   optMain,
-  optDefault,
   optVisibility,
   optHelp,
   optMetaVar,
-  propDefault,
   propVisibility,
   propHelp,
   propMetaVar,
@@ -94,19 +92,17 @@ data OptVisibility
   deriving (Eq, Ord)
 
 -- | Specification for an individual parser option.
-data OptProperties a = OptProperties
-  { _propDefault :: Maybe a                -- ^ default value
-  , _propVisibility :: OptVisibility       -- ^ whether this flag is shown is the brief description
+data OptProperties = OptProperties
+  { _propVisibility :: OptVisibility       -- ^ whether this flag is shown is the brief description
   , _propHelp :: String                    -- ^ help text for this option
   , _propMetaVar :: String                 -- ^ metavariable for this option
-  } deriving Functor
+  }
 
 -- | A single option of a parser.
 data Option a = Option
   { _optMain :: OptReader a               -- ^ reader for this option
-  , _optProps :: OptProperties a          -- ^ properties of this option
-  }
-  deriving Functor
+  , _optProps :: OptProperties            -- ^ properties of this option
+  } deriving Functor
 
 -- | An 'OptReader' defines whether an option matches an command line argument.
 data OptReader a
@@ -162,23 +158,17 @@ data OptHelpInfo = OptHelpInfo
 optMain :: Lens (Option a) (OptReader a)
 optMain = lens _optMain $ \x o -> o { _optMain = x }
 
-optProps :: Lens (Option a) (OptProperties a)
+optProps :: Lens (Option a) OptProperties
 optProps = lens _optProps $ \x o -> o { _optProps = x }
 
-propDefault :: Lens (OptProperties a) (Maybe a)
-propDefault = lens _propDefault $ \x o -> o { _propDefault = x }
-
-propVisibility :: Lens (OptProperties a) OptVisibility
+propVisibility :: Lens OptProperties OptVisibility
 propVisibility = lens _propVisibility $ \x o -> o { _propVisibility = x }
 
-propHelp :: Lens (OptProperties a) String
+propHelp :: Lens OptProperties String
 propHelp = lens _propHelp $ \x o -> o { _propHelp = x }
 
-propMetaVar :: Lens (OptProperties a) String
+propMetaVar :: Lens OptProperties String
 propMetaVar = lens _propMetaVar $ \x o -> o { _propMetaVar = x }
-
-optDefault :: Lens (Option a) (Maybe a)
-optDefault = propDefault . optProps
 
 optVisibility :: Lens (Option a) OptVisibility
 optVisibility = propVisibility . optProps
