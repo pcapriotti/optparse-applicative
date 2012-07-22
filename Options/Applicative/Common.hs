@@ -62,7 +62,7 @@ optionNames _ = []
 
 -- | Create a parser composed of a single option.
 liftOpt :: Option r a -> Parser a
-liftOpt opt = ConsP (fmap const opt) (pure ())
+liftOpt = OptP
 
 uncons :: [a] -> Maybe (a, [a])
 uncons [] = Nothing
@@ -126,14 +126,17 @@ setContext name = lift . tell . Context name
 
 stepParser :: Parser a -> String -> [String] -> P (Parser a, [String])
 stepParser (NilP _) _ _ = empty
-stepParser (ConsP opt p) arg args
-  | Just matcher <- optMatches (opt^.optMain) arg
+stepParser (OptP opt) arg args
+  | Just matcher <- optMatches (opt ^. optMain) arg
   = do (r, args') <- matcher args
        liftOpt' <- getL optCont opt r
-       return (liftOpt' <*> p, args')
-  | otherwise
-  = do (p', args') <- stepParser p arg args
-       return (ConsP opt p', args')
+       return (liftOpt', args')
+  | otherwise = empty
+stepParser (MultP p1 p2) arg args = msum
+  [ do (p1', args') <- stepParser p1 arg args
+       return (p1' <*> p2, args')
+  , do (p2', args') <- stepParser p2 arg args
+       return (p1 <*> p2', args') ]
 
 -- | Apply a 'Parser' to a command line, and return a result and leftover
 -- arguments.  This function returns an error if any parsing error occurs, or
@@ -160,7 +163,8 @@ runParserFully p args = do
 -- the options don't have a default value.
 evalParser :: Parser a -> P a
 evalParser (NilP r) = pure r
-evalParser (ConsP opt p) = tryP (opt^.optDefault) <*> evalParser p
+evalParser (OptP opt) = tryP (opt ^. optDefault)
+evalParser (MultP p1 p2) = evalParser p1 <*> evalParser p2
 
 -- | Map a polymorphic function over all the options of a parser, and collect
 -- the results.
@@ -168,4 +172,5 @@ mapParser :: (forall r x . Option r x -> b)
           -> Parser a
           -> [b]
 mapParser _ (NilP _) = []
-mapParser f (ConsP opt p) = f opt : mapParser f p
+mapParser f (OptP opt) = [f opt]
+mapParser f (MultP p1 p2) = mapParser f p1 ++ mapParser f p2

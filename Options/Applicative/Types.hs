@@ -102,19 +102,21 @@ data OptReader a
 -- | A @Parser a@ is an option parser returning a value of type 'a'.
 data Parser a where
   NilP :: a -> Parser a
-  ConsP :: Option r (a -> b)
+  OptP :: Option r a -> Parser a
+  MultP :: Parser (a -> b)
         -> Parser a
         -> Parser b
 
 instance Functor Parser where
   fmap f (NilP x) = NilP (f x)
-  fmap f (ConsP opt p) = ConsP (fmap (f.) opt) p
+  fmap f (OptP opt) = OptP (fmap f opt)
+  fmap f (MultP p1 p2) = MultP (fmap (f.) p1) p2
 
 instance Applicative Parser where
   pure = NilP
   NilP f <*> p = fmap f p
-  ConsP opt p1 <*> p2 =
-    ConsP (fmap uncurry opt) $ (,) <$> p1 <*> p2
+  p <*> NilP x = fmap ($ x) p
+  p1 <*> p2 = MultP p1 p2
 
 -- | Result after a parse error.
 data ParserFailure = ParserFailure
