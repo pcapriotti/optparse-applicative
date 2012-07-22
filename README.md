@@ -254,12 +254,12 @@ values for properties or adding features, and is used to build the option from
 scratch and finally lift it to a single-option parser, which can then be
 combined with other parsers using normal `Applicative` combinators.
 
-Modifiers are instances of the `Category` typeclass, so they can be combined
-using the composition operator `(.)` from `Control.Category`, but the
-`Options.Applicative.Builders` module provides a convenience operator `(&)`,
-which is just a specialized version of flipped composition, so that you don't
-need to import the `Category` module and hide the `(.)` operator from the
-`Prelude`.
+Modifiers are instances of the `Monoid` typeclass, so they can be combined
+using the composition function `mappend`, for which the
+`Options.Applicative.Builders` module provides a convenience alias `(&)`.
+
+Feel free to use `mappend` or `(<>)`, if you prefer. `(&)` is mostly there for
+backwards compatibility with the previous implementation.
 
 See the haddock documentation for `Options.Applicative.Builder` for a full list
 of builders and modifiers.

@@ -5,19 +5,16 @@ module Options.Applicative.Builder (
   -- | This module contains utility functions and combinators to create parsers
   -- for individual options.
   --
-  -- Each parser builder takes an option modifier, which can be specified by
-  -- composing basic modifiers using '&' and 'idm' (which are just convenient
-  -- synonyms for the 'Category' operations 'Control.Category.>>>' and
-  -- 'Control.Category.id').
+  -- Each parser builder takes an option modifier. A modifier can be created by
+  -- composing the basic modifiers provided by this module using the 'Monoid'
+  -- operations 'mempty' and 'mappend', or their aliases 'idm' and '&'.
   --
   -- For example:
-  --
   --
   -- > out = strOption
   -- >     ( long "output"
   -- >     & short 'o'
   -- >     & metavar "FILENAME" )
-  --
   --
   -- creates a parser for an option called \"output\".
   subparser,
