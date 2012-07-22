@@ -24,7 +24,7 @@ data OptDescStyle = OptDescStyle
   , descSurround :: Bool }
 
 -- | Generate description for a single option.
-optDesc :: OptDescStyle -> Option r a -> String
+optDesc :: OptDescStyle -> Option a -> String
 optDesc style opt =
   let ns = optionNames $ opt^.optMain
       mv = opt^.optMetaVar

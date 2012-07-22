@@ -61,7 +61,7 @@ optionNames (FlagReader names _) = names
 optionNames _ = []
 
 -- | Create a parser composed of a single option.
-liftOpt :: Option r a -> Parser a
+liftOpt :: Option a -> Parser a
 liftOpt = OptP
 
 uncons :: [a] -> Maybe (a, [a])
@@ -129,8 +129,7 @@ stepParser (NilP _) _ _ = empty
 stepParser (OptP opt) arg args
   | Just matcher <- optMatches (opt ^. optMain) arg
   = do (r, args') <- matcher args
-       liftOpt' <- getL optCont opt r
-       return (liftOpt', args')
+       return (pure r, args')
   | otherwise = empty
 stepParser (MultP p1 p2) arg args = msum
   [ do (p1', args') <- stepParser p1 arg args
@@ -179,7 +178,7 @@ evalParser (BindP p k) = evalParser p >>= evalParser . k
 
 -- | Map a polymorphic function over all the options of a parser, and collect
 -- the results.
-mapParser :: (forall r x . Option r x -> b)
+mapParser :: (forall x . Option x -> b)
           -> Parser a
           -> [b]
 mapParser _ (NilP _) = []

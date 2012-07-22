@@ -87,12 +87,11 @@ configureOpts = runA $ proc () -> do
   tests <- (asA . switch)
              ( long "enable-tests"
              & help "Enable compilation of test suites" ) -< ()
-  flags <- (asA . strOption)
+  flags <- (asA . many . strOption)
              ( short 'f'
              & long "flags"
              & metavar "FLAGS"
-             & help "Enable the given flag"
-             & multi ) -< ()
+             & help "Enable the given flag" ) -< ()
   returnA -< ConfigureOpts tests flags
 
 buildParser :: Parser Command

@@ -22,6 +22,7 @@ module Options.Applicative.Types (
   Option(..),
   OptName(..),
   OptReader(..),
+  OptProperties(..),
   OptVisibility(..),
   Parser(..),
   ParserFailure(..),
@@ -31,7 +32,10 @@ module Options.Applicative.Types (
   optVisibility,
   optHelp,
   optMetaVar,
-  optCont
+  propDefault,
+  propVisibility,
+  propHelp,
+  propMetaVar,
   ) where
 
 import Control.Applicative
@@ -82,13 +86,18 @@ data OptVisibility
   deriving (Eq, Ord)
 
 -- | Specification for an individual parser option.
-data Option r a = Option
-  { _optMain :: OptReader r               -- ^ reader for this option
-  , _optDefault :: Maybe a                -- ^ default value
-  , _optVisibility :: OptVisibility       -- ^ whether this flag is shown is the brief description
-  , _optHelp :: String                    -- ^ help text for this option
-  , _optMetaVar :: String                 -- ^ metavariable for this option
-  , _optCont :: r -> P (Parser a) }       -- ^ option continuation
+data OptProperties a = OptProperties
+  { _propDefault :: Maybe a                -- ^ default value
+  , _propVisibility :: OptVisibility       -- ^ whether this flag is shown is the brief description
+  , _propHelp :: String                    -- ^ help text for this option
+  , _propMetaVar :: String                 -- ^ metavariable for this option
+  } deriving Functor
+
+-- | A single option of a parser.
+data Option a = Option
+  { _optMain :: OptReader a               -- ^ reader for this option
+  , _optProps :: OptProperties a          -- ^ properties of this option
+  }
   deriving Functor
 
 -- | An 'OptReader' defines whether an option matches an command line argument.
@@ -102,7 +111,7 @@ data OptReader a
 -- | A @Parser a@ is an option parser returning a value of type 'a'.
 data Parser a where
   NilP :: Maybe a -> Parser a
-  OptP :: Option r a -> Parser a
+  OptP :: Option a -> Parser a
   MultP :: Parser (a -> b) -> Parser a -> Parser b
   AltP :: Parser a -> Parser a -> Parser a
   BindP :: Parser a -> (a -> Parser b) -> Parser b
@@ -138,23 +147,35 @@ instance Error ParserFailure where
 
 -- lenses
 
-optMain :: Lens (Option r a) (OptReader r)
+optMain :: Lens (Option a) (OptReader a)
 optMain = lens _optMain $ \x o -> o { _optMain = x }
 
-optDefault :: Lens (Option r a) (Maybe a)
-optDefault = lens _optDefault $ \x o -> o { _optDefault = x }
+optProps :: Lens (Option a) (OptProperties a)
+optProps = lens _optProps $ \x o -> o { _optProps = x }
 
-optVisibility :: Lens (Option r a) OptVisibility
-optVisibility = lens _optVisibility $ \x o -> o { _optVisibility = x }
+propDefault :: Lens (OptProperties a) (Maybe a)
+propDefault = lens _propDefault $ \x o -> o { _propDefault = x }
 
-optHelp :: Lens (Option r a) String
-optHelp = lens _optHelp $ \x o -> o { _optHelp = x }
+propVisibility :: Lens (OptProperties a) OptVisibility
+propVisibility = lens _propVisibility $ \x o -> o { _propVisibility = x }
 
-optMetaVar :: Lens (Option r a) String
-optMetaVar = lens _optMetaVar $ \x o -> o { _optMetaVar = x }
+propHelp :: Lens (OptProperties a) String
+propHelp = lens _propHelp $ \x o -> o { _propHelp = x }
 
-optCont :: Lens (Option r a) (r -> P (Parser a))
-optCont = lens _optCont $ \x o -> o { _optCont = x }
+propMetaVar :: Lens (OptProperties a) String
+propMetaVar = lens _propMetaVar $ \x o -> o { _propMetaVar = x }
+
+optDefault :: Lens (Option a) (Maybe a)
+optDefault = propDefault . optProps
+
+optVisibility :: Lens (Option a) OptVisibility
+optVisibility = propVisibility . optProps
+
+optHelp :: Lens (Option a) String
+optHelp = propHelp . optProps
+
+optMetaVar :: Lens (Option a) String
+optMetaVar = propMetaVar . optProps
 
 descFull :: Lens ParserDesc Bool
 descFull = lens _descFull $ \x p -> p { _descFull = x }
