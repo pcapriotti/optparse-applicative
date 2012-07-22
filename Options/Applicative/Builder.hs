@@ -258,7 +258,7 @@ flag defv actv m = flag' actv (m . value defv)
 --
 -- It still makes sense to use it as part of a composite parser. For example
 --
--- > length <$> multiP (flag' () (short 't'))
+-- > length <$> many (flag' () (short 't'))
 --
 -- is a parser that counts the number of "-t" arguments on the command line.
 flag' :: a                         -- ^ active value
