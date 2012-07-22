@@ -192,7 +192,8 @@ mapParser = go False False
        -> (forall x . OptHelpInfo -> Option x -> b)
        -> Parser a -> [b]
     go _ _ _ (NilP _) = []
-    go m d f (OptP opt) = [f (OptHelpInfo m d) opt]
+    go m d f (OptP opt) = [f (OptHelpInfo m d') opt]
+      where d' = d || isJust (opt^.optDefault)
     go m d f (MultP p1 p2) = go m d f p1 ++ go m d f p2
     go m d f (AltP p1 p2) = go m d' f p1 ++ go m d' f p2
       where d' = d || has_default p1 || has_default p2

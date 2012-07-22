@@ -24,8 +24,8 @@ data OptDescStyle = OptDescStyle
   , descSurround :: Bool }
 
 -- | Generate description for a single option.
-optDesc :: OptDescStyle -> Option a -> String
-optDesc style opt =
+optDesc :: OptDescStyle -> OptHelpInfo -> Option a -> String
+optDesc style info opt =
   let ns = optionNames $ opt^.optMain
       mv = opt^.optMetaVar
       descs = map showOption (sort ns)
@@ -40,7 +40,7 @@ optDesc style opt =
         = ""
         | null text || not (descSurround style)
         = text
-        | isJust (opt^.optDefault)
+        | hinfoDefault info
         = "[" ++ text ++ "]"
         | null (drop 1 descs)
         = text
@@ -62,7 +62,7 @@ cmdDesc = concat . mapParser desc
 
 -- | Generate a brief help text for a parser.
 briefDesc :: Parser a -> String
-briefDesc = foldr (<+>) "" . mapParser (const $ optDesc style)
+briefDesc = foldr (<+>) "" . mapParser (optDesc style)
   where
     style = OptDescStyle
       { descSep = "|"
@@ -73,11 +73,11 @@ briefDesc = foldr (<+>) "" . mapParser (const $ optDesc style)
 fullDesc :: Parser a -> [String]
 fullDesc = tabulate . catMaybes . mapParser doc
   where
-    doc _ opt
+    doc info opt
       | null n = Nothing
       | null h = Nothing
       | otherwise = Just (n, h)
-      where n = optDesc style opt
+      where n = optDesc style info opt
             h = opt^.optHelp
     style = OptDescStyle
       { descSep = ","

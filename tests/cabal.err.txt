@@ -1,4 +1,4 @@
-Usage: cabal configure [--enable-tests] (-f|--flags FLAGS)
+Usage: cabal configure [--enable-tests] [-f|--flags FLAGS]
   Prepare to build the package
 
 Common options:
