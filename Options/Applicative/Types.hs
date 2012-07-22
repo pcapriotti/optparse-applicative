@@ -105,20 +105,24 @@ data Parser a where
   OptP :: Option r a -> Parser a
   MultP :: Parser (a -> b) -> Parser a -> Parser b
   AltP :: Parser a -> Parser a -> Parser a
+  ManyP :: ([a] -> P b) -> Parser a -> Parser b
 
 instance Functor Parser where
   fmap f (NilP x) = NilP (fmap f x)
   fmap f (OptP opt) = OptP (fmap f opt)
   fmap f (MultP p1 p2) = MultP (fmap (f.) p1) p2
   fmap f (AltP p1 p2) = AltP (fmap f p1) (fmap f p2)
+  fmap f (ManyP k p) = ManyP (fmap f . k) p
 
 instance Applicative Parser where
   pure = NilP . Just
-  p1 <*> p2 = MultP p1 p2
+  (<*>) = MultP
 
 instance Alternative Parser where
   empty = NilP Nothing
-  p1 <|> p2 = AltP p1 p2
+  (<|>) = AltP
+  many = ManyP pure
+  some = ManyP (\xs -> if null xs then empty else pure [])
 
 -- | Result after a parse error.
 data ParserFailure = ParserFailure
