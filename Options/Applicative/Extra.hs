@@ -58,7 +58,7 @@ execParserPure pprefs pinfo args =
     (Left msg, ctx) -> Left ParserFailure
       { errMessage = \progn
           -> with_context ctx pinfo $ \name ->
-                 parserHelpText
+                 parserHelpText pprefs
                . add_error msg
                . add_usage name progn
       , errExitCode = ExitFailure (pinfo^.infoFailureCode) }
@@ -66,7 +66,7 @@ execParserPure pprefs pinfo args =
     parser = pinfo^.infoParser
     add_usage name progn i =
       modL infoHeader
-           (\h -> vcat [h, usage (i^.infoParser) ename])
+           (\h -> vcat [h, usage pprefs (i^.infoParser) ename])
            i
       where
         ename = maybe progn (\n -> progn ++ " " ++ n) name
@@ -82,8 +82,8 @@ execParserPure pprefs pinfo args =
     p = runParserFully parser args
 
 -- | Generate option summary.
-usage :: Parser a -> String -> String
-usage p progn = foldr (<+>) ""
+usage :: ParserPrefs -> Parser a -> String -> String
+usage pprefs p progn = foldr (<+>) ""
   [ "Usage:"
   , progn
-  , briefDesc p ]
+  , briefDesc pprefs p ]

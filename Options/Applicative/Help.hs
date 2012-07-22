@@ -24,8 +24,8 @@ data OptDescStyle = OptDescStyle
   , descSurround :: Bool }
 
 -- | Generate description for a single option.
-optDesc :: OptDescStyle -> OptHelpInfo -> Option a -> String
-optDesc style info opt =
+optDesc :: ParserPrefs -> OptDescStyle -> OptHelpInfo -> Option a -> String
+optDesc pprefs style info opt =
   let ns = optionNames $ opt^.optMain
       mv = opt^.optMetaVar
       descs = map showOption (sort ns)
@@ -35,17 +35,22 @@ optDesc style info opt =
         = descHidden style
         | otherwise
         = opt^.optVisibility == Visible
+      suffix
+        | hinfoMulti info
+        = pprefs^.prefMultiSuffix
+        | otherwise
+        = ""
       render text
         | not show_opt
         = ""
         | null text || not (descSurround style)
-        = text
+        = text ++ suffix
         | hinfoDefault info
-        = "[" ++ text ++ "]"
+        = "[" ++ text ++ "]" ++ suffix
         | null (drop 1 descs)
-        = text
+        = text ++ suffix
         | otherwise
-        = "(" ++ text ++ ")"
+        = "(" ++ text ++ ")" ++ suffix
   in render desc'
 
 -- | Generate descriptions for commands.
@@ -61,8 +66,8 @@ cmdDesc = concat . mapParser desc
       = []
 
 -- | Generate a brief help text for a parser.
-briefDesc :: Parser a -> String
-briefDesc = foldr (<+>) "" . mapParser (optDesc style)
+briefDesc :: ParserPrefs -> Parser a -> String
+briefDesc pprefs = foldr (<+>) "" . mapParser (optDesc pprefs style)
   where
     style = OptDescStyle
       { descSep = "|"
@@ -70,14 +75,14 @@ briefDesc = foldr (<+>) "" . mapParser (optDesc style)
       , descSurround = True }
 
 -- | Generate a full help text for a parser.
-fullDesc :: Parser a -> [String]
-fullDesc = tabulate . catMaybes . mapParser doc
+fullDesc :: ParserPrefs -> Parser a -> [String]
+fullDesc pprefs = tabulate . catMaybes . mapParser doc
   where
     doc info opt
       | null n = Nothing
       | null h = Nothing
       | otherwise = Just (n, h)
-      where n = optDesc style info opt
+      where n = optDesc pprefs style info opt
             h = opt^.optHelp
     style = OptDescStyle
       { descSep = ","
@@ -85,11 +90,11 @@ fullDesc = tabulate . catMaybes . mapParser doc
       , descSurround = False }
 
 -- | Generate the help text for a program.
-parserHelpText :: ParserInfo a -> String
-parserHelpText pinfo = unlines
+parserHelpText :: ParserPrefs -> ParserInfo a -> String
+parserHelpText pprefs pinfo = unlines
    $ nn [pinfo^.infoHeader]
   ++ [ "  " ++ line | line <- nn [pinfo^.infoProgDesc] ]
-  ++ [ line | let opts = fullDesc p
+  ++ [ line | let opts = fullDesc pprefs p
             , not (null opts)
             , line <- ["", "Common options:"] ++ opts
             , pinfo^.infoFullDesc ]
