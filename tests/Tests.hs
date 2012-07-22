@@ -4,6 +4,7 @@ module Main where
 import qualified Examples.Hello as Hello
 import qualified Examples.Commands as Commands
 import qualified Examples.Cabal as Cabal
+import qualified Examples.Alternatives as Alternatives
 
 import Options.Applicative.Extra
 import Options.Applicative.Types
@@ -44,6 +45,15 @@ case_args = do
       ["foo", "bar"] @=? args
     Right Commands.Goodbye ->
       assertFailure "unexpected result: Goodbye"
+
+case_alts :: Assertion
+case_alts = do
+  let result = execParserPure Alternatives.opts ["-b", "-a", "-b", "-a", "-a", "-b"]
+  case result of
+    Left _ -> assertFailure "unexpected parse error"
+    Right xs -> [b, a, b, a, a, b] @=? xs
+      where a = Alternatives.A
+            b = Alternatives.B
 
 main :: IO ()
 main = $(defaultMainGenerator)
