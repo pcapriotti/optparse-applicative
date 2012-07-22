@@ -6,12 +6,14 @@ import qualified Examples.Commands as Commands
 import qualified Examples.Cabal as Cabal
 import qualified Examples.Alternatives as Alternatives
 
-import Options.Applicative.Extra
-import Options.Applicative.Types
+import Options.Applicative
 import System.Exit
 import Test.HUnit
 import Test.Framework.Providers.HUnit
 import Test.Framework.TH.Prime
+
+run :: ParserInfo a -> [String] -> Either ParserFailure a
+run = execParserPure (prefs idm)
 
 assertLeft :: Show b => Either a b -> (a -> Assertion) -> Assertion
 assertLeft x f = either f err x
@@ -20,7 +22,7 @@ assertLeft x f = either f err x
 
 checkHelpText :: Show a => String -> ParserInfo a -> [String] -> Assertion
 checkHelpText name p args = do
-  let result = execParserPure p args
+  let result = run p args
   assertLeft result $ \(ParserFailure err code) -> do
     expected <- readFile $ "tests/" ++ name ++ ".err.txt"
     expected @=? err name
@@ -37,7 +39,7 @@ case_cabal = checkHelpText "cabal" Cabal.pinfo ["configure", "--help"]
 
 case_args :: Assertion
 case_args = do
-  let result = execParserPure Commands.opts ["hello", "foo", "bar"]
+  let result = run Commands.opts ["hello", "foo", "bar"]
   case result of
     Left _ ->
       assertFailure "unexpected parse error"
@@ -48,7 +50,7 @@ case_args = do
 
 case_args_opts :: Assertion
 case_args_opts = do
-  let result = execParserPure Commands.opts ["hello", "foo", "--bar"]
+  let result = run Commands.opts ["hello", "foo", "--bar"]
   case result of
     Left _ -> return ()
     Right (Commands.Hello xs) ->
@@ -58,7 +60,7 @@ case_args_opts = do
 
 case_args_ddash :: Assertion
 case_args_ddash = do
-  let result = execParserPure Commands.opts ["hello", "foo", "--", "--bar", "baz"]
+  let result = run Commands.opts ["hello", "foo", "--", "--bar", "baz"]
   case result of
     Left _ ->
       assertFailure "unexpected parse error"
@@ -69,7 +71,7 @@ case_args_ddash = do
 
 case_alts :: Assertion
 case_alts = do
-  let result = execParserPure Alternatives.opts ["-b", "-a", "-b", "-a", "-a", "-b"]
+  let result = run Alternatives.opts ["-b", "-a", "-b", "-a", "-a", "-b"]
   case result of
     Left _ -> assertFailure "unexpected parse error"
     Right xs -> [b, a, b, a, a, b] @=? xs

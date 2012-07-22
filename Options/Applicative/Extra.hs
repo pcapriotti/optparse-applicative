@@ -34,9 +34,13 @@ helper = nullOption
 -- Parse command line arguments. Display help text and exit if any parse error
 -- occurs.
 execParser :: ParserInfo a -> IO a
-execParser pinfo = do
+execParser = customExecParser (prefs idm)
+
+-- | Run a program description with custom preferences.
+customExecParser :: ParserPrefs -> ParserInfo a -> IO a
+customExecParser pprefs pinfo = do
   args <- getArgs
-  case execParserPure pinfo args of
+  case execParserPure pprefs pinfo args of
     Right a -> return a
     Left failure -> do
       progn <- getProgName
@@ -44,10 +48,11 @@ execParser pinfo = do
       exitWith (errExitCode failure)
 
 -- | A pure version 'execParser'.
-execParserPure :: ParserInfo a      -- ^ Description of the program to run
+execParserPure :: ParserPrefs       -- ^ Global preferences for this parser
+               -> ParserInfo a      -- ^ Description of the program to run
                -> [String]          -- ^ Program arguments
                -> Either ParserFailure a
-execParserPure pinfo args =
+execParserPure pprefs pinfo args =
   case runP p of
     (Right a, _) -> Right a
     (Left msg, ctx) -> Left ParserFailure

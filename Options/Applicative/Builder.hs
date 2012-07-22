@@ -58,14 +58,19 @@ module Options.Applicative.Builder (
   FlagFields,
   CommandFields,
 
-  -- * Builder for `ParserInfo`
+  -- * Builder for 'ParserInfo'
   InfoMod,
   fullDesc,
   header,
   progDesc,
   footer,
   failureCode,
-  info
+  info,
+
+  -- * Builder for 'ParserPrefs'
+  PrefsMod,
+  multiSuffix,
+  prefs
   ) where
 
 import Control.Applicative
@@ -333,6 +338,27 @@ info parser m = applyInfoMod m base
         , _descFailureCode = 1
         }
       }
+
+newtype PrefsModC a b = PrefsMod
+  { applyPrefsMod :: a -> b }
+  -- this newtype is just to define a Category instance, for consistency with
+  -- the other modifiers; we're only going to use it with a = b = ParserPrefs
+
+-- | Modifier for 'ParserPrefs'.
+type PrefsMod = PrefsModC ParserPrefs ParserPrefs
+
+instance Category PrefsModC where
+  id = PrefsMod id
+  m1 . m2 = PrefsMod $ applyPrefsMod m1 . applyPrefsMod m2
+
+multiSuffix :: String -> PrefsMod
+multiSuffix s = PrefsMod $ prefMultiSuffix ^= s
+
+prefs :: PrefsMod -> ParserPrefs
+prefs m = applyPrefsMod m base
+  where
+    base = ParserPrefs
+      { _prefMultiSuffix = "" }
 
 -- | Trivial option modifier.
 idm :: Category hom => hom a a

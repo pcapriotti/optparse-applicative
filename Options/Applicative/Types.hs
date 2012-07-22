@@ -2,6 +2,7 @@
 module Options.Applicative.Types (
   ParserInfo(..),
   ParserDesc(..),
+  ParserPrefs(..),
   Context(..),
   P,
 
@@ -37,6 +38,7 @@ module Options.Applicative.Types (
   propVisibility,
   propHelp,
   propMetaVar,
+  prefMultiSuffix,
   ) where
 
 import Control.Applicative
@@ -62,6 +64,11 @@ data ParserDesc = ParserDesc
   , _descHeader :: String         -- ^ header of the full parser description
   , _descFooter :: String         -- ^ footer of the full parser description
   , _descFailureCode :: Int       -- ^ exit code for a parser failure
+  }
+
+-- | Global preferences for a top-level 'Parser'.
+data ParserPrefs = ParserPrefs
+  { _prefMultiSuffix :: String    -- ^ metavar suffix for multiple options
   }
 
 data Context where
@@ -217,3 +224,6 @@ infoFooter = descFooter . infoDesc
 
 infoFailureCode :: Lens (ParserInfo a) Int
 infoFailureCode = descFailureCode . infoDesc
+
+prefMultiSuffix :: Lens ParserPrefs String
+prefMultiSuffix = lens _prefMultiSuffix $ \x p -> p { _prefMultiSuffix = x }
