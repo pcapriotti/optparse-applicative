@@ -178,11 +178,22 @@ evalParser (BindP p k) = evalParser p >>= evalParser . k
 
 -- | Map a polymorphic function over all the options of a parser, and collect
 -- the results.
-mapParser :: (forall x . Option x -> b)
+mapParser :: (forall x . OptHelpInfo -> Option x -> b)
           -> Parser a
           -> [b]
-mapParser _ (NilP _) = []
-mapParser f (OptP opt) = [f opt]
-mapParser f (MultP p1 p2) = mapParser f p1 ++ mapParser f p2
-mapParser f (AltP p1 p2) = mapParser f p1 ++ mapParser f p2
-mapParser f (BindP p _) = mapParser f p
+mapParser = go False False
+  where
+    has_default :: Parser a -> Bool
+    has_default p = case runP (evalParser p) of
+      (Left _, _) -> False
+      (Right _, _) -> True
+
+    go :: Bool -> Bool
+       -> (forall x . OptHelpInfo -> Option x -> b)
+       -> Parser a -> [b]
+    go _ _ _ (NilP _) = []
+    go m d f (OptP opt) = [f (OptHelpInfo m d) opt]
+    go m d f (MultP p1 p2) = go m d f p1 ++ go m d f p2
+    go m d f (AltP p1 p2) = go m d' f p1 ++ go m d' f p2
+      where d' = d || has_default p1 || has_default p2
+    go _ d f (BindP p _) = go True d f p

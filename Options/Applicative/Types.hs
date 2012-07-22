@@ -26,6 +26,7 @@ module Options.Applicative.Types (
   OptVisibility(..),
   Parser(..),
   ParserFailure(..),
+  OptHelpInfo(..),
 
   optMain,
   optDefault,
@@ -144,6 +145,10 @@ instance Error ParserFailure where
   strMsg msg = ParserFailure
     { errMessage = \_ -> msg
     , errExitCode = ExitFailure 1 }
+
+data OptHelpInfo = OptHelpInfo
+  { hinfoMulti :: Bool
+  , hinfoDefault :: Bool }
 
 -- lenses
 

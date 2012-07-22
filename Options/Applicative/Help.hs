@@ -52,7 +52,7 @@ optDesc style opt =
 cmdDesc :: Parser a -> [String]
 cmdDesc = concat . mapParser desc
   where
-    desc opt
+    desc _ opt
       | CmdReader cmds p <- opt^.optMain
       = tabulate [(cmd, d)
                  | cmd <- cmds
@@ -62,7 +62,7 @@ cmdDesc = concat . mapParser desc
 
 -- | Generate a brief help text for a parser.
 briefDesc :: Parser a -> String
-briefDesc = foldr (<+>) "" . mapParser (optDesc style)
+briefDesc = foldr (<+>) "" . mapParser (const $ optDesc style)
   where
     style = OptDescStyle
       { descSep = "|"
@@ -73,7 +73,7 @@ briefDesc = foldr (<+>) "" . mapParser (optDesc style)
 fullDesc :: Parser a -> [String]
 fullDesc = tabulate . catMaybes . mapParser doc
   where
-    doc opt
+    doc _ opt
       | null n = Nothing
       | null h = Nothing
       | otherwise = Just (n, h)
