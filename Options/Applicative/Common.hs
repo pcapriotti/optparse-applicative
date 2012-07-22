@@ -142,10 +142,10 @@ stepParser (AltP p1 p2) arg args = msum
        return (p1' <|> p2, args')
   , do (p2', args') <- stepParser p2 arg args
        return (p1 <|> p2', args') ]
-stepParser (ManyP k p) arg args = msum
-  [ do (p', args') <- stepParser p arg args
-       x <- evalParser p'
-       return (ManyP (\xs -> k (x : xs)) p, args') ]
+stepParser (BindP p k) arg args = do
+  (p', args') <- stepParser p arg args
+  x <- evalParser p'
+  return (k x, args')
 
 -- | Apply a 'Parser' to a command line, and return a result and leftover
 -- arguments.  This function returns an error if any parsing error occurs, or
@@ -175,7 +175,7 @@ evalParser (NilP r) = tryP r
 evalParser (OptP opt) = tryP (opt ^. optDefault)
 evalParser (MultP p1 p2) = evalParser p1 <*> evalParser p2
 evalParser (AltP p1 p2) = evalParser p1 <|> evalParser p2
-evalParser (ManyP k _) = k []
+evalParser (BindP p k) = evalParser p >>= evalParser . k
 
 -- | Map a polymorphic function over all the options of a parser, and collect
 -- the results.
@@ -186,4 +186,4 @@ mapParser _ (NilP _) = []
 mapParser f (OptP opt) = [f opt]
 mapParser f (MultP p1 p2) = mapParser f p1 ++ mapParser f p2
 mapParser f (AltP p1 p2) = mapParser f p1 ++ mapParser f p2
-mapParser f (ManyP _ p) = mapParser f p
+mapParser f (BindP p _) = mapParser f p
