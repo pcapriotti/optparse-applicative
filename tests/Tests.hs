@@ -46,6 +46,27 @@ case_args = do
     Right Commands.Goodbye ->
       assertFailure "unexpected result: Goodbye"
 
+case_args_opts :: Assertion
+case_args_opts = do
+  let result = execParserPure Commands.opts ["hello", "foo", "--bar"]
+  case result of
+    Left _ -> return ()
+    Right (Commands.Hello xs) ->
+      assertFailure $ "unexpected result: Hello " ++ show xs
+    Right Commands.Goodbye ->
+      assertFailure "unexpected result: Goodbye"
+
+case_args_ddash :: Assertion
+case_args_ddash = do
+  let result = execParserPure Commands.opts ["hello", "foo", "--", "--bar", "baz"]
+  case result of
+    Left _ ->
+      assertFailure "unexpected parse error"
+    Right (Commands.Hello args) ->
+      ["foo", "--bar", "baz"] @=? args
+    Right Commands.Goodbye ->
+      assertFailure "unexpected result: Goodbye"
+
 case_alts :: Assertion
 case_alts = do
   let result = execParserPure Alternatives.opts ["-b", "-a", "-b", "-a", "-a", "-b"]

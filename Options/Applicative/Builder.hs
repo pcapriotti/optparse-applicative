@@ -219,8 +219,27 @@ argument p (Mod f g) = liftOpt $ Option (ArgReader p') (g baseProps)
 
 -- | Builder for an argument list parser. All arguments are collected and
 -- returned as a list.
+--
+-- Note that arguments starting with @'-'@ are ignored.
+--
+-- This parser accepts a special argument: @--@. When a @--@ is found on the
+-- command line, all following arguments are included in the result, even if
+-- they start with @'-'@.
 arguments :: (String -> Maybe a) -> Mod Identity a b -> Parser [b]
-arguments p m = many $ argument p m
+arguments p m = args
+  where
+    p' ('-':_) = Nothing
+    p' s = p s
+
+    args1 = ((Just <$> arg') <|> (ddash *> pure Nothing)) `BindP` \x -> case x of
+      Nothing -> many arg
+      Just a -> fmap (a:) args
+    args = args1 <|> pure []
+
+    arg' = argument p' m
+    arg = argument p m
+
+    ddash = argument (guard . (== "--")) idm
 
 -- | Builder for a flag parser.
 --
