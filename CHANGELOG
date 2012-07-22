@@ -1,3 +1,23 @@
+## Version 0.2.2 (unreleased)
+
+- Parser is now an instance of Alternative. This makes it possible to build
+certain complex parsers that were not definable before. See
+`tests/Examples/Alternatives.hs` for a simple example.
+
+- Removed `multi` modifier. You can now use the `many` or `some` methods from
+`Alternative`, instead, to create parsers for options that can appear more than
+once.
+
+- Added new `flag'` builder that returns a flag without a default value.
+Although flags without default values were not useful before, with the addition
+of `Alternative` combinators, they do have valid use cases.
+
+- Added new `internal` modifier for options. An internal option is completely
+invisible in the help text.
+
+- Fixed bugs
+    * \#6 - "arguments" swallows options
+
 ## Version 0.1.1 (21 Jul 2012)
 
 - New arrow interface
