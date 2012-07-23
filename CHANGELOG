@@ -1,4 +1,11 @@
-## Version 0.2.2 (23 Jul 2012)
+## Version 0.3.0 (unreleased)
+
+- Option modifiers are now instances of `Monoid` instead of `Category`.
+
+- Fixed bugs
+    * \#14 - "arguments" can no longer take a list as a default
+
+## Version 0.2.0 (23 Jul 2012)
 
 - Parser is now an instance of Alternative. This makes it possible to build
 certain complex parsers that were not definable before. See
@@ -28,13 +35,16 @@ description like `[METAVAR]...`.
 ## Version 0.1.1 (21 Jul 2012)
 
 - New arrow interface
+
 - Fixed bugs
       * \#7 - "arguments" reads positional arguments in reverse
 
 ## Version 0.1.0 (07 Jul 2012)
 
 - Improved error reporting internals
+
 - Removed template-haskell dependency
+
 - Fixed bugs:
       * \#3 - No help for subparsers
       * \#4 - Extra empty lines around command list
