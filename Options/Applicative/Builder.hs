@@ -221,7 +221,7 @@ argument p (Mod _ def g) = mkOption def $ Option (ArgReader p) (g baseProps)
 -- command line, all following arguments are included in the result, even if
 -- they start with @'-'@.
 arguments :: (String -> Maybe a) -> Mod ArgumentFields [a] -> Parser [a]
-arguments p m = args
+arguments p m = args1 <|> pure (fromMaybe [] def)
   where
     Mod _ def g = m
 
@@ -231,7 +231,7 @@ arguments p m = args
     args1 = ((Just <$> arg') <|> (ddash *> pure Nothing)) `BindP` \x -> case x of
       Nothing -> many arg
       Just a -> fmap (a:) args
-    args = args1 <|> pure (fromMaybe [] def)
+    args = args1 <|> pure []
 
     arg' = argument p' (optionMod g)
     arg = argument p (optionMod g)
