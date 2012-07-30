@@ -198,7 +198,7 @@ argument str ( metavar "FILE" )
 creates an argument accepting any string.
 
 Arguments are only displayed in the brief help text, so there's no need to
-attach a description to them. They should manually documented in the program
+attach a description to them. They should be manually documented in the program
 description.
 
 ### Commands
@@ -216,10 +216,10 @@ added with the `command` modifier. For example
 
 ```haskell
 subparser
-( command "add" (info addOptions)
-    ( progDesc "Add a file to the repository" )
-& command "commit") (info commitOptions)
-    ( progDesc "Record changes to the repository" )
+( command "add" (info addOptions
+    ( progDesc "Add a file to the repository" ))
+& command "commit" (info commitOptions
+    ( progDesc "Record changes to the repository" ))
 )
 ```
 
