@@ -1,24 +1,9 @@
 {-# LANGUAGE GADTs, DeriveFunctor #-}
 module Options.Applicative.Types (
   ParserInfo(..),
-  ParserDesc(..),
   ParserPrefs(..),
   Context(..),
   P,
-
-  infoParser,
-  infoDesc,
-  infoFullDesc,
-  infoProgDesc,
-  infoHeader,
-  infoFooter,
-  infoFailureCode,
-
-  descFull,
-  descProg,
-  descHeader,
-  descFooter,
-  descFailureCode,
 
   Option(..),
   OptName(..),
@@ -29,14 +14,9 @@ module Options.Applicative.Types (
   ParserFailure(..),
   OptHelpInfo(..),
 
-  optMain,
   optVisibility,
-  optHelp,
   optMetaVar,
-  propVisibility,
-  propHelp,
-  propMetaVar,
-  prefMultiSuffix,
+  optHelp
   ) where
 
 import Control.Applicative
@@ -44,29 +24,23 @@ import Control.Category
 import Control.Monad
 import Control.Monad.Trans.Error
 import Control.Monad.Trans.Writer
-import Data.Lens.Common
 import Data.Monoid
 import Prelude hiding ((.), id)
 import System.Exit
 
 -- | A full description for a runnable 'Parser' for a program.
 data ParserInfo a = ParserInfo
-  { _infoParser :: Parser a            -- ^ the option parser for the program
-  , _infoDesc :: ParserDesc            -- ^ description of the parser
+  { infoParser :: Parser a            -- ^ the option parser for the program
+  , infoFullDesc :: Bool              -- ^ whether the help text should contain full documentation
+  , infoProgDesc :: String            -- ^ brief parser description
+  , infoHeader :: String              -- ^ header of the full parser description
+  , infoFooter :: String              -- ^ footer of the full parser description
+  , infoFailureCode :: Int            -- ^ exit code for a parser failure
   } deriving Functor
-
--- | Attributes that can be associated to a 'Parser'.
-data ParserDesc = ParserDesc
-  { _descFull:: Bool              -- ^ whether the help text should contain full documentation
-  , _descProg:: String            -- ^ brief parser description
-  , _descHeader :: String         -- ^ header of the full parser description
-  , _descFooter :: String         -- ^ footer of the full parser description
-  , _descFailureCode :: Int       -- ^ exit code for a parser failure
-  }
 
 -- | Global preferences for a top-level 'Parser'.
 data ParserPrefs = ParserPrefs
-  { _prefMultiSuffix :: String    -- ^ metavar suffix for multiple options
+  { prefMultiSuffix :: String    -- ^ metavar suffix for multiple options
   }
 
 data Context where
@@ -93,15 +67,15 @@ data OptVisibility
 
 -- | Specification for an individual parser option.
 data OptProperties = OptProperties
-  { _propVisibility :: OptVisibility       -- ^ whether this flag is shown is the brief description
-  , _propHelp :: String                    -- ^ help text for this option
-  , _propMetaVar :: String                 -- ^ metavariable for this option
+  { propVisibility :: OptVisibility       -- ^ whether this flag is shown is the brief description
+  , propHelp :: String                    -- ^ help text for this option
+  , propMetaVar :: String                 -- ^ metavariable for this option
   }
 
 -- | A single option of a parser.
 data Option a = Option
-  { _optMain :: OptReader a               -- ^ reader for this option
-  , _optProps :: OptProperties            -- ^ properties of this option
+  { optMain :: OptReader a               -- ^ reader for this option
+  , optProps :: OptProperties            -- ^ properties of this option
   } deriving Functor
 
 -- | An 'OptReader' defines whether an option matches an command line argument.
@@ -153,67 +127,11 @@ data OptHelpInfo = OptHelpInfo
   { hinfoMulti :: Bool
   , hinfoDefault :: Bool }
 
--- lenses
-
-optMain :: Lens (Option a) (OptReader a)
-optMain = lens _optMain $ \x o -> o { _optMain = x }
-
-optProps :: Lens (Option a) OptProperties
-optProps = lens _optProps $ \x o -> o { _optProps = x }
-
-propVisibility :: Lens OptProperties OptVisibility
-propVisibility = lens _propVisibility $ \x o -> o { _propVisibility = x }
-
-propHelp :: Lens OptProperties String
-propHelp = lens _propHelp $ \x o -> o { _propHelp = x }
-
-propMetaVar :: Lens OptProperties String
-propMetaVar = lens _propMetaVar $ \x o -> o { _propMetaVar = x }
-
-optVisibility :: Lens (Option a) OptVisibility
+optVisibility :: Option a -> OptVisibility
 optVisibility = propVisibility . optProps
 
-optHelp :: Lens (Option a) String
-optHelp = propHelp . optProps
+optHelp :: Option a -> String
+optHelp  = propHelp . optProps
 
-optMetaVar :: Lens (Option a) String
+optMetaVar :: Option a -> String
 optMetaVar = propMetaVar . optProps
-
-descFull :: Lens ParserDesc Bool
-descFull = lens _descFull $ \x p -> p { _descFull = x }
-
-descProg :: Lens ParserDesc String
-descProg = lens _descProg $ \x p -> p { _descProg = x }
-
-descHeader :: Lens ParserDesc String
-descHeader = lens _descHeader $ \x p -> p { _descHeader = x }
-
-descFooter :: Lens ParserDesc String
-descFooter = lens _descFooter $ \x p -> p { _descFooter = x }
-
-descFailureCode :: Lens ParserDesc Int
-descFailureCode = lens _descFailureCode $ \x p -> p { _descFailureCode = x }
-
-infoParser :: Lens (ParserInfo a) (Parser a)
-infoParser = lens _infoParser $ \x p -> p { _infoParser = x }
-
-infoDesc :: Lens (ParserInfo a) ParserDesc
-infoDesc = lens _infoDesc $ \x p -> p { _infoDesc = x }
-
-infoFullDesc :: Lens (ParserInfo a) Bool
-infoFullDesc = descFull . infoDesc
-
-infoProgDesc :: Lens (ParserInfo a) String
-infoProgDesc = descProg . infoDesc
-
-infoHeader :: Lens (ParserInfo a) String
-infoHeader = descHeader . infoDesc
-
-infoFooter :: Lens (ParserInfo a) String
-infoFooter = descFooter . infoDesc
-
-infoFailureCode :: Lens (ParserInfo a) Int
-infoFailureCode = descFailureCode . infoDesc
-
-prefMultiSuffix :: Lens ParserPrefs String
-prefMultiSuffix = lens _prefMultiSuffix $ \x p -> p { _prefMultiSuffix = x }

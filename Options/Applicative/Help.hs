@@ -6,7 +6,6 @@ module Options.Applicative.Help (
   parserHelpText,
   ) where
 
-import Data.Lens.Common
 import Data.List
 import Data.Maybe
 import Options.Applicative.Common
@@ -26,18 +25,18 @@ data OptDescStyle = OptDescStyle
 -- | Generate description for a single option.
 optDesc :: ParserPrefs -> OptDescStyle -> OptHelpInfo -> Option a -> String
 optDesc pprefs style info opt =
-  let ns = optionNames $ opt^.optMain
-      mv = opt^.optMetaVar
+  let ns = optionNames $ optMain opt
+      mv = optMetaVar opt
       descs = map showOption (sort ns)
       desc' = intercalate (descSep style) descs <+> mv
       show_opt
-        | opt^.optVisibility == Hidden
+        | optVisibility opt == Hidden
         = descHidden style
         | otherwise
-        = opt^.optVisibility == Visible
+        = optVisibility opt == Visible
       suffix
         | hinfoMulti info
-        = pprefs^.prefMultiSuffix
+        = prefMultiSuffix pprefs
         | otherwise
         = ""
       render text
@@ -58,10 +57,10 @@ cmdDesc :: Parser a -> [String]
 cmdDesc = concat . mapParser desc
   where
     desc _ opt
-      | CmdReader cmds p <- opt^.optMain
+      | CmdReader cmds p <- optMain opt
       = tabulate [(cmd, d)
                  | cmd <- cmds
-                 , d <- maybeToList . fmap (getL infoProgDesc) $ p cmd ]
+                 , d <- maybeToList . fmap infoProgDesc $ p cmd ]
       | otherwise
       = []
 
@@ -83,7 +82,7 @@ fullDesc pprefs = tabulate . catMaybes . mapParser doc
       | null h = Nothing
       | otherwise = Just (n, h)
       where n = optDesc pprefs style info opt
-            h = opt^.optHelp
+            h = optHelp opt
     style = OptDescStyle
       { descSep = ","
       , descHidden = True
@@ -92,18 +91,18 @@ fullDesc pprefs = tabulate . catMaybes . mapParser doc
 -- | Generate the help text for a program.
 parserHelpText :: ParserPrefs -> ParserInfo a -> String
 parserHelpText pprefs pinfo = unlines
-   $ nn [pinfo^.infoHeader]
-  ++ [ "  " ++ line | line <- nn [pinfo^.infoProgDesc] ]
+   $ nn [infoHeader pinfo]
+  ++ [ "  " ++ line | line <- nn [infoProgDesc pinfo] ]
   ++ [ line | let opts = fullDesc pprefs p
             , not (null opts)
             , line <- ["", "Available options:"] ++ opts
-            , pinfo^.infoFullDesc ]
+            , infoFullDesc pinfo ]
   ++ [ line | let cmds = cmdDesc p
             , not (null cmds)
             , line <- ["", "Available commands:"] ++ cmds
-            , pinfo^.infoFullDesc ]
-  ++ [ line | footer <- nn [pinfo^.infoFooter]
+            , infoFullDesc pinfo ]
+  ++ [ line | footer <- nn [infoFooter pinfo]
             , line <- ["", footer] ]
   where
     nn = filter (not . null)
-    p = pinfo^.infoParser
+    p = infoParser pinfo

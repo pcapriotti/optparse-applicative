@@ -71,7 +71,6 @@ module Options.Applicative.Builder (
 
 import Control.Applicative
 import Control.Monad
-import Data.Lens.Common
 import Data.Maybe
 import Data.Monoid
 
@@ -79,42 +78,30 @@ import Options.Applicative.Common
 import Options.Applicative.Types
 
 data OptionFields a = OptionFields
-  { _optNames :: [OptName]
-  , _optReader :: String -> Maybe a }
+  { optNames :: [OptName]
+  , optReader :: String -> Maybe a }
   deriving Functor
 
 data FlagFields a = FlagFields
-  { _flagNames :: [OptName]
-  , _flagActive :: a }
+  { flagNames :: [OptName]
+  , flagActive :: a }
   deriving Functor
 
 data CommandFields a = CommandFields
-  { _cmdCommands :: [(String, ParserInfo a)] }
+  { cmdCommands :: [(String, ParserInfo a)] }
   deriving Functor
 
 data ArgumentFields a
   deriving Functor
 
-optNames :: Lens (OptionFields a) [OptName]
-optNames = lens _optNames $ \x o -> o { _optNames = x }
-
-optReader :: Lens (OptionFields a) (String -> Maybe a)
-optReader = lens _optReader $ \x o -> o { _optReader = x }
-
-flagNames :: Lens (FlagFields a) [OptName]
-flagNames = lens _flagNames $ \x o -> o { _flagNames = x }
-
-cmdCommands :: Lens (CommandFields a) [(String, ParserInfo a)]
-cmdCommands = lens _cmdCommands $ \x o -> o { _cmdCommands = x }
-
 class HasName f where
   name :: OptName -> f a -> f a
 
 instance HasName OptionFields where
-  name n = modL optNames (n:)
+  name n fields = fields { optNames = n : optNames fields }
 
 instance HasName FlagFields where
-  name n = modL flagNames (n:)
+  name n fields = fields { flagNames = n : flagNames fields }
 
 -- mod --
 
@@ -165,36 +152,38 @@ value x = Mod id (Just x) id
 
 -- | Specify the help text for an option.
 help :: String -> Mod f a
-help = optionMod . setL propHelp
+help s = optionMod $ \p -> p { propHelp = s }
 
 -- | Specify the 'Option' reader.
 reader :: (String -> Maybe a) -> Mod OptionFields a
-reader = fieldMod . setL optReader
+reader f = fieldMod $ \p -> p { optReader = f }
 
 -- | Specify the metavariable.
 metavar :: String -> Mod f a
-metavar = optionMod . setL propMetaVar
+metavar var = optionMod $ \p -> p { propMetaVar = var }
 
 -- | Hide this option from the brief description.
 hidden :: Mod f a
-hidden = optionMod $ propVisibility ^%= min Hidden
+hidden = optionMod $ \p ->
+  p { propVisibility = min Hidden (propVisibility p) }
 
 -- | Hide this option from the help text
 internal :: Mod f a
-internal = optionMod $ propVisibility ^= Internal
+internal = optionMod $ \p -> p { propVisibility = Internal }
 
 -- | Add a command to a subparser option.
 command :: String -> ParserInfo a -> Mod CommandFields a
-command cmd pinfo = fieldMod $ cmdCommands^%=((cmd, pinfo):)
+command cmd pinfo = fieldMod $ \p ->
+  p { cmdCommands = (cmd, pinfo) : cmdCommands p }
 
 -- parsers --
 
 -- | Base default properties.
 baseProps :: OptProperties
 baseProps = OptProperties
-  { _propMetaVar = ""
-  , _propVisibility = Visible
-  , _propHelp = "" }
+  { propMetaVar = ""
+  , propVisibility = Visible
+  , propHelp = "" }
 
 mkOption :: Maybe a -> Option a -> Parser a
 mkOption def opt = liftOpt opt <|> maybe empty pure def
@@ -263,8 +252,9 @@ flag' :: a                         -- ^ active value
       -> Parser a
 flag' actv (Mod f def g) = mkOption def $ Option rdr (g baseProps)
   where
-    rdr = let FlagFields ns actv' = f (FlagFields [] actv)
-          in FlagReader ns actv'
+    rdr = let fields = f (FlagFields [] actv)
+          in FlagReader (flagNames fields)
+                        (flagActive fields)
 
 -- | Builder for a boolean flag.
 --
@@ -278,7 +268,7 @@ nullOption :: Mod OptionFields a -> Parser a
 nullOption (Mod f def g) = mkOption def $ Option rdr (g baseProps)
   where
     rdr = let fields = f (OptionFields [] disabled)
-          in OptReader (fields^.optNames) (fields^.optReader)
+          in OptReader (optNames fields) (optReader fields)
 
 -- | Builder for an option taking a 'String' argument.
 strOption :: Mod OptionFields String -> Parser String
@@ -298,38 +288,35 @@ instance Monoid (InfoMod a) where
 
 -- | Specify a full description for this parser.
 fullDesc :: InfoMod a
-fullDesc = InfoMod $ infoFullDesc^=True
+fullDesc = InfoMod $ \i -> i { infoFullDesc = True }
 
 -- | Specify a header for this parser.
 header :: String -> InfoMod a
-header s = InfoMod $ infoHeader^=s
+header s = InfoMod $ \i -> i { infoHeader = s }
 
 -- | Specify a footer for this parser.
 footer :: String -> InfoMod a
-footer s = InfoMod $ infoFooter^=s
+footer s = InfoMod $ \i -> i { infoFooter = s }
 
 -- | Specify a short program description.
 progDesc :: String -> InfoMod a
-progDesc s = InfoMod $ infoProgDesc^=s
+progDesc s = InfoMod $ \i -> i { infoProgDesc = s }
 
 -- | Specify an exit code if a parse error occurs.
 failureCode :: Int -> InfoMod a
-failureCode n = InfoMod $ infoFailureCode^=n
+failureCode n = InfoMod $ \i -> i { infoFailureCode = n }
 
 -- | Create a 'ParserInfo' given a 'Parser' and a modifier.
 info :: Parser a -> InfoMod a -> ParserInfo a
 info parser m = applyInfoMod m base
   where
     base = ParserInfo
-      { _infoParser = parser
-      , _infoDesc = ParserDesc
-        { _descFull = True
-        , _descProg = ""
-        , _descHeader = ""
-        , _descFooter = ""
-        , _descFailureCode = 1
-        }
-      }
+      { infoParser = parser
+      , infoFullDesc = True
+      , infoProgDesc = ""
+      , infoHeader = ""
+      , infoFooter = ""
+      , infoFailureCode = 1 }
 
 newtype PrefsMod = PrefsMod
   { applyPrefsMod :: ParserPrefs -> ParserPrefs }
@@ -339,13 +326,13 @@ instance Monoid PrefsMod where
   mappend m1 m2 = PrefsMod $ applyPrefsMod m2 . applyPrefsMod m1
 
 multiSuffix :: String -> PrefsMod
-multiSuffix s = PrefsMod $ prefMultiSuffix ^= s
+multiSuffix s = PrefsMod $ \p -> p { prefMultiSuffix = s }
 
 prefs :: PrefsMod -> ParserPrefs
 prefs m = applyPrefsMod m base
   where
     base = ParserPrefs
-      { _prefMultiSuffix = "" }
+      { prefMultiSuffix = "" }
 
 -- convenience shortcuts
 

@@ -50,7 +50,6 @@ import Control.Monad
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Error
 import Control.Monad.Trans.Writer
-import Data.Lens.Common
 import Data.Maybe
 import Data.Monoid
 import Options.Applicative.Types
@@ -100,7 +99,7 @@ optMatches rdr arg = case rdr of
     | Just subp <- f arg
     -> Just $ \args -> do
           setContext (Just arg) subp
-          runParser (subp^.infoParser) args
+          runParser (infoParser subp) args
   _ -> Nothing
   where
     parsed
@@ -127,7 +126,7 @@ setContext name = lift . tell . Context name
 stepParser :: Parser a -> String -> [String] -> P (Parser a, [String])
 stepParser (NilP _) _ _ = empty
 stepParser (OptP opt) arg args
-  | Just matcher <- optMatches (opt ^. optMain) arg
+  | Just matcher <- optMatches (optMain opt) arg
   = do (r, args') <- matcher args
        return (pure r, args')
   | otherwise = empty

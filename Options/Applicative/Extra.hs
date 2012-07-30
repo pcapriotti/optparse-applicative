@@ -10,7 +10,6 @@ module Options.Applicative.Extra (
   ParserFailure(..),
   ) where
 
-import Data.Lens.Common
 import Options.Applicative.Common
 import Options.Applicative.Builder
 import Options.Applicative.Help
@@ -61,16 +60,17 @@ execParserPure pprefs pinfo args =
                  parserHelpText pprefs
                . add_error msg
                . add_usage name progn
-      , errExitCode = ExitFailure (pinfo^.infoFailureCode) }
+      , errExitCode = ExitFailure (infoFailureCode pinfo) }
   where
-    parser = pinfo^.infoParser
-    add_usage name progn i =
-      modL infoHeader
-           (\h -> vcat [h, usage pprefs (i^.infoParser) ename])
-           i
+    parser = infoParser pinfo
+    add_usage name progn i = i
+      { infoHeader = vcat
+          [ infoHeader i
+          , usage pprefs (infoParser i) ename ] }
       where
         ename = maybe progn (\n -> progn ++ " " ++ n) name
-    add_error msg = modL infoHeader $ \h -> vcat [msg, h]
+    add_error msg i = i
+      { infoHeader = vcat [msg, infoHeader i] }
 
     with_context :: Context
                  -> ParserInfo a
