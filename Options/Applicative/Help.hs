@@ -80,9 +80,11 @@ fullDesc pprefs = tabulate . catMaybes . mapParser doc
     doc info opt
       | null n = Nothing
       | null h = Nothing
-      | otherwise = Just (n, h)
+      | otherwise = Just (n, h ++ hdef)
       where n = optDesc pprefs style info opt
             h = optHelp opt
+            hdef = maybe "" show_def (optShowDefault opt)
+            show_def s = " (default: " ++ s ++ ")"
     style = OptDescStyle
       { descSep = ","
       , descHidden = True

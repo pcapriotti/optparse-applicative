@@ -20,6 +20,11 @@ assertLeft x f = either f err x
   where
     err b = assertFailure $ "expected Left, got " ++ show b
 
+assertHasLine :: String -> String -> Assertion
+assertHasLine l s
+  | l `elem` lines s = return ()
+  | otherwise = assertFailure $ "expected line:\n\t" ++ l ++ "\nnot found"
+
 checkHelpText :: Show a => String -> ParserInfo a -> [String] -> Assertion
 checkHelpText name p args = do
   let result = run p args
@@ -77,6 +82,21 @@ case_alts = do
     Right xs -> [b, a, b, a, a, b] @=? xs
       where a = Alternatives.A
             b = Alternatives.B
+
+case_show_default :: Assertion
+case_show_default = do
+  let p = option ( short 'n'
+                 & help "set count"
+                 & value (0 :: Int)
+                 & showDefault)
+      i = info (p <**> helper) idm
+      result = run i ["--help"]
+  case result of
+    Left (ParserFailure err _) ->
+      assertHasLine
+        "  -n                       set count (default: 0)"
+        (err "test")
+    Right r  -> assertFailure $ "unexpected result: " ++ show r
 
 main :: IO ()
 main = $(defaultMainGenerator)

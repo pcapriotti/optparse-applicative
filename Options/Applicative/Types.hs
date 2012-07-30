@@ -16,7 +16,8 @@ module Options.Applicative.Types (
 
   optVisibility,
   optMetaVar,
-  optHelp
+  optHelp,
+  optShowDefault
   ) where
 
 import Control.Applicative
@@ -70,6 +71,7 @@ data OptProperties = OptProperties
   { propVisibility :: OptVisibility       -- ^ whether this flag is shown is the brief description
   , propHelp :: String                    -- ^ help text for this option
   , propMetaVar :: String                 -- ^ metavariable for this option
+  , propShowDefault :: Maybe String       -- ^ what to show in the help text as the default
   }
 
 -- | A single option of a parser.
@@ -135,3 +137,6 @@ optHelp  = propHelp . optProps
 
 optMetaVar :: Option a -> String
 optMetaVar = propMetaVar . optProps
+
+optShowDefault :: Option a -> Maybe String
+optShowDefault = propShowDefault . optProps
