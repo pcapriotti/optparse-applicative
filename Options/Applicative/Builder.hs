@@ -32,6 +32,8 @@ module Options.Applicative.Builder (
   long,
   help,
   value,
+  showDefaultWith,
+  showDefault,
   metavar,
   reader,
   hidden,
@@ -105,20 +107,29 @@ instance HasName FlagFields where
 
 -- mod --
 
+data DefaultProp a = DefaultProp
+  (Maybe a)
+  (Maybe (a -> String))
+
+instance Monoid (DefaultProp a) where
+  mempty = DefaultProp Nothing Nothing
+  mappend (DefaultProp d1 s1) (DefaultProp d2 s2) =
+    DefaultProp (d1 `mplus` d2) (s1 `mplus` s2)
+
 data Mod f a = Mod (f a -> f a)
-                   (Maybe a)
+                   (DefaultProp a)
                    (OptProperties -> OptProperties)
 
 optionMod :: (OptProperties -> OptProperties) -> Mod f a
-optionMod = Mod id Nothing
+optionMod = Mod id mempty
 
 fieldMod :: (f a -> f a) -> Mod f a
-fieldMod f = Mod f Nothing id
+fieldMod f = Mod f mempty id
 
 instance Monoid (Mod f a) where
-  mempty = Mod id Nothing id
+  mempty = Mod id mempty id
   Mod f1 d1 g1 `mappend` Mod f2 d2 g2
-    = Mod (f2 . f1) (d2 `mplus` d1) (g2 . g1)
+    = Mod (f2 . f1) (d2 <> d1) (g2 . g1)
 
 -- readers --
 
@@ -146,9 +157,17 @@ short = fieldMod . name . OptShort
 long :: HasName f => String -> Mod f a
 long = fieldMod . name . OptLong
 
----- | Specify a default value for an option.
+-- | Specify a default value for an option.
 value :: a -> Mod f a
-value x = Mod id (Just x) id
+value x = Mod id (DefaultProp (Just x) Nothing) id
+
+-- | Specify a function to show the default value for an option.
+showDefaultWith :: (a -> String) -> Mod f a
+showDefaultWith s = Mod id (DefaultProp Nothing (Just s)) id
+
+-- | Show the default value for this option using its 'Show' instance.
+showDefault :: Show a => Mod f a
+showDefault = showDefaultWith show
 
 -- | Specify the help text for an option.
 help :: String -> Mod f a
@@ -183,23 +202,44 @@ baseProps :: OptProperties
 baseProps = OptProperties
   { propMetaVar = ""
   , propVisibility = Visible
-  , propHelp = "" }
+  , propHelp = ""
+  , propShowDefault = Nothing }
 
-mkOption :: Maybe a -> Option a -> Parser a
-mkOption def opt = liftOpt opt <|> maybe empty pure def
+mkParser :: DefaultProp a
+         -> (OptProperties -> OptProperties)
+         -> OptReader a
+         -> Parser a
+mkParser d@(DefaultProp def _) g rdr = liftOpt opt <|> maybe empty pure def
+  where
+    opt = mkOption d g rdr
+
+mkOption :: DefaultProp a
+         -> (OptProperties -> OptProperties)
+         -> OptReader a
+         -> Option a
+mkOption d g rdr = Option rdr (mkProps d g)
+
+mkProps :: DefaultProp a
+        -> (OptProperties -> OptProperties)
+        -> OptProperties
+mkProps (DefaultProp def sdef) g = props
+  where
+    props = (g baseProps)
+      { propShowDefault = sdef <*> def }
+
 
 -- | Builder for a command parser. The 'command' modifier can be used to
 -- specify individual commands.
 subparser :: Mod CommandFields a -> Parser a
-subparser m = mkOption def $ Option rdr (g baseProps)
+subparser m = mkParser d g rdr
   where
-    Mod f def g = m & metavar "COMMAND"
+    Mod f d g = m & metavar "COMMAND"
     CommandFields cmds = f (CommandFields [])
     rdr = CmdReader (map fst cmds) (`lookup` cmds)
 
 -- | Builder for an argument parser.
 argument :: (String -> Maybe a) -> Mod ArgumentFields a -> Parser a
-argument p (Mod _ def g) = mkOption def $ Option (ArgReader p) (g baseProps)
+argument p (Mod _ d g) = mkParser d g (ArgReader p)
 
 -- | Builder for an argument list parser. All arguments are collected and
 -- returned as a list.
@@ -212,18 +252,22 @@ argument p (Mod _ def g) = mkOption def $ Option (ArgReader p) (g baseProps)
 arguments :: (String -> Maybe a) -> Mod ArgumentFields [a] -> Parser [a]
 arguments p m = args1 <|> pure (fromMaybe [] def)
   where
-    Mod _ def g = m
+    Mod _ (DefaultProp def sdef) g = m
+    show_def = sdef <*> def
 
     p' ('-':_) = Nothing
     p' s = p s
+
+    props = mkProps mempty g
+    props' = (mkProps mempty g) { propShowDefault = show_def }
 
     args1 = ((Just <$> arg') <|> (ddash *> pure Nothing)) `BindP` \x -> case x of
       Nothing -> many arg
       Just a -> fmap (a:) args
     args = args1 <|> pure []
 
-    arg' = argument p' (optionMod g)
-    arg = argument p (optionMod g)
+    arg = liftOpt (Option (ArgReader p) props)
+    arg' = liftOpt (Option (ArgReader p') props')
 
     ddash = argument (guard . (== "--")) internal
 
@@ -250,7 +294,7 @@ flag defv actv m = flag' actv m <|> pure defv
 flag' :: a                         -- ^ active value
       -> Mod FlagFields a          -- ^ option modifier
       -> Parser a
-flag' actv (Mod f def g) = mkOption def $ Option rdr (g baseProps)
+flag' actv (Mod f d g) = mkParser d g rdr
   where
     rdr = let fields = f (FlagFields [] actv)
           in FlagReader (flagNames fields)
@@ -265,7 +309,7 @@ switch = flag False True
 -- | Builder for an option with a null reader. A non-trivial reader can be
 -- added using the 'reader' modifier.
 nullOption :: Mod OptionFields a -> Parser a
-nullOption (Mod f def g) = mkOption def $ Option rdr (g baseProps)
+nullOption (Mod f d g) = mkParser d g rdr
   where
     rdr = let fields = f (OptionFields [] disabled)
           in OptReader (optNames fields) (optReader fields)
