@@ -82,7 +82,6 @@ library
                        Options.Applicative.Help
   build-depends:       base == 4.*,
                        data-lens == 2.10.*,
-                       data-default == 0.4.*,
                        transformers >= 0.2 && < 0.4
 test-suite tests
   type:                exitcode-stdio-1.0
