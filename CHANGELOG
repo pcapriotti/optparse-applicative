@@ -1,4 +1,4 @@
-## Version 0.3.0 (unreleased)
+## Version 0.3.0 (30 Jul 2012)
 
 - Option modifiers are now instances of `Monoid` instead of `Category`.
 
