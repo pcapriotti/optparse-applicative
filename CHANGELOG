@@ -1,4 +1,4 @@
-## Version 0.3.1 (unreleased)
+## Version 0.3.1 (30 Jul 2012)
 
 - Added new `showDefault` and `showDefaultWith` modifiers, which will result in
 the default value (if present) to be displayed in the help text.
