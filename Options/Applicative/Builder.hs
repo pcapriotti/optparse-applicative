@@ -53,6 +53,7 @@ module Options.Applicative.Builder (
   OptionFields,
   FlagFields,
   CommandFields,
+  ArgumentFields,
 
   -- * Builder for 'ParserInfo'
   InfoMod,
