@@ -233,15 +233,31 @@ define a type like:
 
 ```haskell
 data Options = Options
-  { globalOpt :: String
-  , globalFlag :: Bool
+  { optGlobalOpt :: String
+  , optGlobalFlag :: Bool
   ...
-  , commandOpts :: CommandOptions }
+  , optCommand :: Command }
 
-data CommandOptions
-  = AddOptions { ... }
-  | CommitOptions { ... }
+data Command
+  = Add AddOptions
+  | Commit CommitOptions
   ...
+```
+
+Alternatively, you can directly return an `IO` action from a parser, and
+execute it using `join` from `Control.Monad`.
+
+```haskell
+start :: String -> IO ()
+stop :: IO ()
+
+opts :: Parser (IO ())
+opts = subparser
+  ( command "start" (info (start <$> argument str idm) idm)
+  & command "stop"  (info (pure stop) idm) )
+
+main :: IO ()
+main = join $ execParser (info opts idm)
 ```
 
 # Option builders
