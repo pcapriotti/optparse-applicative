@@ -1,3 +1,11 @@
+## Version 0.3.1 (unreleased)
+
+- Added new `showDefault` and `showDefaultWith` modifiers, which will result in
+the default value (if present) to be displayed in the help text.
+
+- Fixed bugs
+    * \#12 - Optionally display default values in help
+
 ## Version 0.3.0 (30 Jul 2012)
 
 - Option modifiers are now instances of `Monoid` instead of `Category`.
