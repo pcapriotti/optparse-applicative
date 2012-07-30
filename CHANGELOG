@@ -2,6 +2,8 @@
 
 - Option modifiers are now instances of `Monoid` instead of `Category`.
 
+- Dropped dependencies on data-default and data-lens.
+
 - Fixed bugs
     * \#14 - "arguments" can no longer take a list as a default
 
