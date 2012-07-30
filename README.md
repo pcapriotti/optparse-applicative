@@ -59,7 +59,7 @@ help text:
     Usage: hello --hello TARGET [--quiet]
       Print a greeting for TARGET
 
-    Common options:
+    Available options:
       -h,--help                Show this help text
       --hello TARGET           Target for the greeting
       --quiet                  Whether to be quiet

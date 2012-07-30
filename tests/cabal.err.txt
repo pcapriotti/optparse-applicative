@@ -1,7 +1,7 @@
 Usage: cabal configure [--enable-tests] [-f|--flags FLAGS]
   Prepare to build the package
 
-Common options:
+Available options:
   --enable-tests           Enable compilation of test suites
   -f,--flags FLAGS         Enable the given flag
   -h,--help                Show this help text

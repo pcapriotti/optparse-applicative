@@ -96,7 +96,7 @@ parserHelpText pprefs pinfo = unlines
   ++ [ "  " ++ line | line <- nn [pinfo^.infoProgDesc] ]
   ++ [ line | let opts = fullDesc pprefs p
             , not (null opts)
-            , line <- ["", "Common options:"] ++ opts
+            , line <- ["", "Available options:"] ++ opts
             , pinfo^.infoFullDesc ]
   ++ [ line | let cmds = cmdDesc p
             , not (null cmds)
