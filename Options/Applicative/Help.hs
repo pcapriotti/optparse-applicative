@@ -54,7 +54,7 @@ optDesc pprefs style info opt =
 
 -- | Generate descriptions for commands.
 cmdDesc :: Parser a -> [String]
-cmdDesc = concat . mapParser desc
+cmdDesc = concat . flatMapParser desc
   where
     desc _ opt
       | CmdReader cmds p <- optMain opt
@@ -66,16 +66,22 @@ cmdDesc = concat . mapParser desc
 
 -- | Generate a brief help text for a parser.
 briefDesc :: ParserPrefs -> Parser a -> String
-briefDesc pprefs = foldr (<+>) "" . mapParser (optDesc pprefs style)
+briefDesc pprefs = fold_tree . mapParser (optDesc pprefs style)
   where
     style = OptDescStyle
       { descSep = "|"
       , descHidden = False
       , descSurround = True }
 
+    fold_tree (Leaf x) = x
+    fold_tree (MultNode xs) = unwords (fold_trees xs)
+    fold_tree (AltNode xs) = "(" ++ intercalate " | " (fold_trees xs) ++ ")"
+
+    fold_trees = filter (not . null) . map fold_tree
+
 -- | Generate a full help text for a parser.
 fullDesc :: ParserPrefs -> Parser a -> [String]
-fullDesc pprefs = tabulate . catMaybes . mapParser doc
+fullDesc pprefs = tabulate . catMaybes . flatMapParser doc
   where
     doc info opt
       | null n = Nothing
