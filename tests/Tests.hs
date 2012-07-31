@@ -98,5 +98,14 @@ case_show_default = do
         (err "test")
     Right r  -> assertFailure $ "unexpected result: " ++ show r
 
+case_alt_cont :: Assertion
+case_alt_cont = do
+  let p = Alternatives.a <|> Alternatives.b
+      i = info p idm
+      result = run i ["-a", "-b"]
+  case result of
+    Left _ -> return ()
+    Right r -> assertFailure $ "unexpected result: " ++ show r
+
 main :: IO ()
 main = $(defaultMainGenerator)
