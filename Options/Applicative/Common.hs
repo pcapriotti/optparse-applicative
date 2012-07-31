@@ -35,6 +35,7 @@ module Options.Applicative.Common (
 
   -- * Running parsers
   runParser,
+  runParserWith,
   runParserFully,
   evalParser,
 
@@ -127,16 +128,17 @@ stepParser (BindP p k) arg = do
   x <- liftMaybe $ evalParser p'
   return $ k x
 
+runParserWith :: MonadP m => (Parser a -> m b) -> Parser a -> m b
+runParserWith h p = tryP (h p) $ do
+    arg <- nextArg Nothing
+    p' <- stepParser p arg
+    runParserWith h p'
+
 -- | Apply a 'Parser' to a command line, and return a result and leftover
 -- arguments.  This function returns an error if any parsing error occurs, or
 -- if any options are missing and don't have a default value.
-runParser :: forall m a . MonadP m => Parser a -> m a
-runParser p = do
-  let result = liftMaybe (evalParser p)
-  tryP result $ do
-    arg <- nextArg Nothing
-    p' <- stepParser p arg
-    runParser p'
+runParser :: MonadP m => Parser a -> m a
+runParser = runParserWith (liftMaybe . evalParser)
 
 runParserFully :: Parser a -> P a
 runParserFully p = do
