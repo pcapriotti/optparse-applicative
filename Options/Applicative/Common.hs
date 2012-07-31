@@ -42,7 +42,7 @@ module Options.Applicative.Common (
   runP,
   setContext,
   mapParser,
-  flatMapParser,
+  treeMapParser,
   optionNames
   ) where
 
@@ -175,11 +175,20 @@ evalParser (AltP p1 p2) = evalParser p1 <|> evalParser p2
 evalParser (BindP p k) = evalParser p >>= evalParser . k
 
 -- | Map a polymorphic function over all the options of a parser, and collect
--- the results in a tree structure.
-mapParser :: (forall x . OptHelpInfo -> Option x -> b)
+-- the results in a list.
+mapParser :: (forall x. OptHelpInfo -> Option x -> b)
+              -> Parser a -> [b]
+mapParser f = flatten . treeMapParser f
+  where
+    flatten (Leaf x) = [x]
+    flatten (MultNode xs) = xs >>= flatten
+    flatten (AltNode xs) = xs >>= flatten
+
+-- | Like 'mapParser', but collect the results in a tree structure.
+treeMapParser :: (forall x . OptHelpInfo -> Option x -> b)
           -> Parser a
           -> OptTree b
-mapParser g = simplify . go False False g
+treeMapParser g = simplify . go False False g
   where
     has_default :: Parser a -> Bool
     has_default p = case runP (evalParser p) of
@@ -215,12 +224,3 @@ simplify (AltNode xs) =
     remove_alt (AltNode ts) = ts
     remove_alt (MultNode []) = []
     remove_alt t = [t]
-
--- | Like 'mapParser', but collect the results in a list.
-flatMapParser :: (forall x. OptHelpInfo -> Option x -> b)
-              -> Parser a -> [b]
-flatMapParser f = flatten . mapParser f
-  where
-    flatten (Leaf x) = [x]
-    flatten (MultNode xs) = xs >>= flatten
-    flatten (AltNode xs) = xs >>= flatten
