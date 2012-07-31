@@ -53,6 +53,8 @@ import Control.Monad.Trans.State
 import Control.Monad.Trans.Writer
 import Data.Maybe
 import Data.Monoid
+
+import Options.Applicative.Internal
 import Options.Applicative.Types
 
 optionNames :: OptReader a -> [OptName]

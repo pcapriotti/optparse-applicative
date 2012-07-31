@@ -2,8 +2,6 @@
 module Options.Applicative.Types (
   ParserInfo(..),
   ParserPrefs(..),
-  Context(..),
-  P,
 
   Option(..),
   OptName(..),
@@ -21,13 +19,7 @@ module Options.Applicative.Types (
   ) where
 
 import Control.Applicative
-import Control.Category
-import Control.Monad
 import Control.Monad.Trans.Error
-import Control.Monad.Trans.State
-import Control.Monad.Trans.Writer
-import Data.Monoid
-import Prelude hiding ((.), id)
 import System.Exit
 
 -- | A full description for a runnable 'Parser' for a program.
@@ -44,17 +36,6 @@ data ParserInfo a = ParserInfo
 data ParserPrefs = ParserPrefs
   { prefMultiSuffix :: String    -- ^ metavar suffix for multiple options
   }
-
-data Context where
-  Context :: Maybe String -> ParserInfo a -> Context
-  NullContext :: Context
-
-instance Monoid Context where
-  mempty = NullContext
-  mappend _ c@(Context _ _) = c
-  mappend c _ = c
-
-type P = StateT [String] (ErrorT String (Writer Context))
 
 data OptName = OptShort !Char
              | OptLong !String

@@ -77,12 +77,13 @@ library
   exposed-modules:     Options.Applicative,
                        Options.Applicative.Arrows,
                        Options.Applicative.BashCompletion,
-                       Options.Applicative.Common,
-                       Options.Applicative.Types,
                        Options.Applicative.Builder,
-                       Options.Applicative.Utils,
+                       Options.Applicative.Common,
                        Options.Applicative.Extra,
-                       Options.Applicative.Help
+                       Options.Applicative.Help,
+                       Options.Applicative.Types,
+                       Options.Applicative.Utils
+  other-modules:       Options.Applicative.Internal
   build-depends:       base == 4.*,
                        transformers >= 0.2 && < 0.4
 test-suite tests
