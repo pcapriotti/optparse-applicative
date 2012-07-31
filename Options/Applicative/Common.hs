@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types, PatternGuards #-}
+{-# LANGUAGE Rank2Types, PatternGuards, ScopedTypeVariables #-}
 module Options.Applicative.Common (
   -- * Option parsers
   --
@@ -47,10 +47,6 @@ module Options.Applicative.Common (
 
 import Control.Applicative
 import Control.Monad
-import Control.Monad.Trans.Class
-import Control.Monad.Trans.Error
-import Control.Monad.Trans.State
-import Control.Monad.Trans.Writer
 import Data.Maybe
 import Data.Monoid
 
@@ -66,10 +62,6 @@ optionNames _ = []
 liftOpt :: Option a -> Parser a
 liftOpt = OptP
 
-uncons :: [a] -> Maybe (a, [a])
-uncons [] = Nothing
-uncons (x : xs) = Just (x, xs)
-
 data MatchResult
   = NoMatch
   | Match (Maybe String)
@@ -79,7 +71,7 @@ instance Monoid MatchResult where
   mappend m@(Match _) _ = m
   mappend _ m = m
 
-optMatches :: OptReader a -> String -> Maybe (P a)
+optMatches :: MonadP m => OptReader a -> String -> Maybe (m a)
 optMatches rdr arg = case rdr of
   OptReader names f
     | Just (arg1, val) <- parsed
@@ -114,40 +106,8 @@ optMatches rdr arg = case rdr of
           (a : rest) -> Just (OptShort a, Just rest)
       | otherwise = Nothing
 
-liftMaybe :: Maybe a -> P a
-liftMaybe = maybe empty return
-
-runP :: P a -> [String] -> (Either String (a, [String]), Context)
-runP p args = runWriter . runErrorT $ runStateT p args
-
-tryP :: P a -> [String] -> P (Either String a)
-tryP p args = do
-  let (r, ctx) = runP p args
-  lift . lift . tell $ ctx
-  case r of
-    Left e -> return (Left e)
-    Right (x, args') -> do
-      setArgs args'
-      return (Right x)
-
-nextArg :: Maybe String -> P String
-nextArg val = do
-  args <- getArgs
-  (arg', args') <- liftMaybe . uncons $ maybeToList val ++ args
-  setArgs args'
-  return arg'
-
-getArgs :: P [String]
-getArgs = get
-
-setArgs :: [String] -> P ()
-setArgs = put
-
-setContext :: Maybe String -> ParserInfo a -> P ()
-setContext name = lift . lift . tell . Context name
-
-stepParser :: Parser a -> String -> P (Parser a)
-stepParser (NilP _) _ = empty
+stepParser :: MonadP m => Parser a -> String -> m (Parser a)
+stepParser (NilP _) _ = mzero
 stepParser (OptP opt) arg
   | Just matcher <- optMatches (optMain opt) arg
   = pure <$> matcher
@@ -170,17 +130,13 @@ stepParser (BindP p k) arg = do
 -- | Apply a 'Parser' to a command line, and return a result and leftover
 -- arguments.  This function returns an error if any parsing error occurs, or
 -- if any options are missing and don't have a default value.
-runParser :: Parser a -> P a
+runParser :: forall m a . MonadP m => Parser a -> m a
 runParser p = do
-  args <- getArgs
   let result = liftMaybe (evalParser p)
-  case args of
-    [] -> result
-    (arg : argt) -> do
-      r <- tryP (stepParser p arg) argt
-      case r of
-        Left e -> result <|> lift (throwError e)
-        Right p' -> runParser p'
+  tryP result $ do
+    arg <- nextArg Nothing
+    p' <- stepParser p arg
+    runParser p'
 
 runParserFully :: Parser a -> P a
 runParserFully p = do

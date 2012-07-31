@@ -15,7 +15,7 @@ import Options.Applicative.BashCompletion
 import Options.Applicative.Common
 import Options.Applicative.Builder
 import Options.Applicative.Help
-import Options.Applicative.Internal
+import Options.Applicative.Internal hiding (getArgs)
 import Options.Applicative.Utils
 import Options.Applicative.Types
 import System.Environment
