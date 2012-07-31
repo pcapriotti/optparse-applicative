@@ -98,5 +98,29 @@ case_show_default = do
         (err "test")
     Right r  -> assertFailure $ "unexpected result: " ++ show r
 
+case_alt_cont :: Assertion
+case_alt_cont = do
+  let p = Alternatives.a <|> Alternatives.b
+      i = info p idm
+      result = run i ["-a", "-b"]
+  case result of
+    Left _ -> return ()
+    Right r -> assertFailure $ "unexpected result: " ++ show r
+
+case_alt_help :: Assertion
+case_alt_help = do
+  let p = p1 <|> p2 <|> p3
+      p1 = (Just . Left)
+        <$> strOption ( long "virtual-machine"
+                      & metavar "VM"
+                      & help "Virtual machine name" )
+      p2 = (Just . Right)
+        <$> strOption ( long "cloud-service"
+                      & metavar "CS"
+                      & help "Cloud service name" )
+      p3 = flag' Nothing ( long "dry-run" )
+      i = info (p <**> helper) idm
+  checkHelpText "alt" i ["--help"]
+
 main :: IO ()
 main = $(defaultMainGenerator)

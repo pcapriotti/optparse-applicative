@@ -42,6 +42,7 @@ module Options.Applicative.Common (
   runP,
   setContext,
   mapParser,
+  flatMapParser,
   optionNames
   ) where
 
@@ -136,10 +137,8 @@ stepParser (MultP p1 p2) arg args = msum
   , do (p2', args') <- stepParser p2 arg args
        return (p1 <*> p2', args') ]
 stepParser (AltP p1 p2) arg args = msum
-  [ do (p1', args') <- stepParser p1 arg args
-       return (p1' <|> p2, args')
-  , do (p2', args') <- stepParser p2 arg args
-       return (p1 <|> p2', args') ]
+  [ stepParser p1 arg args
+  , stepParser p2 arg args ]
 stepParser (BindP p k) arg args = do
   (p', args') <- stepParser p arg args
   x <- evalParser p'
@@ -176,11 +175,11 @@ evalParser (AltP p1 p2) = evalParser p1 <|> evalParser p2
 evalParser (BindP p k) = evalParser p >>= evalParser . k
 
 -- | Map a polymorphic function over all the options of a parser, and collect
--- the results.
+-- the results in a tree structure.
 mapParser :: (forall x . OptHelpInfo -> Option x -> b)
           -> Parser a
-          -> [b]
-mapParser = go False False
+          -> OptTree b
+mapParser g = simplify . go False False g
   where
     has_default :: Parser a -> Bool
     has_default p = case runP (evalParser p) of
@@ -189,10 +188,39 @@ mapParser = go False False
 
     go :: Bool -> Bool
        -> (forall x . OptHelpInfo -> Option x -> b)
-       -> Parser a -> [b]
-    go _ _ _ (NilP _) = []
-    go m d f (OptP opt) = [f (OptHelpInfo m d) opt]
-    go m d f (MultP p1 p2) = go m d f p1 ++ go m d f p2
-    go m d f (AltP p1 p2) = go m d' f p1 ++ go m d' f p2
+       -> Parser a
+       -> OptTree b
+    go _ _ _ (NilP _) = MultNode []
+    go m d f (OptP opt) = Leaf (f (OptHelpInfo m d) opt)
+    go m d f (MultP p1 p2) = MultNode [go m d f p1, go m d f p2]
+    go m d f (AltP p1 p2) = AltNode [go m d' f p1, go m d' f p2]
       where d' = d || has_default p1 || has_default p2
     go _ d f (BindP p _) = go True d f p
+
+simplify :: OptTree a -> OptTree a
+simplify (Leaf x) = Leaf x
+simplify (MultNode xs) =
+  case concatMap (remove_mult . simplify) xs of
+    [x] -> x
+    xs' -> MultNode xs'
+  where
+    remove_mult (MultNode ts) = ts
+    remove_mult t = [t]
+simplify (AltNode xs) =
+  case concatMap (remove_alt . simplify) xs of
+    []  -> MultNode []
+    [x] -> x
+    xs' -> AltNode xs'
+  where
+    remove_alt (AltNode ts) = ts
+    remove_alt (MultNode []) = []
+    remove_alt t = [t]
+
+-- | Like 'mapParser', but collect the results in a list.
+flatMapParser :: (forall x. OptHelpInfo -> Option x -> b)
+              -> Parser a -> [b]
+flatMapParser f = flatten . mapParser f
+  where
+    flatten (Leaf x) = [x]
+    flatten (MultNode xs) = xs >>= flatten
+    flatten (AltNode xs) = xs >>= flatten

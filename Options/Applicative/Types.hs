@@ -13,6 +13,7 @@ module Options.Applicative.Types (
   Parser(..),
   ParserFailure(..),
   OptHelpInfo(..),
+  OptTree(..),
 
   optVisibility,
   optMetaVar,
@@ -128,6 +129,12 @@ instance Error ParserFailure where
 data OptHelpInfo = OptHelpInfo
   { hinfoMulti :: Bool
   , hinfoDefault :: Bool }
+
+data OptTree a
+  = Leaf a
+  | MultNode [OptTree a]
+  | AltNode [OptTree a]
+  deriving (Functor, Show)
 
 optVisibility :: Option a -> OptVisibility
 optVisibility = propVisibility . optProps
