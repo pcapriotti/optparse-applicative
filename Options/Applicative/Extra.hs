@@ -10,6 +10,8 @@ module Options.Applicative.Extra (
   ParserFailure(..),
   ) where
 
+import Control.Applicative
+import Options.Applicative.BashCompletion
 import Options.Applicative.Common
 import Options.Applicative.Builder
 import Options.Applicative.Help
@@ -46,6 +48,9 @@ customExecParser pprefs pinfo = do
       hPutStr stderr (errMessage failure progn)
       exitWith (errExitCode failure)
 
+data Result a = Result a
+              | Extra ParserFailure
+
 -- | A pure version 'execParser'.
 execParserPure :: ParserPrefs       -- ^ Global preferences for this parser
                -> ParserInfo a      -- ^ Description of the program to run
@@ -53,7 +58,9 @@ execParserPure :: ParserPrefs       -- ^ Global preferences for this parser
                -> Either ParserFailure a
 execParserPure pprefs pinfo args =
   case runP p args of
-    (Right (a, _), _) -> Right a
+    (Right (r, _), _) -> case r of
+      Result a -> Right a
+      Extra failure -> Left failure
     (Left msg, ctx) -> Left ParserFailure
       { errMessage = \progn
           -> with_context ctx pinfo $ \name ->
@@ -79,7 +86,8 @@ execParserPure pprefs pinfo args =
     with_context NullContext i f = f Nothing i
     with_context (Context n i) _ f = f n i
 
-    p = runParserFully parser
+    parser' = (Result <$> parser) <|> (Extra <$> bashCompletionParser parser)
+    p = runParserFully parser'
 
 -- | Generate option summary.
 usage :: ParserPrefs -> Parser a -> String -> String

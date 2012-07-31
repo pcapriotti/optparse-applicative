@@ -76,6 +76,7 @@ bug-reports:         https://github.com/pcapriotti/optparse-applicative/issues
 library
   exposed-modules:     Options.Applicative,
                        Options.Applicative.Arrows,
+                       Options.Applicative.BashCompletion,
                        Options.Applicative.Common,
                        Options.Applicative.Types,
                        Options.Applicative.Builder,
