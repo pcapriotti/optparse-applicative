@@ -52,8 +52,8 @@ execParserPure :: ParserPrefs       -- ^ Global preferences for this parser
                -> [String]          -- ^ Program arguments
                -> Either ParserFailure a
 execParserPure pprefs pinfo args =
-  case runP p of
-    (Right a, _) -> Right a
+  case runP p args of
+    (Right (a, _), _) -> Right a
     (Left msg, ctx) -> Left ParserFailure
       { errMessage = \progn
           -> with_context ctx pinfo $ \name ->
@@ -79,7 +79,7 @@ execParserPure pprefs pinfo args =
     with_context NullContext i f = f Nothing i
     with_context (Context n i) _ f = f n i
 
-    p = runParserFully parser args
+    p = runParserFully parser
 
 -- | Generate option summary.
 usage :: ParserPrefs -> Parser a -> String -> String

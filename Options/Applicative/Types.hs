@@ -24,6 +24,7 @@ import Control.Applicative
 import Control.Category
 import Control.Monad
 import Control.Monad.Trans.Error
+import Control.Monad.Trans.State
 import Control.Monad.Trans.Writer
 import Data.Monoid
 import Prelude hiding ((.), id)
@@ -53,7 +54,7 @@ instance Monoid Context where
   mappend _ c@(Context _ _) = c
   mappend c _ = c
 
-type P = ErrorT String (Writer Context)
+type P = StateT [String] (ErrorT String (Writer Context))
 
 data OptName = OptShort !Char
              | OptLong !String
