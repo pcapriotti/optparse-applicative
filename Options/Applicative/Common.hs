@@ -136,10 +136,8 @@ stepParser (MultP p1 p2) arg args = msum
   , do (p2', args') <- stepParser p2 arg args
        return (p1 <*> p2', args') ]
 stepParser (AltP p1 p2) arg args = msum
-  [ do (p1', args') <- stepParser p1 arg args
-       return (p1' <|> p2, args')
-  , do (p2', args') <- stepParser p2 arg args
-       return (p1 <|> p2', args') ]
+  [ stepParser p1 arg args
+  , stepParser p2 arg args ]
 stepParser (BindP p k) arg args = do
   (p', args') <- stepParser p arg args
   x <- evalParser p'
