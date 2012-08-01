@@ -7,8 +7,6 @@ module Options.Applicative.Internal
   , uncons
   , liftMaybe
 
-  , getArgs
-  , setArgs
   , runP
 
   , runCompletion
@@ -30,14 +28,13 @@ import Options.Applicative.Types
 class (Alternative m, MonadPlus m) => MonadP m where
   type PError m
 
-  nextArg :: Maybe String -> m (Maybe String)
   setContext :: Maybe String -> ParserInfo a -> m ()
   setParser :: Maybe String -> Parser a -> m ()
 
   tryP :: m a -> m (Either (PError m) a)
   errorP :: PError m -> m a
 
-type P = StateT [String] (ErrorT String (Writer Context))
+type P = ErrorT String (Writer Context)
 
 data Context where
   Context :: Maybe String -> ParserInfo a -> Context
@@ -51,40 +48,18 @@ instance Monoid Context where
 instance MonadP P where
   type PError P = String
 
-  nextArg val = do
-    args <- getArgs
-    case maybeToList val ++ args of
-      [] -> return Nothing
-      (arg':args') -> do
-        setArgs args'
-        return $ Just arg'
-
-  setContext name = lift . lift . tell . Context name
+  setContext name = lift . tell . Context name
   setParser _ _ = return ()
 
-  errorP = lift . throwError
+  errorP = throwError
 
-  tryP p = do
-    args <- getArgs
-    let (r, ctx) = runP p args
-    lift . lift . tell $ ctx
-    case r of
-      Left e -> return (Left e)
-      Right (x, args') -> do
-        setArgs args'
-        return (Right x)
+  tryP p = lift $ runErrorT p
 
 liftMaybe :: MonadPlus m => Maybe a -> m a
 liftMaybe = maybe mzero return
 
-runP :: P a -> [String] -> (Either String (a, [String]), Context)
-runP p args = runWriter . runErrorT $ runStateT p args
-
-getArgs :: P [String]
-getArgs = get
-
-setArgs :: [String] -> P ()
-setArgs = put
+runP :: P a -> (Either String a, Context)
+runP = runWriter . runErrorT
 
 uncons :: [a] -> Maybe (a, [a])
 uncons [] = Nothing
@@ -110,20 +85,6 @@ type Completion = ErrorT ComplError (State ComplState)
 
 instance MonadP Completion where
   type PError Completion = ComplError
-
-  nextArg val = do
-    st <- lift get
-    let i = complIndex st
-    unless (i > 0) exitCompletion
-    case val of
-      Just arg -> return $ Just arg
-      Nothing -> do
-        let ws = complWords st
-        (arg, ws') <- liftMaybe (uncons ws)
-        lift . modify $ \s -> s
-          { complWords = ws'
-          , complIndex = i - 1 }
-        return $ Just arg
 
   setContext val i = setParser val (infoParser i)
   setParser val p = lift . modify $ \s -> s

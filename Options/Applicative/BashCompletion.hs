@@ -31,4 +31,4 @@ bashCompletionQuery parser ws i = case runCompletion compl ws i parser of
     show_name (OptShort c) = '-':[c]
     show_name (OptLong name) = "--" ++ name
 
-    compl = runParserWith (\_ _ -> exitCompletion) parser
+    compl = runParser parser ws

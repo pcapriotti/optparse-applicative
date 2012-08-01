@@ -15,7 +15,7 @@ import Options.Applicative.BashCompletion
 import Options.Applicative.Common
 import Options.Applicative.Builder
 import Options.Applicative.Help
-import Options.Applicative.Internal hiding (getArgs)
+import Options.Applicative.Internal
 import Options.Applicative.Utils
 import Options.Applicative.Types
 import System.Environment
@@ -61,8 +61,8 @@ execParserPure :: ParserPrefs       -- ^ Global preferences for this parser
                -> [String]          -- ^ Program arguments
                -> Either ParserFailure a
 execParserPure pprefs pinfo args =
-  case runP p args of
-    (Right (r, _), _) -> case r of
+  case runP p of
+    (Right r, _) -> case r of
       Result a -> Right a
       Extra failure -> Left failure
     (Left msg, ctx) -> Left ParserFailure
@@ -91,7 +91,7 @@ execParserPure pprefs pinfo args =
     with_context (Context n i) _ f = f n i
 
     parser' = (Result <$> parser) <|> (Extra <$> bashCompletionParser parser)
-    p = runParserFully parser'
+    p = runParserFully parser' args
 
 -- | Generate option summary.
 usage :: ParserPrefs -> Parser a -> String -> String

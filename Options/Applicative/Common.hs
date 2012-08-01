@@ -35,7 +35,6 @@ module Options.Applicative.Common (
 
   -- * Running parsers
   runParser,
-  runParserWith,
   runParserFully,
   evalParser,
 
@@ -45,8 +44,6 @@ module Options.Applicative.Common (
   mapParser,
   optionNames
   ) where
-
-import Debug.Trace
 
 import Control.Applicative
 import Control.Monad
@@ -74,28 +71,30 @@ instance Monoid MatchResult where
   mappend m@(Match _) _ = m
   mappend _ m = m
 
-optMatches :: MonadP m => OptReader a -> String -> Maybe (m a)
+type Matcher m a = [String] -> m (a, [String])
+
+optMatches :: MonadP m => OptReader a -> String -> Maybe (Matcher m a)
 optMatches rdr arg = case rdr of
   OptReader names f
     | Just (arg1, val) <- parsed
     , arg1 `elem` names
-    -> Just $ do
-         arg' <- nextArg val
-         trace ("arg' nothing: " ++ show (isNothing arg')) $ return ()
-         liftMaybe $ arg' >>= f
+    -> Just $ \args -> do
+         (arg', args') <- liftMaybe . uncons $ maybeToList val ++ args
+         r <- liftMaybe $ f arg'
+         return (r, args')
     | otherwise -> Nothing
   FlagReader names x
     | Just (arg1, Nothing) <- parsed
     , arg1 `elem` names
-    -> Just $ return x
+    -> Just $ \args -> return (x, args)
   ArgReader f
     | Just result <- f arg
-    -> Just $ return result
+    -> Just $ \args -> return (result, args)
   CmdReader _ f
     | Just subp <- f arg
-    -> Just $ do
+    -> Just $ \args -> do
          setContext (Just arg) subp
-         runParser (infoParser subp)
+         runParser (infoParser subp) args
   _ -> Nothing
   where
     parsed
@@ -110,51 +109,46 @@ optMatches rdr arg = case rdr of
           (a : rest) -> Just (OptShort a, Just rest)
       | otherwise = Nothing
 
-stepParser :: MonadP m => Parser a -> String -> m (Parser a)
-stepParser (NilP _) _ = mzero
-stepParser (OptP opt) arg
+stepParser :: MonadP m => Parser a -> String -> [String] -> m (Parser a, [String])
+stepParser (NilP _) _ _ = empty
+stepParser (OptP opt) arg args
   | Just matcher <- optMatches (optMain opt) arg
-  = pure <$> matcher
+  = do (r, args') <- matcher args
+       return (pure r, args')
   | otherwise = empty
-stepParser (MultP p1 p2) arg = msum
-  [ do p1' <- stepParser p1 arg
-       return (p1' <*> p2)
-  , do p2' <- stepParser p2 arg
-       return (p1 <*> p2') ]
-stepParser (AltP p1 p2) arg = msum
-  [ do p1' <- stepParser p1 arg
-       return (p1' <|> p2)
-  , do p2' <- stepParser p2 arg
-       return (p1 <|> p2') ]
-stepParser (BindP p k) arg = do
-  p' <- stepParser p arg
+stepParser (MultP p1 p2) arg args = msum
+  [ do (p1', args') <- stepParser p1 arg args
+       return (p1' <*> p2, args')
+  , do (p2', args') <- stepParser p2 arg args
+       return (p1 <*> p2', args') ]
+stepParser (AltP p1 p2) arg args = msum
+  [ do (p1', args') <- stepParser p1 arg args
+       return (p1' <|> p2, args')
+  , do (p2', args') <- stepParser p2 arg args
+       return (p1 <|> p2', args') ]
+stepParser (BindP p k) arg args = do
+  (p', args') <- stepParser p arg args
   x <- liftMaybe $ evalParser p'
-  return $ k x
-
-runParserWith :: MonadP m => (Parser a -> Maybe String -> m b) -> Parser a -> m b
-runParserWith h p = do
-  a <- nextArg Nothing
-  case a of
-    Nothing -> h p Nothing
-    Just arg -> do
-      r <- tryP $ stepParser p arg
-      case r of
-        Left e -> h p (Just arg) <|> errorP e
-        Right p' -> do
-          setParser (Just arg) p'
-          runParserWith h p'
+  return (k x, args')
 
 -- | Apply a 'Parser' to a command line, and return a result and leftover
 -- arguments.  This function returns an error if any parsing error occurs, or
 -- if any options are missing and don't have a default value.
-runParser :: MonadP m => Parser a -> m a
-runParser = runParserWith $ \p _ -> liftMaybe (evalParser p)
+runParser :: MonadP m => Parser a -> [String] -> m (a, [String])
+runParser p args = case args of
+  [] -> result
+  (arg : argt) -> do
+    x <- tryP (stepParser p arg argt)
+    case x of
+      Left e -> result <|> errorP e
+      Right (p', args') -> runParser p' args'
+  where
+    result = liftMaybe $ (,) <$> evalParser p <*> pure args
 
-runParserFully :: Parser a -> P a
-runParserFully p = do
-  r <- runParser p
-  args <- getArgs
-  guard $ null args
+runParserFully :: Parser a -> [String] -> P a
+runParserFully p args = do
+  (r, args') <- runParser p args
+  guard $ null args'
   return r
 
 -- | The default value of a 'Parser'.  This function returns an error if any of
