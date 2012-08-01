@@ -46,6 +46,8 @@ module Options.Applicative.Common (
   optionNames
   ) where
 
+import Debug.Trace
+
 import Control.Applicative
 import Control.Monad
 import Data.Maybe
@@ -79,7 +81,8 @@ optMatches rdr arg = case rdr of
     , arg1 `elem` names
     -> Just $ do
          arg' <- nextArg val
-         liftMaybe $ f arg'
+         trace ("arg' nothing: " ++ show (isNothing arg')) $ return ()
+         liftMaybe $ arg' >>= f
     | otherwise -> Nothing
   FlagReader names x
     | Just (arg1, Nothing) <- parsed
@@ -128,17 +131,24 @@ stepParser (BindP p k) arg = do
   x <- liftMaybe $ evalParser p'
   return $ k x
 
-runParserWith :: MonadP m => (Parser a -> m b) -> Parser a -> m b
-runParserWith h p = tryP (h p) $ do
-    arg <- nextArg Nothing
-    p' <- stepParser p arg
-    runParserWith h p'
+runParserWith :: MonadP m => (Parser a -> Maybe String -> m b) -> Parser a -> m b
+runParserWith h p = do
+  a <- nextArg Nothing
+  case a of
+    Nothing -> h p Nothing
+    Just arg -> do
+      r <- tryP $ stepParser p arg
+      case r of
+        Left e -> h p (Just arg) <|> errorP e
+        Right p' -> do
+          setParser (Just arg) p'
+          runParserWith h p'
 
 -- | Apply a 'Parser' to a command line, and return a result and leftover
 -- arguments.  This function returns an error if any parsing error occurs, or
 -- if any options are missing and don't have a default value.
 runParser :: MonadP m => Parser a -> m a
-runParser = runParserWith (liftMaybe . evalParser)
+runParser = runParserWith $ \p _ -> liftMaybe (evalParser p)
 
 runParserFully :: Parser a -> P a
 runParserFully p = do

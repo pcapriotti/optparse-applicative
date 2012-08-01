@@ -23,12 +23,12 @@ bashCompletionParser parser = complParser
       <*> option (long "bash-completion-index") )
 
 bashCompletionQuery :: Parser a -> [String] -> Int -> [String]
-bashCompletionQuery parser ws i = case runCompletion compl ws i of
-  Nothing -> []
-  Just p  -> list_options p
+bashCompletionQuery parser ws i = case runCompletion compl ws i parser of
+  Left ComplExit -> []
+  _              -> []
   where
     list_options = concat . mapParser (\_ -> map show_name . optionNames . optMain)
     show_name (OptShort c) = '-':[c]
     show_name (OptLong name) = "--" ++ name
 
-    compl = runParserWith pure parser
+    compl = runParserWith (\_ _ -> exitCompletion) parser
