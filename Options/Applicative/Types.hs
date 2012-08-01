@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, DeriveFunctor #-}
+{-# LANGUAGE GADTs, DeriveFunctor, Rank2Types #-}
 module Options.Applicative.Types (
   ParserInfo(..),
   ParserPrefs(..),
@@ -11,9 +11,14 @@ module Options.Applicative.Types (
   OptProperties(..),
   OptVisibility(..),
   Parser(..),
+  ParserM(..),
   ParserFailure(..),
   OptHelpInfo(..),
   OptTree(..),
+
+  fromM,
+  oneM,
+  manyM,
 
   optVisibility,
   optMetaVar,
@@ -112,13 +117,38 @@ instance Applicative Parser where
   pure = NilP . Just
   (<*>) = MultP
 
+newtype ParserM r = ParserM
+  { runParserM :: forall x . (r -> Parser x) -> Parser x }
+
+instance Monad ParserM where
+  return x = ParserM $ \k -> k x
+  ParserM f >>= g = ParserM $ \k -> f (\x -> runParserM (g x) k)
+
+instance Functor ParserM where
+  fmap = liftM
+
+instance Applicative ParserM where
+  pure = return
+  (<*>) = ap
+
+fromM :: ParserM a -> Parser a
+fromM (ParserM f) = f pure
+
+oneM :: Parser a -> ParserM a
+oneM p = ParserM (BindP p)
+
+manyM :: Parser a -> ParserM [a]
+manyM p = do
+  mx <- oneM (optional p)
+  case mx of
+    Nothing -> return []
+    Just x -> (x:) <$> manyM p
+
 instance Alternative Parser where
   empty = NilP Nothing
   (<|>) = AltP
-  many p = optional p `BindP` \mx -> case mx of
-    Nothing -> pure []
-    Just x  -> (x:) <$> many p
-  some p = p `BindP` (\r -> (r:) <$> many p)
+  many p = fromM $ manyM p
+  some p = fromM $ (:) <$> oneM p <*> manyM p
 
 -- | Result after a parse error.
 data ParserFailure = ParserFailure
