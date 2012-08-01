@@ -37,7 +37,14 @@ bashCompletionQuery parser ws i = case runCompletion compl parser of
   where
     list_options = filter is_completion
                  . concat
-                 . mapParser (\_ -> map show_name . optionNames . optMain)
+                 . mapParser (\_ -> opt_names)
+
+    opt_names opt = case optMain opt of
+      OptReader ns _  -> map show_name ns
+      FlagReader ns _ -> map show_name ns
+      ArgReader _     -> []
+      CmdReader ns _  -> ns
+
     show_name (OptShort c) = '-':[c]
     show_name (OptLong name) = "--" ++ name
 
