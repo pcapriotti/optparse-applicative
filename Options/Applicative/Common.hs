@@ -136,16 +136,18 @@ stepParser (BindP p k) arg args = do
 -- if any options are missing and don't have a default value.
 runParser :: MonadP m => Parser a -> [String] -> m (a, [String])
 runParser p args = case args of
-  [] -> result
+  [] -> maybe exitP return result
   (arg : argt) -> do
     x <- tryP (stepParser p arg argt)
     case x of
-      Left e -> result <|> errorP e
-      Right (p', args') -> runParser p' args'
+      Left e -> liftMaybe result <|> errorP e
+      Right (p', args') -> do
+        setParser (Just arg) p'
+        runParser p' args'
   where
-    result = liftMaybe $ (,) <$> evalParser p <*> pure args
+    result = (,) <$> evalParser p <*> pure args
 
-runParserFully :: Parser a -> [String] -> P a
+runParserFully :: MonadP m => Parser a -> [String] -> m a
 runParserFully p args = do
   (r, args') <- runParser p args
   guard $ null args'

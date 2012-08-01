@@ -9,7 +9,9 @@ module Options.Applicative.Internal
 
   , runP
 
+  , Completion
   , runCompletion
+  , SomeParser(..)
   , ComplError(..)
   , exitCompletion
   ) where
@@ -33,6 +35,7 @@ class (Alternative m, MonadPlus m) => MonadP m where
 
   tryP :: m a -> m (Either (PError m) a)
   errorP :: PError m -> m a
+  exitP :: m a
 
 type P = ErrorT String (Writer Context)
 
@@ -51,9 +54,10 @@ instance MonadP P where
   setContext name = lift . tell . Context name
   setParser _ _ = return ()
 
-  errorP = throwError
 
   tryP p = lift $ runErrorT p
+  exitP = mzero
+  errorP = throwError
 
 liftMaybe :: MonadPlus m => Maybe a -> m a
 liftMaybe = maybe mzero return
@@ -69,9 +73,7 @@ data SomeParser where
   SomeParser :: Parser a -> SomeParser
 
 data ComplState = ComplState
-  { complWords :: [String]
-  , complIndex :: !Int
-  , complParser :: SomeParser
+  { complParser :: SomeParser
   , complArg :: String }
 
 data ComplError
@@ -91,18 +93,19 @@ instance MonadP Completion where
     { complParser = SomeParser p
     , complArg = fromMaybe "" val }
 
-  errorP = throwError
-
   tryP p = do
     r <- lift $ runErrorT p
     case r of
       Left e@(ComplParseError _) -> return (Left e)
       Left e -> throwError e
       Right x -> return (Right x)
+  exitP = throwError ComplExit
+  errorP = throwError
 
-runCompletion :: Completion r -> [String] -> Int -> Parser a -> Either ComplError r
-runCompletion c ws i p = evalState (runErrorT c) s
-  where s = ComplState ws i (SomeParser p) ""
+runCompletion :: Completion r -> Parser a -> (Either ComplError r, SomeParser, String)
+runCompletion c p = case runState (runErrorT c) s of
+  (r, s') -> (r, complParser s', complArg s')
+  where s = ComplState (SomeParser p) ""
 
 exitCompletion :: Completion ()
 exitCompletion = throwError ComplExit
