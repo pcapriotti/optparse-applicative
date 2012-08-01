@@ -99,7 +99,7 @@ optMatches rdr arg = case rdr of
   CmdReader _ f
     | Just subp <- f arg
     -> Just $ \args -> do
-          setContext (Just arg) subp
+          setContext arg subp
           runParser (infoParser subp) args
   _ -> Nothing
   where
@@ -121,8 +121,8 @@ tryP = maybe empty return
 runP :: P a -> (Either String a, Context)
 runP = runWriter . runErrorT
 
-setContext :: Maybe String -> ParserInfo a -> P ()
-setContext name = lift . tell . Context name
+setContext :: String -> ParserInfo a -> P ()
+setContext name = lift . tell . Context [name]
 
 stepParser :: Parser a -> String -> [String] -> P (Parser a, [String])
 stepParser (NilP _) _ _ = empty

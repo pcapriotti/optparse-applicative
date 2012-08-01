@@ -122,5 +122,13 @@ case_alt_help = do
       i = info (p <**> helper) idm
   checkHelpText "alt" i ["--help"]
 
+case_nested_commands :: Assertion
+case_nested_commands = do
+  let p3 = strOption (short 'a' & metavar "A")
+      p2 = subparser (command "b" (info p3 idm))
+      p1 = subparser (command "c" (info p2 idm))
+      i = info (p1 <**> helper) idm
+  checkHelpText "nested" i ["c", "b"]
+
 main :: IO ()
 main = $(defaultMainGenerator)

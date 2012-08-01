@@ -56,27 +56,27 @@ execParserPure pprefs pinfo args =
     (Right a, _) -> Right a
     (Left msg, ctx) -> Left ParserFailure
       { errMessage = \progn
-          -> with_context ctx pinfo $ \name ->
+          -> with_context ctx pinfo $ \names ->
                  parserHelpText pprefs
                . add_error msg
-               . add_usage name progn
+               . add_usage names progn
       , errExitCode = ExitFailure (infoFailureCode pinfo) }
   where
     parser = infoParser pinfo
-    add_usage name progn i = i
+    add_usage names progn i = i
       { infoHeader = vcat
           [ infoHeader i
           , usage pprefs (infoParser i) ename ] }
       where
-        ename = maybe progn (\n -> progn ++ " " ++ n) name
+        ename = unwords (progn : names)
     add_error msg i = i
       { infoHeader = vcat [msg, infoHeader i] }
 
     with_context :: Context
                  -> ParserInfo a
-                 -> (forall b . Maybe String -> ParserInfo b -> c)
+                 -> (forall b . [String] -> ParserInfo b -> c)
                  -> c
-    with_context NullContext i f = f Nothing i
+    with_context NullContext i f = f [] i
     with_context (Context n i) _ f = f n i
 
     p = runParserFully parser args

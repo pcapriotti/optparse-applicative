@@ -46,12 +46,16 @@ data ParserPrefs = ParserPrefs
   }
 
 data Context where
-  Context :: Maybe String -> ParserInfo a -> Context
+  Context :: [String] -> ParserInfo a -> Context
   NullContext :: Context
+
+contextNames :: Context -> [String]
+contextNames (Context ns _) = ns
+contextNames NullContext = []
 
 instance Monoid Context where
   mempty = NullContext
-  mappend _ c@(Context _ _) = c
+  mappend c (Context ns i) = Context (contextNames c ++ ns) i
   mappend c _ = c
 
 type P = ErrorT String (Writer Context)
