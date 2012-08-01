@@ -130,5 +130,15 @@ case_nested_commands = do
       i = info (p1 <**> helper) idm
   checkHelpText "nested" i ["c", "b"]
 
+case_many_args :: Assertion
+case_many_args = do
+  let p = arguments str idm
+      i = info p idm
+      nargs = 20000
+      result = run i (replicate nargs "foo")
+  case result of
+    Left _ -> assertFailure "unexpected parse error"
+    Right xs -> nargs @=? length xs
+
 main :: IO ()
 main = $(defaultMainGenerator)
