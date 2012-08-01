@@ -251,7 +251,7 @@ argument p (Mod _ d g) = mkParser d g (ArgReader p)
 -- command line, all following arguments are included in the result, even if
 -- they start with @'-'@.
 arguments :: (String -> Maybe a) -> Mod ArgumentFields [a] -> Parser [a]
-arguments p m = args1 <|> pure (fromMaybe [] def)
+arguments p m = set_default <$> args
   where
     Mod _ (DefaultProp def sdef) g = m
     show_def = sdef <*> def
@@ -262,10 +262,13 @@ arguments p m = args1 <|> pure (fromMaybe [] def)
     props = mkProps mempty g
     props' = (mkProps mempty g) { propShowDefault = show_def }
 
-    args1 = ((Just <$> arg') <|> (ddash *> pure Nothing)) `BindP` \x -> case x of
-      Nothing -> many arg
-      Just a -> fmap (a:) args
-    args = args1 <|> pure []
+    args = optional arg_or_ddash `BindP` \mx -> case mx of
+      Nothing       -> pure []
+      Just Nothing  -> many arg
+      Just (Just x) -> (x:) <$> args
+    arg_or_ddash = (Just <$> arg') <|> (ddash *> pure Nothing)
+    set_default [] = fromMaybe [] def
+    set_default xs = xs
 
     arg = liftOpt (Option (ArgReader p) props)
     arg' = liftOpt (Option (ArgReader p') props')

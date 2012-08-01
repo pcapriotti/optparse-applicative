@@ -115,7 +115,9 @@ instance Applicative Parser where
 instance Alternative Parser where
   empty = NilP Nothing
   (<|>) = AltP
-  many p = some p <|> pure []
+  many p = optional p `BindP` \mx -> case mx of
+    Nothing -> pure []
+    Just x  -> (x:) <$> many p
   some p = p `BindP` (\r -> (r:) <$> many p)
 
 -- | Result after a parse error.
