@@ -4,6 +4,7 @@ module Options.Applicative.BashCompletion
   ) where
 
 import Control.Applicative
+import Data.Foldable (asum)
 import Data.List
 import System.Exit
 
@@ -19,10 +20,15 @@ bashCompletionParser parser = complParser
       { errMessage = \_ -> unlines opts
       , errExitCode = ExitSuccess }
 
-    complParser = failure <$>
-      (   bashCompletionQuery parser
-      <$> (many . strOption) (long "bash-completion-word")
-      <*> option (long "bash-completion-index") )
+    complParser = asum
+      [ failure <$>
+        (   bashCompletionQuery parser
+        <$> (many . strOption) (long "bash-completion-word")
+        <*> option (long "bash-completion-index") )
+      , ParserFailure
+          <$> (bashCompletionScript <$>
+                strOption (long "bash-completion-script"))
+          <*> pure ExitSuccess ]
 
 bashCompletionQuery :: Parser a -> [String] -> Int -> [String]
 bashCompletionQuery parser ws i = case runCompletion compl parser of
@@ -44,3 +50,19 @@ bashCompletionQuery parser ws i = case runCompletion compl parser of
     compl = do
       setParser Nothing parser
       runParserFully parser (drop 1 ws')
+
+bashCompletionScript :: String -> String -> String
+bashCompletionScript prog progn = unlines
+  [ "_" ++ progn ++ "()"
+  , "{"
+  , "    local cmdline"
+  , "    CMDLINE=(--bash-completion-index $COMP_CWORD)"
+  , ""
+  , "    for arg in ${COMP_WORDS[@]}; do"
+  , "        CMDLINE=(${CMDLINE[@]} --bash-completion-word $arg)"
+  , "    done"
+  , ""
+  , "    COMPREPLY=( $(" ++ prog ++ " \"${CMDLINE[@]}\") )"
+  , "}"
+  , ""
+  , "complete -F _" ++ progn ++ " " ++ progn ]
