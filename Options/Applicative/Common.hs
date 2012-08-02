@@ -87,7 +87,7 @@ optMatches rdr arg = case rdr of
     | Just (arg1, Nothing) <- parsed
     , arg1 `elem` names
     -> Just $ \args -> return (x, args)
-  ArgReader f
+  ArgReader _ f
     | Just result <- f arg
     -> Just $ \args -> return (result, args)
   CmdReader _ f

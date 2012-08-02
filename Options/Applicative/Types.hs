@@ -9,6 +9,7 @@ module Options.Applicative.Types (
   OptProperties(..),
   OptVisibility(..),
   Parser(..),
+  Completer(..),
   ParserFailure(..),
   OptHelpInfo(..),
 
@@ -20,6 +21,7 @@ module Options.Applicative.Types (
 
 import Control.Applicative
 import Control.Monad.Trans.Error
+import Data.Monoid
 import System.Exit
 
 -- | A full description for a runnable 'Parser' for a program.
@@ -66,7 +68,7 @@ data Option a = Option
 data OptReader a
   = OptReader [OptName] (String -> Maybe a)             -- ^ option reader
   | FlagReader [OptName] !a                             -- ^ flag reader
-  | ArgReader (String -> Maybe a)                       -- ^ argument reader
+  | ArgReader Completer (String -> Maybe a)             -- ^ argument reader
   | CmdReader [String] (String -> Maybe (ParserInfo a)) -- ^ command reader
   deriving Functor
 
@@ -94,6 +96,14 @@ instance Alternative Parser where
   (<|>) = AltP
   many p = some p <|> pure []
   some p = p `BindP` (\r -> (r:) <$> many p)
+
+newtype Completer = Completer
+  { runCompleter :: String -> IO [String] }
+
+instance Monoid Completer where
+  mempty = Completer $ \_ -> return []
+  mappend (Completer c1) (Completer c2) =
+    Completer $ \s -> (++) <$> c1 s <*> c2 s
 
 -- | Result after a parse error.
 data ParserFailure = ParserFailure

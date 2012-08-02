@@ -42,7 +42,7 @@ bashCompletionQuery parser ws i = case runCompletion compl parser of
     opt_names opt = case optMain opt of
       OptReader ns _  -> map show_name ns
       FlagReader ns _ -> map show_name ns
-      ArgReader _     -> []
+      ArgReader _ _   -> []
       CmdReader ns _  -> ns
 
     show_name (OptShort c) = '-':[c]

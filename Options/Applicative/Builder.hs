@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor, EmptyDataDecls #-}
+{-# LANGUAGE DeriveFunctor #-}
 module Options.Applicative.Builder (
   -- * Parser builders
   --
@@ -74,6 +74,7 @@ module Options.Applicative.Builder (
 
 import Control.Applicative
 import Control.Monad
+import Data.List
 import Data.Maybe
 import Data.Monoid
 
@@ -94,7 +95,9 @@ data CommandFields a = CommandFields
   { cmdCommands :: [(String, ParserInfo a)] }
   deriving Functor
 
-data ArgumentFields a
+data ArgumentFields a = ArgumentFields
+  { argCompleter :: Completer
+  , argAdmissible :: [String] }
   deriving Functor
 
 class HasName f where
@@ -238,9 +241,16 @@ subparser m = mkParser d g rdr
     CommandFields cmds = f (CommandFields [])
     rdr = CmdReader (map fst cmds) (`lookup` cmds)
 
+listCompleter :: [String] -> Completer
+listCompleter ss = Completer $ \s -> return
+  [ x | x <- ss, x `isPrefixOf` s ]
+
 -- | Builder for an argument parser.
 argument :: (String -> Maybe a) -> Mod ArgumentFields a -> Parser a
-argument p (Mod _ d g) = mkParser d g (ArgReader p)
+argument p (Mod f d g) = mkParser d g (ArgReader completer p)
+  where
+    fields = f (ArgumentFields mempty [])
+    completer = argCompleter fields <> listCompleter (argAdmissible fields)
 
 -- | Builder for an argument list parser. All arguments are collected and
 -- returned as a list.
@@ -253,7 +263,7 @@ argument p (Mod _ d g) = mkParser d g (ArgReader p)
 arguments :: (String -> Maybe a) -> Mod ArgumentFields [a] -> Parser [a]
 arguments p m = args1 <|> pure (fromMaybe [] def)
   where
-    Mod _ (DefaultProp def sdef) g = m
+    Mod f (DefaultProp def sdef) g = m
     show_def = sdef <*> def
 
     p' ('-':_) = Nothing
@@ -267,10 +277,13 @@ arguments p m = args1 <|> pure (fromMaybe [] def)
       Just a -> fmap (a:) args
     args = args1 <|> pure []
 
-    arg = liftOpt (Option (ArgReader p) props)
-    arg' = liftOpt (Option (ArgReader p') props')
+    arg = liftOpt (Option (ArgReader completer p) props)
+    arg' = liftOpt (Option (ArgReader completer p') props')
 
     ddash = argument (guard . (== "--")) internal
+
+    fields = f (ArgumentFields mempty [])
+    completer = argCompleter fields <> listCompleter (argAdmissible fields)
 
 -- | Builder for a flag parser.
 --
