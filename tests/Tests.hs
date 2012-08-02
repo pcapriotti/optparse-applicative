@@ -100,5 +100,47 @@ case_show_default = do
         msg
     Right r  -> assertFailure $ "unexpected result: " ++ show r
 
+case_alt_cont :: Assertion
+case_alt_cont = do
+  let p = Alternatives.a <|> Alternatives.b
+      i = info p idm
+      result = run i ["-a", "-b"]
+  case result of
+    Left _ -> return ()
+    Right r -> assertFailure $ "unexpected result: " ++ show r
+
+case_alt_help :: Assertion
+case_alt_help = do
+  let p = p1 <|> p2 <|> p3
+      p1 = (Just . Left)
+        <$> strOption ( long "virtual-machine"
+                      & metavar "VM"
+                      & help "Virtual machine name" )
+      p2 = (Just . Right)
+        <$> strOption ( long "cloud-service"
+                      & metavar "CS"
+                      & help "Cloud service name" )
+      p3 = flag' Nothing ( long "dry-run" )
+      i = info (p <**> helper) idm
+  checkHelpText "alt" i ["--help"]
+
+case_nested_commands :: Assertion
+case_nested_commands = do
+  let p3 = strOption (short 'a' & metavar "A")
+      p2 = subparser (command "b" (info p3 idm))
+      p1 = subparser (command "c" (info p2 idm))
+      i = info (p1 <**> helper) idm
+  checkHelpText "nested" i ["c", "b"]
+
+case_many_args :: Assertion
+case_many_args = do
+  let p = arguments str idm
+      i = info p idm
+      nargs = 20000
+      result = run i (replicate nargs "foo")
+  case result of
+    Left _ -> assertFailure "unexpected parse error"
+    Right xs -> nargs @=? length xs
+
 main :: IO ()
 main = $(defaultMainGenerator)

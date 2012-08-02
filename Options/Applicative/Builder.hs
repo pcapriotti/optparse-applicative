@@ -287,7 +287,7 @@ argument p (Mod f d g) = mkParser d g (ArgReader rdr)
 -- command line, all following arguments are included in the result, even if
 -- they start with @'-'@.
 arguments :: (String -> Maybe a) -> Mod ArgumentFields [a] -> Parser [a]
-arguments p m = args1 <|> pure (fromMaybe [] def)
+arguments p m = set_default <$> fromM args
   where
     Mod f (DefaultProp def sdef) g = m
     show_def = sdef <*> def
@@ -298,10 +298,15 @@ arguments p m = args1 <|> pure (fromMaybe [] def)
     props = mkProps mempty g
     props' = (mkProps mempty g) { propShowDefault = show_def }
 
-    args1 = ((Just <$> arg') <|> (ddash *> pure Nothing)) `BindP` \x -> case x of
-      Nothing -> many arg
-      Just a -> fmap (a:) args
-    args = args1 <|> pure []
+    args = do
+      mx <- oneM $ optional arg_or_ddash
+      case mx of
+        Nothing       -> return []
+        Just Nothing  -> manyM arg
+        Just (Just x) -> (x:) <$> args
+    arg_or_ddash = (Just <$> arg') <|> (ddash *> pure Nothing)
+    set_default [] = fromMaybe [] def
+    set_default xs = xs
 
     arg = liftOpt (Option (ArgReader (CReader compl p)) props)
     arg' = liftOpt (Option (ArgReader (CReader compl p')) props')
@@ -348,8 +353,9 @@ switch = flag False True
 -- | Builder for an option with a null reader. A non-trivial reader can be
 -- added using the 'reader' modifier.
 nullOption :: Mod OptionFields a -> Parser a
-nullOption (Mod f d g) = mkParser d g rdr
+nullOption m = mkParser d g rdr
   where
+    Mod f d g = metavar "ARG" <> m
     fields = f (OptionFields [] mempty disabled)
     crdr = CReader (optCompleter fields) (optReader fields)
     rdr = OptReader (optNames fields) crdr

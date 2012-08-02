@@ -66,12 +66,18 @@ cmdDesc = concat . mapParser desc
 
 -- | Generate a brief help text for a parser.
 briefDesc :: ParserPrefs -> Parser a -> String
-briefDesc pprefs = foldr (<+>) "" . mapParser (optDesc pprefs style)
+briefDesc pprefs = fold_tree . treeMapParser (optDesc pprefs style)
   where
     style = OptDescStyle
       { descSep = "|"
       , descHidden = False
       , descSurround = True }
+
+    fold_tree (Leaf x) = x
+    fold_tree (MultNode xs) = unwords (fold_trees xs)
+    fold_tree (AltNode xs) = "(" ++ intercalate " | " (fold_trees xs) ++ ")"
+
+    fold_trees = filter (not . null) . map fold_tree
 
 -- | Generate a full help text for a parser.
 fullDesc :: ParserPrefs -> Parser a -> [String]

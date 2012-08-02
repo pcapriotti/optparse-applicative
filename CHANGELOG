@@ -1,3 +1,9 @@
+## Version 0.3.2 (31 Jul 2012)
+
+- Fixed bug where both branches of an alternative could be matched.
+
+- Improved brief help text for alternatives.
+
 ## Version 0.3.1 (30 Jul 2012)
 
 - Added new `showDefault` and `showDefaultWith` modifiers, which will result in
