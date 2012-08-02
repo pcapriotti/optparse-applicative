@@ -92,7 +92,7 @@ execParserPure pprefs pinfo args =
     with_context NullContext i f = f Nothing i
     with_context (Context n i) _ f = f n i
 
-    parser' = (Result <$> parser) <|> (Extra <$> bashCompletionParser parser)
+    parser' = (Extra <$> bashCompletionParser parser) <|> (Result <$> parser)
     p = runParserFully parser' args
 
 -- | Generate option summary.
