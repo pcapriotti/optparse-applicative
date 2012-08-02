@@ -96,7 +96,7 @@ case_show_default = do
     Left (ParserFailure err _) -> do
       msg <- err "test"
       assertHasLine
-        "  -n                       set count (default: 0)"
+        "  -n ARG                   set count (default: 0)"
         msg
     Right r  -> assertFailure $ "unexpected result: " ++ show r
 
