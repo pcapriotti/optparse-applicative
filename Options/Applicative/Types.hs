@@ -8,6 +8,7 @@ module Options.Applicative.Types (
   OptReader(..),
   OptProperties(..),
   OptVisibility(..),
+  CReader(..),
   Parser(..),
   Completer(..),
   ParserFailure(..),
@@ -64,11 +65,16 @@ data Option a = Option
   , optProps :: OptProperties            -- ^ properties of this option
   } deriving Functor
 
+data CReader a = CReader
+  { crCompleter :: Completer
+  , crReader :: String -> Maybe a }
+  deriving Functor
+
 -- | An 'OptReader' defines whether an option matches an command line argument.
 data OptReader a
-  = OptReader [OptName] (String -> Maybe a)             -- ^ option reader
+  = OptReader [OptName] (CReader a)                     -- ^ option reader
   | FlagReader [OptName] !a                             -- ^ flag reader
-  | ArgReader Completer (String -> Maybe a)             -- ^ argument reader
+  | ArgReader (CReader a)                               -- ^ argument reader
   | CmdReader [String] (String -> Maybe (ParserInfo a)) -- ^ command reader
   deriving Functor
 

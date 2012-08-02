@@ -85,6 +85,7 @@ import Options.Applicative.Types
 
 data OptionFields a = OptionFields
   { optNames :: [OptName]
+  , optCompleter :: Completer
   , optReader :: String -> Maybe a }
   deriving Functor
 
@@ -98,8 +99,7 @@ data CommandFields a = CommandFields
   deriving Functor
 
 data ArgumentFields a = ArgumentFields
-  { argCompleter :: Completer
-  , argAdmissible :: [String] }
+  { argCompleter :: Completer }
   deriving Functor
 
 class HasName f where
@@ -110,6 +110,15 @@ instance HasName OptionFields where
 
 instance HasName FlagFields where
   name n fields = fields { flagNames = n : flagNames fields }
+
+class HasCompleter f where
+  modCompleter :: (Completer -> Completer) -> f a -> f a
+
+instance HasCompleter OptionFields where
+  modCompleter f p = p { optCompleter = f (optCompleter p) }
+
+instance HasCompleter ArgumentFields where
+  modCompleter f p = p { argCompleter = f (argCompleter p) }
 
 -- mod --
 
@@ -202,17 +211,15 @@ command cmd pinfo = fieldMod $ \p ->
   p { cmdCommands = (cmd, pinfo) : cmdCommands p }
 
 -- | Add a list of possible values for an argument
-argValues :: [String] -> Mod ArgumentFields a
-argValues xs = fieldMod $ \p ->
-  p { argAdmissible = argAdmissible p ++ xs }
+argValues :: HasCompleter f => [String] -> Mod f a
+argValues xs = fieldMod $ modCompleter (<> listCompleter xs)
 
 -- | Add a completer to an argument.
 --
 -- A completer is a function String -> IO String which, given a partial
 -- argument, returns all possible completions for that argument.
 completer :: (String -> IO [String]) -> Mod ArgumentFields a
-completer f = fieldMod $ \p ->
-  p { argCompleter = argCompleter p <> Completer f }
+completer f = fieldMod $ modCompleter (<> Completer f)
 
 -- parsers --
 
@@ -262,10 +269,10 @@ listCompleter ss = Completer $ \s -> return
 
 -- | Builder for an argument parser.
 argument :: (String -> Maybe a) -> Mod ArgumentFields a -> Parser a
-argument p (Mod f d g) = mkParser d g (ArgReader compl p)
+argument p (Mod f d g) = mkParser d g (ArgReader rdr)
   where
-    fields = f (ArgumentFields mempty [])
-    compl = argCompleter fields <> listCompleter (argAdmissible fields)
+    ArgumentFields compl = f (ArgumentFields mempty)
+    rdr = CReader compl p
 
 -- | Builder for an argument list parser. All arguments are collected and
 -- returned as a list.
@@ -292,13 +299,12 @@ arguments p m = args1 <|> pure (fromMaybe [] def)
       Just a -> fmap (a:) args
     args = args1 <|> pure []
 
-    arg = liftOpt (Option (ArgReader compl p) props)
-    arg' = liftOpt (Option (ArgReader compl p') props')
+    arg = liftOpt (Option (ArgReader (CReader compl p)) props)
+    arg' = liftOpt (Option (ArgReader (CReader compl p')) props')
 
     ddash = argument (guard . (== "--")) internal
 
-    fields = f (ArgumentFields mempty [])
-    compl = argCompleter fields <> listCompleter (argAdmissible fields)
+    ArgumentFields compl = f (ArgumentFields mempty)
 
 -- | Builder for a flag parser.
 --
@@ -340,8 +346,9 @@ switch = flag False True
 nullOption :: Mod OptionFields a -> Parser a
 nullOption (Mod f d g) = mkParser d g rdr
   where
-    rdr = let fields = f (OptionFields [] disabled)
-          in OptReader (optNames fields) (optReader fields)
+    fields = f (OptionFields [] mempty disabled)
+    crdr = CReader (optCompleter fields) (optReader fields)
+    rdr = OptReader (optNames fields) crdr
 
 -- | Builder for an option taking a 'String' argument.
 strOption :: Mod OptionFields String -> Parser String

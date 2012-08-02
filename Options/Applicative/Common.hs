@@ -74,21 +74,21 @@ instance Monoid MatchResult where
 type Matcher m a = [String] -> m (a, [String])
 
 optMatches :: MonadP m => OptReader a -> String -> Maybe (Matcher m a)
-optMatches rdr arg = case rdr of
-  OptReader names f
+optMatches opt arg = case opt of
+  OptReader names rdr
     | Just (arg1, val) <- parsed
     , arg1 `elem` names
     -> Just $ \args -> do
          (arg', args') <- liftMaybe . uncons $ maybeToList val ++ args
-         r <- liftMaybe $ f arg'
+         r <- liftMaybe $ crReader rdr arg'
          return (r, args')
     | otherwise -> Nothing
   FlagReader names x
     | Just (arg1, Nothing) <- parsed
     , arg1 `elem` names
     -> Just $ \args -> return (x, args)
-  ArgReader _ f
-    | Just result <- f arg
+  ArgReader rdr
+    | Just result <- crReader rdr arg
     -> Just $ \args -> return (result, args)
   CmdReader _ f
     | Just subp <- f arg
