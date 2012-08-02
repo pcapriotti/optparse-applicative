@@ -6,6 +6,7 @@ module Options.Applicative.BashCompletion
 import Control.Applicative
 import Data.Foldable (asum)
 import Data.List
+import Data.Maybe
 import System.Exit
 
 import Options.Applicative.Builder
@@ -31,21 +32,28 @@ bashCompletionParser parser = complParser
 
 bashCompletionQuery :: Parser a -> [String] -> Int -> String -> IO [String]
 bashCompletionQuery parser ws i _ = case runCompletion compl parser of
-  (Left ComplExit, SomeParser p, _) -> return $ list_options p
+  (Left ComplExit, SomeParser p, _) -> list_options p
   _ -> return []
   where
-    list_options = filter is_completion
-                 . concat
-                 . mapParser (\_ -> opt_names)
+    list_options =
+        fmap concat
+      . sequence
+      . mapParser (\_ -> opt_completions)
 
-    opt_names opt = case optMain opt of
-      OptReader ns _  -> map show_name ns
-      FlagReader ns _ -> map show_name ns
-      ArgReader _ _   -> []
-      CmdReader ns _  -> ns
+    opt_completions opt = case optMain opt of
+      OptReader ns _        -> show_names ns
+      FlagReader ns _       -> show_names ns
+      ArgReader completer _ -> run_completer completer
+      CmdReader ns _        -> filter_names ns
 
     show_name (OptShort c) = '-':[c]
     show_name (OptLong name) = "--" ++ name
+
+    show_names = filter_names . map show_name
+    filter_names = return . filter is_completion
+
+    run_completer :: Completer -> IO [String]
+    run_completer c = runCompleter c (fromMaybe "" (listToMaybe ws''))
 
     (ws', ws'') = splitAt i ws
 
