@@ -39,6 +39,8 @@ module Options.Applicative.Builder (
   hidden,
   internal,
   command,
+  argValues,
+  completer,
   idm,
   (&),
 
@@ -199,6 +201,19 @@ command :: String -> ParserInfo a -> Mod CommandFields a
 command cmd pinfo = fieldMod $ \p ->
   p { cmdCommands = (cmd, pinfo) : cmdCommands p }
 
+-- | Add a list of possible values for an argument
+argValues :: [String] -> Mod ArgumentFields a
+argValues xs = fieldMod $ \p ->
+  p { argAdmissible = argAdmissible p ++ xs }
+
+-- | Add a completer to an argument.
+--
+-- A completer is a function String -> IO String which, given a partial
+-- argument, returns all possible completions for that argument.
+completer :: (String -> IO [String]) -> Mod ArgumentFields a
+completer f = fieldMod $ \p ->
+  p { argCompleter = argCompleter p <> Completer f }
+
 -- parsers --
 
 -- | Base default properties.
@@ -243,14 +258,14 @@ subparser m = mkParser d g rdr
 
 listCompleter :: [String] -> Completer
 listCompleter ss = Completer $ \s -> return
-  [ x | x <- ss, x `isPrefixOf` s ]
+  [ x | x <- ss, s `isPrefixOf` x ]
 
 -- | Builder for an argument parser.
 argument :: (String -> Maybe a) -> Mod ArgumentFields a -> Parser a
-argument p (Mod f d g) = mkParser d g (ArgReader completer p)
+argument p (Mod f d g) = mkParser d g (ArgReader compl p)
   where
     fields = f (ArgumentFields mempty [])
-    completer = argCompleter fields <> listCompleter (argAdmissible fields)
+    compl = argCompleter fields <> listCompleter (argAdmissible fields)
 
 -- | Builder for an argument list parser. All arguments are collected and
 -- returned as a list.
@@ -277,13 +292,13 @@ arguments p m = args1 <|> pure (fromMaybe [] def)
       Just a -> fmap (a:) args
     args = args1 <|> pure []
 
-    arg = liftOpt (Option (ArgReader completer p) props)
-    arg' = liftOpt (Option (ArgReader completer p') props')
+    arg = liftOpt (Option (ArgReader compl p) props)
+    arg' = liftOpt (Option (ArgReader compl p') props')
 
     ddash = argument (guard . (== "--")) internal
 
     fields = f (ArgumentFields mempty [])
-    completer = argCompleter fields <> listCompleter (argAdmissible fields)
+    compl = argCompleter fields <> listCompleter (argAdmissible fields)
 
 -- | Builder for a flag parser.
 --
