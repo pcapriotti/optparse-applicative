@@ -315,8 +315,9 @@ switch = flag False True
 -- | Builder for an option with a null reader. A non-trivial reader can be
 -- added using the 'reader' modifier.
 nullOption :: Mod OptionFields a -> Parser a
-nullOption (Mod f d g) = mkParser d g rdr
+nullOption m = mkParser d g rdr
   where
+    Mod f d g = metavar "ARG" <> m
     rdr = let fields = f (OptionFields [] disabled)
           in OptReader (optNames fields) (optReader fields)
 
