@@ -47,9 +47,10 @@ customExecParser pprefs pinfo = do
     Left failure -> do
       progn <- getProgName
       let c = errExitCode failure
+      msg <- errMessage failure progn
       case c of
-        ExitSuccess -> putStr (errMessage failure progn)
-        _           -> hPutStr stderr (errMessage failure progn)
+        ExitSuccess -> putStr msg
+        _           -> hPutStr stderr msg
       exitWith c
 
 data Result a = Result a
@@ -68,7 +69,8 @@ execParserPure pprefs pinfo args =
     (Left msg, ctx) -> Left ParserFailure
       { errMessage = \progn
           -> with_context ctx pinfo $ \name ->
-                 parserHelpText pprefs
+                 return
+               . parserHelpText pprefs
                . add_error msg
                . add_usage name progn
       , errExitCode = ExitFailure (infoFailureCode pinfo) }

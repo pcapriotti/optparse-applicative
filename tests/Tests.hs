@@ -30,7 +30,8 @@ checkHelpText name p args = do
   let result = run p args
   assertLeft result $ \(ParserFailure err code) -> do
     expected <- readFile $ "tests/" ++ name ++ ".err.txt"
-    expected @=? err name
+    msg <- err name
+    expected @=? msg
     ExitFailure 1 @=? code
 
 case_hello :: Assertion
@@ -92,10 +93,11 @@ case_show_default = do
       i = info (p <**> helper) idm
       result = run i ["--help"]
   case result of
-    Left (ParserFailure err _) ->
+    Left (ParserFailure err _) -> do
+      msg <- err "test"
       assertHasLine
         "  -n                       set count (default: 0)"
-        (err "test")
+        msg
     Right r  -> assertFailure $ "unexpected result: " ++ show r
 
 main :: IO ()

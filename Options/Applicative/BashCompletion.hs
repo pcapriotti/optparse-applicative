@@ -17,7 +17,7 @@ bashCompletionParser :: Parser a -> Parser ParserFailure
 bashCompletionParser parser = complParser
   where
     failure opts = ParserFailure
-      { errMessage = \_ -> unlines opts
+      { errMessage = \progn -> unlines <$> opts progn
       , errExitCode = ExitSuccess }
 
     complParser = asum
@@ -25,15 +25,14 @@ bashCompletionParser parser = complParser
         (   bashCompletionQuery parser
         <$> (many . strOption) (long "bash-completion-word")
         <*> option (long "bash-completion-index") )
-      , ParserFailure
-          <$> (bashCompletionScript <$>
-                strOption (long "bash-completion-script"))
-          <*> pure ExitSuccess ]
+      , failure <$>
+          (bashCompletionScript <$>
+            strOption (long "bash-completion-script")) ]
 
-bashCompletionQuery :: Parser a -> [String] -> Int -> [String]
-bashCompletionQuery parser ws i = case runCompletion compl parser of
-  (Left ComplExit, SomeParser p, _) -> list_options p
-  _ -> []
+bashCompletionQuery :: Parser a -> [String] -> Int -> String -> IO [String]
+bashCompletionQuery parser ws i _ = case runCompletion compl parser of
+  (Left ComplExit, SomeParser p, _) -> return $ list_options p
+  _ -> return []
   where
     list_options = filter is_completion
                  . concat
@@ -58,8 +57,8 @@ bashCompletionQuery parser ws i = case runCompletion compl parser of
       setParser Nothing parser
       runParserFully parser (drop 1 ws')
 
-bashCompletionScript :: String -> String -> String
-bashCompletionScript prog progn = unlines
+bashCompletionScript :: String -> String -> IO [String]
+bashCompletionScript prog progn = return
   [ "_" ++ progn ++ "()"
   , "{"
   , "    local cmdline"

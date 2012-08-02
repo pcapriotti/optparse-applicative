@@ -107,14 +107,14 @@ instance Monoid Completer where
 
 -- | Result after a parse error.
 data ParserFailure = ParserFailure
-  { errMessage :: String -> String -- ^ Function which takes the program name
-                                   -- as input and returns an error message
-  , errExitCode :: ExitCode        -- ^ Exit code to use for this error
+  { errMessage :: String -> IO String -- ^ Function which takes the program name
+                                      -- as input and returns an error message
+  , errExitCode :: ExitCode           -- ^ Exit code to use for this error
   }
 
 instance Error ParserFailure where
   strMsg msg = ParserFailure
-    { errMessage = \_ -> msg
+    { errMessage = \_ -> return msg
     , errExitCode = ExitFailure 1 }
 
 data OptHelpInfo = OptHelpInfo
