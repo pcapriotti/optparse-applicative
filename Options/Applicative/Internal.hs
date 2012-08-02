@@ -13,7 +13,6 @@ module Options.Applicative.Internal
   , runCompletion
   , SomeParser(..)
   , ComplError(..)
-  , exitCompletion
   ) where
 
 import Control.Applicative
@@ -33,9 +32,10 @@ class (Alternative m, MonadPlus m) => MonadP m where
   setContext :: Maybe String -> ParserInfo a -> m ()
   setParser :: Maybe String -> Parser a -> m ()
 
+  missingArgP :: Completer -> m a
   tryP :: m a -> m (Either (PError m) a)
   errorP :: PError m -> m a
-  exitP :: m a
+  exitP :: Parser b -> m a
 
 type P = ErrorT String (Writer Context)
 
@@ -54,9 +54,9 @@ instance MonadP P where
   setContext name = lift . tell . Context name
   setParser _ _ = return ()
 
-
+  missingArgP _ = empty
   tryP p = lift $ runErrorT p
-  exitP = mzero
+  exitP _ = mzero
   errorP = throwError
 
 liftMaybe :: MonadPlus m => Maybe a -> m a
@@ -83,29 +83,43 @@ data ComplError
 instance Error ComplError where
   strMsg = ComplParseError
 
-type Completion = ErrorT ComplError (State ComplState)
+data ComplResult a
+  = ComplParser SomeParser
+  | ComplOption Completer
+  | ComplResult a
+
+instance Functor ComplResult where
+  fmap = liftM
+
+instance Applicative ComplResult where
+  pure = ComplResult
+  (<*>) = ap
+
+instance Monad ComplResult where
+  return = pure
+  m >>= f = case m of
+    ComplResult r -> f r
+    ComplParser p -> ComplParser p
+    ComplOption c -> ComplOption c
+
+type Completion = ErrorT String (StateT ComplState ComplResult)
 
 instance MonadP Completion where
-  type PError Completion = ComplError
+  type PError Completion = String
 
   setContext val i = setParser val (infoParser i)
   setParser val p = lift . modify $ \s -> s
     { complParser = SomeParser p
     , complArg = fromMaybe "" val }
 
-  tryP p = do
-    r <- lift $ runErrorT p
-    case r of
-      Left e@(ComplParseError _) -> return (Left e)
-      Left e -> throwError e
-      Right x -> return (Right x)
-  exitP = throwError ComplExit
+  missingArgP = lift . lift . ComplOption
+  tryP p = catchError (Right <$> p) (return . Left)
+  exitP = lift . lift . ComplParser . SomeParser
   errorP = throwError
 
-runCompletion :: Completion r -> Parser a -> (Either ComplError r, SomeParser, String)
-runCompletion c p = case runState (runErrorT c) s of
-  (r, s') -> (r, complParser s', complArg s')
+runCompletion :: Completion r -> Parser a -> Maybe (Either SomeParser Completer)
+runCompletion c p = case runStateT (runErrorT c) s of
+  ComplResult _ -> Nothing
+  ComplParser p' -> Just $ Left p'
+  ComplOption compl -> Just $ Right compl
   where s = ComplState (SomeParser p) ""
-
-exitCompletion :: Completion ()
-exitCompletion = throwError ComplExit

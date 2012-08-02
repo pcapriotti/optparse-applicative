@@ -79,7 +79,8 @@ optMatches opt arg = case opt of
     | Just (arg1, val) <- parsed
     , arg1 `elem` names
     -> Just $ \args -> do
-         (arg', args') <- liftMaybe . uncons $ maybeToList val ++ args
+         let mb_args = uncons $ maybeToList val ++ args
+         (arg', args') <- maybe (missingArgP (crCompleter rdr)) return mb_args
          r <- liftMaybe $ crReader rdr arg'
          return (r, args')
     | otherwise -> Nothing
@@ -136,14 +137,12 @@ stepParser (BindP p k) arg args = do
 -- if any options are missing and don't have a default value.
 runParser :: MonadP m => Parser a -> [String] -> m (a, [String])
 runParser p args = case args of
-  [] -> maybe exitP return result
+  [] -> maybe (exitP p) return result
   (arg : argt) -> do
     x <- tryP (stepParser p arg argt)
     case x of
       Left e -> liftMaybe result <|> errorP e
-      Right (p', args') -> do
-        setParser (Just arg) p'
-        runParser p' args'
+      Right (p', args') -> runParser p' args'
   where
     result = (,) <$> evalParser p <*> pure args
 

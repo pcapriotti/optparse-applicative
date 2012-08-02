@@ -32,8 +32,9 @@ bashCompletionParser parser = complParser
 
 bashCompletionQuery :: Parser a -> [String] -> Int -> String -> IO [String]
 bashCompletionQuery parser ws i _ = case runCompletion compl parser of
-  (Left ComplExit, SomeParser p, _) -> list_options p
-  _ -> return []
+  Just (Left (SomeParser p)) -> list_options p
+  Just (Right c)             -> run_completer c
+  _                          -> return []
   where
     list_options =
         fmap concat
