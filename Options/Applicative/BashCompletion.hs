@@ -80,4 +80,4 @@ bashCompletionScript prog progn = return
   , "    COMPREPLY=( $(" ++ prog ++ " \"${CMDLINE[@]}\") )"
   , "}"
   , ""
-  , "complete -F _" ++ progn ++ " " ++ progn ]
+  , "complete -o filenames -F _" ++ progn ++ " " ++ progn ]
