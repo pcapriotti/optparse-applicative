@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, FlexibleInstances, TypeFamilies #-}
+{-# LANGUAGE GADTs, FlexibleInstances #-}
 module Options.Applicative.Internal
   ( P
   , Context(..)
@@ -27,14 +27,12 @@ import Data.Monoid
 import Options.Applicative.Types
 
 class (Alternative m, MonadPlus m) => MonadP m where
-  type PError m
-
   setContext :: Maybe String -> ParserInfo a -> m ()
   setParser :: Maybe String -> Parser a -> m ()
 
   missingArgP :: Completer -> m a
-  tryP :: m a -> m (Either (PError m) a)
-  errorP :: PError m -> m a
+  tryP :: m a -> m (Either String a)
+  errorP :: String -> m a
   exitP :: Parser b -> m a
 
 type P = ErrorT String (Writer Context)
@@ -53,8 +51,6 @@ instance Monoid Context where
   mappend c _ = c
 
 instance MonadP P where
-  type PError P = String
-
   setContext name = lift . tell . Context (maybeToList name)
   setParser _ _ = return ()
 
@@ -109,8 +105,6 @@ instance Monad ComplResult where
 type Completion = ErrorT String (StateT ComplState ComplResult)
 
 instance MonadP Completion where
-  type PError Completion = String
-
   setContext val i = setParser val (infoParser i)
   setParser val p = lift . modify $ \s -> s
     { complParser = SomeParser p
