@@ -76,10 +76,10 @@ module Options.Applicative.Builder (
 
 import Control.Applicative
 import Control.Monad
-import Data.List
 import Data.Maybe
 import Data.Monoid
 
+import Options.Applicative.Builder.Completer
 import Options.Applicative.Common
 import Options.Applicative.Types
 
@@ -212,14 +212,14 @@ command cmd pinfo = fieldMod $ \p ->
 
 -- | Add a list of possible values for an argument
 argValues :: HasCompleter f => [String] -> Mod f a
-argValues xs = fieldMod $ modCompleter (<> listCompleter xs)
+argValues xs = completer (listCompleter xs)
 
 -- | Add a completer to an argument.
 --
 -- A completer is a function String -> IO String which, given a partial
 -- argument, returns all possible completions for that argument.
-completer :: (String -> IO [String]) -> Mod ArgumentFields a
-completer f = fieldMod $ modCompleter (<> Completer f)
+completer :: HasCompleter f => Completer -> Mod f a
+completer f = fieldMod $ modCompleter (<> f)
 
 -- parsers --
 
@@ -262,10 +262,6 @@ subparser m = mkParser d g rdr
     Mod f d g = m & metavar "COMMAND"
     CommandFields cmds = f (CommandFields [])
     rdr = CmdReader (map fst cmds) (`lookup` cmds)
-
-listCompleter :: [String] -> Completer
-listCompleter ss = Completer $ \s -> return
-  [ x | x <- ss, s `isPrefixOf` x ]
 
 -- | Builder for an argument parser.
 argument :: (String -> Maybe a) -> Mod ArgumentFields a -> Parser a

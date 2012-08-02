@@ -20,6 +20,9 @@ module Options.Applicative (
   -- | Utilities to build parsers out of basic primitives.
   module Options.Applicative.Builder,
 
+  -- | Common completion functions.
+  module Options.Applicative.Builder.Completer,
+
   -- | Utilities to run parsers and display a help text.
   module Options.Applicative.Extra,
   ) where
@@ -29,4 +32,5 @@ import Control.Applicative
 
 import Options.Applicative.Common
 import Options.Applicative.Builder
+import Options.Applicative.Builder.Completer
 import Options.Applicative.Extra
