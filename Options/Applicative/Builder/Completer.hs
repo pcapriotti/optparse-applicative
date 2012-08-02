@@ -1,17 +1,13 @@
 module Options.Applicative.Builder.Completer
   ( listIOCompleter
   , listCompleter
-  , fileCompleter
-  , dirCompleter
   , bashCompleter
   ) where
 
 import Control.Applicative
 import Control.Exception (IOException, try)
-import Control.Monad
 import Data.List
 import Options.Applicative.Types
-import System.Directory
 import System.Process
 
 listIOCompleter :: IO [String] -> Completer
@@ -20,15 +16,6 @@ listIOCompleter ss = Completer $ \s ->
 
 listCompleter :: [String] -> Completer
 listCompleter = listIOCompleter . pure
-
-fileCompleter :: Completer
-fileCompleter = listIOCompleter $
-  getDirectoryContents "."
-
-dirCompleter :: Completer
-dirCompleter = listIOCompleter $ do
-  files <- getDirectoryContents "."
-  filterM doesDirectoryExist files
 
 bashCompleter :: String -> Completer
 bashCompleter action = Completer $ \word -> do

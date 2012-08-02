@@ -39,7 +39,8 @@ module Options.Applicative.Builder (
   hidden,
   internal,
   command,
-  argValues,
+  completeWith,
+  action,
   completer,
   idm,
   (&),
@@ -210,9 +211,16 @@ command :: String -> ParserInfo a -> Mod CommandFields a
 command cmd pinfo = fieldMod $ \p ->
   p { cmdCommands = (cmd, pinfo) : cmdCommands p }
 
--- | Add a list of possible values for an argument
-argValues :: HasCompleter f => [String] -> Mod f a
-argValues xs = completer (listCompleter xs)
+-- | Add a list of possible completion values.
+completeWith :: HasCompleter f => [String] -> Mod f a
+completeWith xs = completer (listCompleter xs)
+
+-- | Add a bash completion action. Common actions include @file@ and
+-- @directory@. See
+-- http://www.gnu.org/software/bash/manual/html_node/Programmable-Completion-Builtins.html#Programmable-Completion-Builtins
+-- for a complete list.
+action :: HasCompleter f => String -> Mod f a
+action act = completer (bashCompleter act)
 
 -- | Add a completer to an argument.
 --
