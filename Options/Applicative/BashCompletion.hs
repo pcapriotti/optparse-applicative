@@ -31,7 +31,7 @@ bashCompletionParser parser = complParser
             strOption (long "bash-completion-script")) ]
 
 bashCompletionQuery :: Parser a -> [String] -> Int -> String -> IO [String]
-bashCompletionQuery parser ws i _ = case runCompletion compl parser of
+bashCompletionQuery parser ws i _ = case runCompletion compl of
   Just (Left (SomeParser p)) -> list_options p
   Just (Right c)             -> run_completer c
   _                          -> return []

@@ -19,7 +19,6 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Error
-import Control.Monad.Trans.State
 import Control.Monad.Trans.Writer
 import Data.Maybe
 import Data.Monoid
@@ -72,10 +71,6 @@ uncons (x : xs) = Just (x, xs)
 data SomeParser where
   SomeParser :: Parser a -> SomeParser
 
-data ComplState = ComplState
-  { complParser :: SomeParser
-  , complArg :: String }
-
 data ComplError
   = ComplParseError String
   | ComplExit
@@ -102,22 +97,19 @@ instance Monad ComplResult where
     ComplParser p -> ComplParser p
     ComplOption c -> ComplOption c
 
-type Completion = ErrorT String (StateT ComplState ComplResult)
+type Completion = ErrorT String ComplResult
 
 instance MonadP Completion where
-  setContext val i = setParser val (infoParser i)
-  setParser val p = lift . modify $ \s -> s
-    { complParser = SomeParser p
-    , complArg = fromMaybe "" val }
+  setContext _ _ = return ()
+  setParser _ _ = return ()
 
-  missingArgP = lift . lift . ComplOption
+  missingArgP = lift . ComplOption
   tryP p = catchError (Right <$> p) (return . Left)
-  exitP = lift . lift . ComplParser . SomeParser
+  exitP = lift . ComplParser . SomeParser
   errorP = throwError
 
-runCompletion :: Completion r -> Parser a -> Maybe (Either SomeParser Completer)
-runCompletion c p = case runStateT (runErrorT c) s of
+runCompletion :: Completion r -> Maybe (Either SomeParser Completer)
+runCompletion c = case runErrorT c of
   ComplResult _ -> Nothing
   ComplParser p' -> Just $ Left p'
   ComplOption compl -> Just $ Right compl
-  where s = ComplState (SomeParser p) ""
