@@ -14,8 +14,8 @@ import Options.Applicative.Common
 import Options.Applicative.Internal
 import Options.Applicative.Types
 
-bashCompletionParser :: Parser a -> Parser ParserFailure
-bashCompletionParser parser = complParser
+bashCompletionParser :: Parser a -> ParserPrefs -> Parser ParserFailure
+bashCompletionParser parser pprefs = complParser
   where
     failure opts = ParserFailure
       { errMessage = \progn -> unlines <$> opts progn
@@ -23,15 +23,15 @@ bashCompletionParser parser = complParser
 
     complParser = asum
       [ failure <$>
-        (   bashCompletionQuery parser
+        (   bashCompletionQuery parser pprefs
         <$> (many . strOption) (long "bash-completion-word")
         <*> option (long "bash-completion-index") )
       , failure <$>
           (bashCompletionScript <$>
             strOption (long "bash-completion-script")) ]
 
-bashCompletionQuery :: Parser a -> [String] -> Int -> String -> IO [String]
-bashCompletionQuery parser ws i _ = case runCompletion compl of
+bashCompletionQuery :: Parser a -> ParserPrefs -> [String] -> Int -> String -> IO [String]
+bashCompletionQuery parser pprefs ws i _ = case runCompletion compl pprefs of
   Just (Left (SomeParser p)) -> list_options p
   Just (Right c)             -> run_completer c
   _                          -> return []

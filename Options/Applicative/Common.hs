@@ -39,8 +39,6 @@ module Options.Applicative.Common (
   evalParser,
 
   -- * Low-level utilities
-  runP,
-  setContext,
   mapParser,
   treeMapParser,
   optionNames
