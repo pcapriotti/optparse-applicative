@@ -422,7 +422,8 @@ prefs :: PrefsMod -> ParserPrefs
 prefs m = applyPrefsMod m base
   where
     base = ParserPrefs
-      { prefMultiSuffix = "" }
+      { prefMultiSuffix = ""
+      , prefDisambiguate = False }
 
 -- convenience shortcuts
 

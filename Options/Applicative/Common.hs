@@ -46,6 +46,7 @@ module Options.Applicative.Common (
 
 import Control.Applicative
 import Control.Monad
+import Data.List
 import Data.Maybe
 import Data.Monoid
 
@@ -56,6 +57,11 @@ optionNames :: OptReader a -> [OptName]
 optionNames (OptReader names _) = names
 optionNames (FlagReader names _) = names
 optionNames _ = []
+
+isOptionPrefix :: OptName -> OptName -> Bool
+isOptionPrefix (OptShort x) (OptShort y) = x == y
+isOptionPrefix (OptLong x) (OptLong y) = x `isPrefixOf` y
+isOptionPrefix _ _ = False
 
 -- | Create a parser composed of a single option.
 liftOpt :: Option a -> Parser a
@@ -72,11 +78,11 @@ instance Monoid MatchResult where
 
 type Matcher m a = [String] -> m (a, [String])
 
-optMatches :: MonadP m => OptReader a -> String -> Maybe (Matcher m a)
-optMatches opt arg = case opt of
+optMatches :: MonadP m => ParserPrefs -> OptReader a -> String -> Maybe (Matcher m a)
+optMatches prefs opt arg = case opt of
   OptReader names rdr
     | Just (arg1, val) <- parsed
-    , arg1 `elem` names
+    , has_name arg1 names
     -> Just $ \args -> do
          let mb_args = uncons $ maybeToList val ++ args
          (arg', args') <- maybe (missingArgP (crCompleter rdr)) return mb_args
@@ -85,7 +91,7 @@ optMatches opt arg = case opt of
     | otherwise -> Nothing
   FlagReader names x
     | Just (arg1, Nothing) <- parsed
-    , arg1 `elem` names
+    , has_name arg1 names
     -> Just $ \args -> return (x, args)
   ArgReader rdr
     | Just result <- crReader rdr arg
@@ -108,14 +114,21 @@ optMatches opt arg = case opt of
           [a] -> Just (OptShort a, Nothing)
           (a : rest) -> Just (OptShort a, Just rest)
       | otherwise = Nothing
+    has_name a
+      | prefDisambiguate prefs
+      = any (isOptionPrefix a)
+      | otherwise
+      = elem a
 
 stepParser :: MonadP m => Parser a -> String -> [String] -> m (Parser a, [String])
 stepParser (NilP _) _ _ = empty
-stepParser (OptP opt) arg args
-  | Just matcher <- optMatches (optMain opt) arg
-  = do (r, args') <- matcher args
-       return (pure r, args')
-  | otherwise = empty
+stepParser (OptP opt) arg args = do
+  prefs <- getPrefs
+  case optMatches prefs (optMain opt) arg of
+    Just matcher -> do
+      (r, args') <- matcher args
+      return (pure r, args')
+    Nothing -> empty
 stepParser (MultP p1 p2) arg args = msum
   [ do (p1', args') <- stepParser p1 arg args
        return (p1' <*> p2, args')
