@@ -16,6 +16,8 @@ like:
   will match an option called `--output`, as long as its the only one starting
   with the string `out`.
 
+- Added `briefDesc` modifier.
+
 - Fixed bugs
     * \#8 - Long options not disambiguated
     * \#10 - Shell completions
