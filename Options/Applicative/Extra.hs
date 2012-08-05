@@ -6,6 +6,7 @@ module Options.Applicative.Extra (
   helper,
   execParser,
   execParserPure,
+  customExecParser,
   usage,
   ParserFailure(..),
   ) where
