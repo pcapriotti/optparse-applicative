@@ -14,7 +14,7 @@ module Options.Applicative.Extra (
 import Control.Applicative
 import Options.Applicative.BashCompletion
 import Options.Applicative.Common
-import Options.Applicative.Builder
+import Options.Applicative.Builder hiding (briefDesc)
 import Options.Applicative.Help
 import Options.Applicative.Internal
 import Options.Applicative.Utils
