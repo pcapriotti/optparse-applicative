@@ -55,6 +55,7 @@ module Options.Applicative.Builder (
   -- * Internals
   Mod,
   HasName,
+  HasCompleter,
   OptionFields,
   FlagFields,
   CommandFields,
