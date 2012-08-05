@@ -164,5 +164,20 @@ case_ambiguous = do
     Left _ -> return ()
     Right val -> assertFailure $ "unexpected result " ++ show val
 
+case_completion :: Assertion
+case_completion = do
+  let p = (,)
+        <$> strOption (long "foo" & value "")
+        <*> strOption (long "bar" & value "")
+      i = info p idm
+      result = run i ["--bash-completion-index", "0"]
+  case result of
+    Left (ParserFailure err code) -> do
+      ExitSuccess @=? code
+      completions <- lines <$> err "test"
+      ["--foo", "--bar"] @=? completions
+    Right val ->
+      assertFailure $ "unexpected result " ++ show val
+
 main :: IO ()
 main = $(defaultMainGenerator)

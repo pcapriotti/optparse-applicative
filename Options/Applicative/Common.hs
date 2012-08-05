@@ -150,7 +150,7 @@ stepParser prefs (BindP p k) arg args =
 -- if any options are missing and don't have a default value.
 runParser :: MonadP m => Parser a -> [String] -> m (a, [String])
 runParser p args = case args of
-  [] -> maybe (exitP p) return result
+  [] -> exitP p result
   (arg : argt) -> do
     prefs <- getPrefs
     x <- tryP $ do_step prefs arg argt

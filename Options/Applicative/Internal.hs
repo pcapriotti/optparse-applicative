@@ -34,7 +34,7 @@ class (Alternative m, MonadPlus m) => MonadP m where
   missingArgP :: Completer -> m a
   tryP :: m a -> m (Either String a)
   errorP :: String -> m a
-  exitP :: Parser b -> m a
+  exitP :: Parser b -> Maybe a -> m a
 
 type P = ErrorT String (WriterT Context (Reader ParserPrefs))
 
@@ -58,7 +58,7 @@ instance MonadP P where
 
   missingArgP _ = empty
   tryP p = lift $ runErrorT p
-  exitP _ = mzero
+  exitP _ = maybe mzero return
   errorP = throwError
 
 liftMaybe :: MonadPlus m => Maybe a -> m a
@@ -109,7 +109,7 @@ instance MonadP Completion where
 
   missingArgP = lift . lift . ComplOption
   tryP p = catchError (Right <$> p) (return . Left)
-  exitP = lift . lift . ComplParser . SomeParser
+  exitP p _ = lift . lift . ComplParser $ SomeParser p
   errorP = throwError
 
 runCompletion :: Completion r -> ParserPrefs -> Maybe (Either SomeParser Completer)
