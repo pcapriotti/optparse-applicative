@@ -142,5 +142,27 @@ case_many_args = do
     Left _ -> assertFailure "unexpected parse error"
     Right xs -> nargs @=? length xs
 
+case_disambiguate :: Assertion
+case_disambiguate = do
+  let p =   flag' (1 :: Int) (long "foo")
+        <|> flag' 2 (long "bar")
+        <|> flag' 3 (long "baz")
+      i = info p idm
+      result = execParserPure (prefs disambiguate) i ["--f"]
+  case result of
+    Left _ -> assertFailure "unexpected parse error"
+    Right val -> 1 @=? val
+
+case_ambiguous :: Assertion
+case_ambiguous = do
+  let p =   flag' (1 :: Int) (long "foo")
+        <|> flag' 2 (long "bar")
+        <|> flag' 3 (long "baz")
+      i = info p idm
+      result = execParserPure (prefs disambiguate) i ["--ba"]
+  case result of
+    Left _ -> return ()
+    Right val -> assertFailure $ "unexpected result " ++ show val
+
 main :: IO ()
 main = $(defaultMainGenerator)

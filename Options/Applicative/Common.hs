@@ -78,8 +78,8 @@ instance Monoid MatchResult where
 
 type Matcher m a = [String] -> m (a, [String])
 
-optMatches :: MonadP m => ParserPrefs -> OptReader a -> String -> Maybe (Matcher m a)
-optMatches prefs opt arg = case opt of
+optMatches :: MonadP m => Bool -> OptReader a -> String -> Maybe (Matcher m a)
+optMatches disambiguate opt arg = case opt of
   OptReader names rdr
     | Just (arg1, val) <- parsed
     , has_name arg1 names
@@ -115,32 +115,32 @@ optMatches prefs opt arg = case opt of
           (a : rest) -> Just (OptShort a, Just rest)
       | otherwise = Nothing
     has_name a
-      | prefDisambiguate prefs
-      = any (isOptionPrefix a)
-      | otherwise
-      = elem a
+      | disambiguate = any (isOptionPrefix a)
+      | otherwise = elem a
 
-stepParser :: MonadP m => Parser a -> String -> [String] -> [m (Parser a, [String])]
-stepParser (NilP _) _ _ = []
-stepParser (OptP opt) arg args = pure $ do
-  prefs <- getPrefs
-  case optMatches prefs (optMain opt) arg of
-    Just matcher -> do
+stepParser :: MonadP m => ParserPrefs -> Parser a -> String -> [String] -> [m (Parser a, [String])]
+stepParser _ (NilP _) _ _ = []
+stepParser prefs (OptP opt) arg args =
+  case optMatches disambiguate (optMain opt) arg of
+    Just matcher -> pure $ do
       (r, args') <- matcher args
       return (pure r, args')
     Nothing -> empty
-stepParser (MultP p1 p2) arg args = msum
-  [ flip map (stepParser p1 arg args) $ \m ->
+  where
+    disambiguate = prefDisambiguate prefs
+                && optVisibility opt > Internal
+stepParser prefs (MultP p1 p2) arg args = msum
+  [ flip map (stepParser prefs p1 arg args) $ \m ->
       do (p1', args') <- m
          return (p1' <*> p2, args')
-  , flip map (stepParser p2 arg args) $ \m ->
+  , flip map (stepParser prefs p2 arg args) $ \m ->
       do (p2', args') <- m
          return (p1 <*> p2', args') ]
-stepParser (AltP p1 p2) arg args = msum
-  [ stepParser p1 arg args
-  , stepParser p2 arg args ]
-stepParser (BindP p k) arg args =
-  flip map (stepParser p arg args) $ \m -> do
+stepParser prefs (AltP p1 p2) arg args = msum
+  [ stepParser prefs p1 arg args
+  , stepParser prefs p2 arg args ]
+stepParser prefs (BindP p k) arg args =
+  flip map (stepParser prefs p arg args) $ \m -> do
     (p', args') <- m
     x <- liftMaybe $ evalParser p'
     return (k x, args')
@@ -161,11 +161,12 @@ runParser p args = case args of
     result = (,) <$> evalParser p <*> pure args
     do_step prefs arg argt
       | prefDisambiguate prefs
-      , [m] <- parses
-      = m
+      = case parses of
+          [m] -> m
+          _   -> empty
       | otherwise
       = msum parses
-      where parses = stepParser p arg argt
+      where parses = stepParser prefs p arg argt
 
 runParserFully :: MonadP m => Parser a -> [String] -> m a
 runParserFully p args = do
