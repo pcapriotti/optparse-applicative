@@ -1,3 +1,26 @@
+## Version 0.4.0 *(unreleased)*
+
+- Brief help text for nested commands now shows the full command line.
+
+- Fixed inefficiency in the `arguments` parsers for long argument lists.
+
+- Added automatic [bash
+completion](https://github.com/pcapriotti/optparse-applicative/wiki/Bash-Completion).
+
+- Added `disambiguate` modifier for `prefs`, which enabled automatic
+disambiguation of option abbreviations. With disambiguation on, a command line
+like:
+
+        foo --out
+
+  will match an option called `--output`, as long as its the only one starting
+  with the string `out`.
+
+- Fixed bugs
+    * \#8 - Long options not disambiguated
+    * \#10 - Shell completions
+    * \#12 - Possible memory leak?
+
 ## Version 0.3.2 (31 Jul 2012)
 
 - Fixed bug where both branches of an alternative could be matched.
