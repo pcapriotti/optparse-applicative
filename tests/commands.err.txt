@@ -1,5 +1,5 @@
 Usage: commands COMMAND
 
 Available commands:
-  goodbye                  Say goodbye
   hello                    Print greeting
+  goodbye                  Say goodbye

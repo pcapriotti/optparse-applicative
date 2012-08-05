@@ -59,7 +59,7 @@ cmdDesc = concat . mapParser desc
     desc _ opt
       | CmdReader cmds p <- optMain opt
       = tabulate [(cmd, d)
-                 | cmd <- cmds
+                 | cmd <- reverse cmds
                  , d <- maybeToList . fmap infoProgDesc $ p cmd ]
       | otherwise
       = []
