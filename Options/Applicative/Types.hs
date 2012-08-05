@@ -45,6 +45,7 @@ data ParserInfo a = ParserInfo
 -- | Global preferences for a top-level 'Parser'.
 data ParserPrefs = ParserPrefs
   { prefMultiSuffix :: String    -- ^ metavar suffix for multiple options
+  , prefDisambiguate :: Bool     -- ^ automatically disambiguate abbreviations
   }
 
 data OptName = OptShort !Char

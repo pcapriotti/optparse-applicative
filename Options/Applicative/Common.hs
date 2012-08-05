@@ -39,8 +39,6 @@ module Options.Applicative.Common (
   evalParser,
 
   -- * Low-level utilities
-  runP,
-  setContext,
   mapParser,
   treeMapParser,
   optionNames
@@ -48,6 +46,7 @@ module Options.Applicative.Common (
 
 import Control.Applicative
 import Control.Monad
+import Data.List
 import Data.Maybe
 import Data.Monoid
 
@@ -58,6 +57,11 @@ optionNames :: OptReader a -> [OptName]
 optionNames (OptReader names _) = names
 optionNames (FlagReader names _) = names
 optionNames _ = []
+
+isOptionPrefix :: OptName -> OptName -> Bool
+isOptionPrefix (OptShort x) (OptShort y) = x == y
+isOptionPrefix (OptLong x) (OptLong y) = x `isPrefixOf` y
+isOptionPrefix _ _ = False
 
 -- | Create a parser composed of a single option.
 liftOpt :: Option a -> Parser a
@@ -74,11 +78,11 @@ instance Monoid MatchResult where
 
 type Matcher m a = [String] -> m (a, [String])
 
-optMatches :: MonadP m => OptReader a -> String -> Maybe (Matcher m a)
-optMatches opt arg = case opt of
+optMatches :: MonadP m => Bool -> OptReader a -> String -> Maybe (Matcher m a)
+optMatches disambiguate opt arg = case opt of
   OptReader names rdr
     | Just (arg1, val) <- parsed
-    , arg1 `elem` names
+    , has_name arg1 names
     -> Just $ \args -> do
          let mb_args = uncons $ maybeToList val ++ args
          (arg', args') <- maybe (missingArgP (crCompleter rdr)) return mb_args
@@ -87,7 +91,7 @@ optMatches opt arg = case opt of
     | otherwise -> Nothing
   FlagReader names x
     | Just (arg1, Nothing) <- parsed
-    , arg1 `elem` names
+    , has_name arg1 names
     -> Just $ \args -> return (x, args)
   ArgReader rdr
     | Just result <- crReader rdr arg
@@ -110,26 +114,36 @@ optMatches opt arg = case opt of
           [a] -> Just (OptShort a, Nothing)
           (a : rest) -> Just (OptShort a, Just rest)
       | otherwise = Nothing
+    has_name a
+      | disambiguate = any (isOptionPrefix a)
+      | otherwise = elem a
 
-stepParser :: MonadP m => Parser a -> String -> [String] -> m (Parser a, [String])
-stepParser (NilP _) _ _ = empty
-stepParser (OptP opt) arg args
-  | Just matcher <- optMatches (optMain opt) arg
-  = do (r, args') <- matcher args
-       return (pure r, args')
-  | otherwise = empty
-stepParser (MultP p1 p2) arg args = msum
-  [ do (p1', args') <- stepParser p1 arg args
-       return (p1' <*> p2, args')
-  , do (p2', args') <- stepParser p2 arg args
-       return (p1 <*> p2', args') ]
-stepParser (AltP p1 p2) arg args = msum
-  [ stepParser p1 arg args
-  , stepParser p2 arg args ]
-stepParser (BindP p k) arg args = do
-  (p', args') <- stepParser p arg args
-  x <- liftMaybe $ evalParser p'
-  return (k x, args')
+stepParser :: MonadP m => ParserPrefs -> Parser a -> String -> [String] -> [m (Parser a, [String])]
+stepParser _ (NilP _) _ _ = []
+stepParser prefs (OptP opt) arg args =
+  case optMatches disambiguate (optMain opt) arg of
+    Just matcher -> pure $ do
+      (r, args') <- matcher args
+      return (pure r, args')
+    Nothing -> empty
+  where
+    disambiguate = prefDisambiguate prefs
+                && optVisibility opt > Internal
+stepParser prefs (MultP p1 p2) arg args = msum
+  [ flip map (stepParser prefs p1 arg args) $ \m ->
+      do (p1', args') <- m
+         return (p1' <*> p2, args')
+  , flip map (stepParser prefs p2 arg args) $ \m ->
+      do (p2', args') <- m
+         return (p1 <*> p2', args') ]
+stepParser prefs (AltP p1 p2) arg args = msum
+  [ stepParser prefs p1 arg args
+  , stepParser prefs p2 arg args ]
+stepParser prefs (BindP p k) arg args =
+  flip map (stepParser prefs p arg args) $ \m -> do
+    (p', args') <- m
+    x <- liftMaybe $ evalParser p'
+    return (k x, args')
 
 -- | Apply a 'Parser' to a command line, and return a result and leftover
 -- arguments.  This function returns an error if any parsing error occurs, or
@@ -138,12 +152,21 @@ runParser :: MonadP m => Parser a -> [String] -> m (a, [String])
 runParser p args = case args of
   [] -> maybe (exitP p) return result
   (arg : argt) -> do
-    x <- tryP (stepParser p arg argt)
+    prefs <- getPrefs
+    x <- tryP $ do_step prefs arg argt
     case x of
       Left e -> liftMaybe result <|> errorP e
       Right (p', args') -> runParser p' args'
   where
     result = (,) <$> evalParser p <*> pure args
+    do_step prefs arg argt
+      | prefDisambiguate prefs
+      = case parses of
+          [m] -> m
+          _   -> empty
+      | otherwise
+      = msum parses
+      where parses = stepParser prefs p arg argt
 
 runParserFully :: MonadP m => Parser a -> [String] -> m a
 runParserFully p args = do

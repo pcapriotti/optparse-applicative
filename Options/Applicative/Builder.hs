@@ -72,6 +72,7 @@ module Options.Applicative.Builder (
   -- * Builder for 'ParserPrefs'
   PrefsMod,
   multiSuffix,
+  disambiguate,
   prefs
   ) where
 
@@ -418,11 +419,15 @@ instance Monoid PrefsMod where
 multiSuffix :: String -> PrefsMod
 multiSuffix s = PrefsMod $ \p -> p { prefMultiSuffix = s }
 
+disambiguate :: PrefsMod
+disambiguate = PrefsMod $ \p -> p { prefDisambiguate = True }
+
 prefs :: PrefsMod -> ParserPrefs
 prefs m = applyPrefsMod m base
   where
     base = ParserPrefs
-      { prefMultiSuffix = "" }
+      { prefMultiSuffix = ""
+      , prefDisambiguate = False }
 
 -- convenience shortcuts
 

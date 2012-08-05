@@ -6,6 +6,7 @@ module Options.Applicative.Extra (
   helper,
   execParser,
   execParserPure,
+  customExecParser,
   usage,
   ParserFailure(..),
   ) where
@@ -63,7 +64,7 @@ execParserPure :: ParserPrefs       -- ^ Global preferences for this parser
                -> [String]          -- ^ Program arguments
                -> Either ParserFailure a
 execParserPure pprefs pinfo args =
-  case runP p of
+  case runP p pprefs of
     (Right r, _) -> case r of
       Result a -> Right a
       Extra failure -> Left failure
@@ -93,7 +94,8 @@ execParserPure pprefs pinfo args =
     with_context NullContext i f = f [] i
     with_context (Context n i) _ f = f n i
 
-    parser' = (Extra <$> bashCompletionParser parser) <|> (Result <$> parser)
+    parser' = (Extra <$> bashCompletionParser parser pprefs)
+          <|> (Result <$> parser)
     p = runParserFully parser' args
 
 -- | Generate option summary.

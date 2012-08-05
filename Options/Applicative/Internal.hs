@@ -19,6 +19,7 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Error
+import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Writer
 import Data.Maybe
 import Data.Monoid
@@ -28,13 +29,14 @@ import Options.Applicative.Types
 class (Alternative m, MonadPlus m) => MonadP m where
   setContext :: Maybe String -> ParserInfo a -> m ()
   setParser :: Maybe String -> Parser a -> m ()
+  getPrefs :: m ParserPrefs
 
   missingArgP :: Completer -> m a
   tryP :: m a -> m (Either String a)
   errorP :: String -> m a
   exitP :: Parser b -> m a
 
-type P = ErrorT String (Writer Context)
+type P = ErrorT String (WriterT Context (Reader ParserPrefs))
 
 data Context where
   Context :: [String] -> ParserInfo a -> Context
@@ -52,6 +54,7 @@ instance Monoid Context where
 instance MonadP P where
   setContext name = lift . tell . Context (maybeToList name)
   setParser _ _ = return ()
+  getPrefs = lift . lift $ ask
 
   missingArgP _ = empty
   tryP p = lift $ runErrorT p
@@ -61,8 +64,8 @@ instance MonadP P where
 liftMaybe :: MonadPlus m => Maybe a -> m a
 liftMaybe = maybe mzero return
 
-runP :: P a -> (Either String a, Context)
-runP = runWriter . runErrorT
+runP :: P a -> ParserPrefs -> (Either String a, Context)
+runP = runReader . runWriterT . runErrorT
 
 uncons :: [a] -> Maybe (a, [a])
 uncons [] = Nothing
@@ -97,19 +100,20 @@ instance Monad ComplResult where
     ComplParser p -> ComplParser p
     ComplOption c -> ComplOption c
 
-type Completion = ErrorT String ComplResult
+type Completion = ErrorT String (ReaderT ParserPrefs ComplResult)
 
 instance MonadP Completion where
   setContext _ _ = return ()
   setParser _ _ = return ()
+  getPrefs = lift ask
 
-  missingArgP = lift . ComplOption
+  missingArgP = lift . lift . ComplOption
   tryP p = catchError (Right <$> p) (return . Left)
-  exitP = lift . ComplParser . SomeParser
+  exitP = lift . lift . ComplParser . SomeParser
   errorP = throwError
 
-runCompletion :: Completion r -> Maybe (Either SomeParser Completer)
-runCompletion c = case runErrorT c of
+runCompletion :: Completion r -> ParserPrefs -> Maybe (Either SomeParser Completer)
+runCompletion c prefs = case runReaderT (runErrorT c) prefs of
   ComplResult _ -> Nothing
   ComplParser p' -> Just $ Left p'
   ComplOption compl -> Just $ Right compl
