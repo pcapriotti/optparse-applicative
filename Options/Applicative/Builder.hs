@@ -436,10 +436,10 @@ prefs m = applyPrefsMod m base
 
 -- convenience shortcuts
 
---- | Trivial option modifier.
+-- | Trivial option modifier.
 idm :: Monoid m => m
 idm = mempty
 
---- | Compose modifiers.
+-- | Compose modifiers.
 (&) :: Monoid m => m -> m -> m
 (&) = mappend
