@@ -207,7 +207,11 @@ treeMapParser g = simplify . go False False g
        -> Parser a
        -> OptTree b
     go _ _ _ (NilP _) = MultNode []
-    go m d f (OptP opt) = Leaf (f (OptHelpInfo m d) opt)
+    go m d f (OptP opt)
+      | optVisibility opt > Internal
+      = Leaf (f (OptHelpInfo m d) opt)
+      | otherwise
+      = MultNode []
     go m d f (MultP p1 p2) = MultNode [go m d f p1, go m d f p2]
     go m d f (AltP p1 p2) = AltNode [go m d' f p1, go m d' f p2]
       where d' = d || has_default p1 || has_default p2

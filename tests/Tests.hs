@@ -179,5 +179,17 @@ case_completion = do
     Right val ->
       assertFailure $ "unexpected result " ++ show val
 
+case_bind_usage :: Assertion
+case_bind_usage = do
+  let p = arguments str (metavar "ARGS...")
+      i = info (p <**> helper) briefDesc
+      result = run i ["--help"]
+  case result of
+    Left (ParserFailure err _) -> do
+      text <- head . lines <$> err "test"
+      "Usage: test [ARGS...]" @=? text
+    Right val ->
+      assertFailure $ "unexpected result " ++ show val
+
 main :: IO ()
 main = $(defaultMainGenerator)
