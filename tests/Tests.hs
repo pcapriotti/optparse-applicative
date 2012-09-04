@@ -191,5 +191,17 @@ case_bind_usage = do
     Right val ->
       assertFailure $ "unexpected result " ++ show val
 
+case_issue_19 :: Assertion
+case_issue_19 = do
+  let p = option
+        ( short 'x'
+        & reader (Just . str)
+        & value Nothing )
+      i = info (p <**> helper) idm
+      result = run i ["-x", "foo"]
+  case result of
+    Left _ -> assertFailure "unexpected parse error"
+    Right r -> Just "foo" @=? r
+
 main :: IO ()
 main = $(defaultMainGenerator)

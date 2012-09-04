@@ -365,11 +365,11 @@ nullOption m = mkParser d g rdr
 
 -- | Builder for an option taking a 'String' argument.
 strOption :: Mod OptionFields String -> Parser String
-strOption m = nullOption $ m & reader str
+strOption m = nullOption $ reader str & m
 
 -- | Builder for an option using the 'auto' reader.
 option :: Read a => Mod OptionFields a -> Parser a
-option m = nullOption $ m & reader auto
+option m = nullOption $ reader auto & m
 
 -- | Modifier for 'ParserInfo'.
 newtype InfoMod a = InfoMod
