@@ -1,3 +1,8 @@
+## Version 0.4.1 (04 Sep 2012)
+
+- Fixed bugs
+    * \#19 - Regression
+
 ## Version 0.4.0 (05 Aug 2012)
 
 - Brief help text for nested commands now shows the full command line.
