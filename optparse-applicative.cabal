@@ -1,5 +1,5 @@
 name:                optparse-applicative
-version:             0.4.0
+version:             0.4.1
 synopsis:            Utilities and combinators for parsing command line options
 description:
     Here is a simple example of an applicative option parser:
