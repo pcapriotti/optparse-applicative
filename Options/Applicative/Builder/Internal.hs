@@ -1,0 +1,125 @@
+{-# LANGUAGE DeriveFunctor #-}
+module Options.Applicative.Builder.Internal (
+  -- * Internals
+  Mod(..),
+  HasName(..),
+  HasCompleter(..),
+  OptionFields(..),
+  FlagFields(..),
+  CommandFields(..),
+  ArgumentFields(..),
+  DefaultProp(..),
+
+  optionMod,
+  fieldMod,
+
+  baseProps,
+  mkParser,
+  mkOption,
+  mkProps,
+
+  internal
+  ) where
+
+import Control.Applicative
+import Control.Monad
+import Data.Monoid
+import Options.Applicative.Common
+import Options.Applicative.Types
+
+data OptionFields a = OptionFields
+  { optNames :: [OptName]
+  , optCompleter :: Completer
+  , optReader :: String -> Maybe a }
+  deriving Functor
+
+data FlagFields a = FlagFields
+  { flagNames :: [OptName]
+  , flagActive :: a }
+  deriving Functor
+
+data CommandFields a = CommandFields
+  { cmdCommands :: [(String, ParserInfo a)] }
+  deriving Functor
+
+data ArgumentFields a = ArgumentFields
+  { argCompleter :: Completer }
+  deriving Functor
+
+class HasName f where
+  name :: OptName -> f a -> f a
+
+instance HasName OptionFields where
+  name n fields = fields { optNames = n : optNames fields }
+
+instance HasName FlagFields where
+  name n fields = fields { flagNames = n : flagNames fields }
+
+class HasCompleter f where
+  modCompleter :: (Completer -> Completer) -> f a -> f a
+
+instance HasCompleter OptionFields where
+  modCompleter f p = p { optCompleter = f (optCompleter p) }
+
+instance HasCompleter ArgumentFields where
+  modCompleter f p = p { argCompleter = f (argCompleter p) }
+
+-- mod --
+
+data DefaultProp a = DefaultProp
+  (Maybe a)
+  (Maybe (a -> String))
+
+instance Monoid (DefaultProp a) where
+  mempty = DefaultProp Nothing Nothing
+  mappend (DefaultProp d1 s1) (DefaultProp d2 s2) =
+    DefaultProp (d1 `mplus` d2) (s1 `mplus` s2)
+
+data Mod f a = Mod (f a -> f a)
+                   (DefaultProp a)
+                   (OptProperties -> OptProperties)
+
+optionMod :: (OptProperties -> OptProperties) -> Mod f a
+optionMod = Mod id mempty
+
+fieldMod :: (f a -> f a) -> Mod f a
+fieldMod f = Mod f mempty id
+
+instance Monoid (Mod f a) where
+  mempty = Mod id mempty id
+  Mod f1 d1 g1 `mappend` Mod f2 d2 g2
+    = Mod (f2 . f1) (d2 <> d1) (g2 . g1)
+
+-- | Base default properties.
+baseProps :: OptProperties
+baseProps = OptProperties
+  { propMetaVar = ""
+  , propVisibility = Visible
+  , propHelp = ""
+  , propShowDefault = Nothing }
+
+mkParser :: DefaultProp a
+         -> (OptProperties -> OptProperties)
+         -> OptReader a
+         -> Parser a
+mkParser d@(DefaultProp def _) g rdr = liftOpt opt <|> maybe empty pure def
+  where
+    opt = mkOption d g rdr
+
+mkOption :: DefaultProp a
+         -> (OptProperties -> OptProperties)
+         -> OptReader a
+         -> Option a
+mkOption d g rdr = Option rdr (mkProps d g)
+
+mkProps :: DefaultProp a
+        -> (OptProperties -> OptProperties)
+        -> OptProperties
+mkProps (DefaultProp def sdef) g = props
+  where
+    props = (g baseProps)
+      { propShowDefault = sdef <*> def }
+
+-- | Hide this option from the help text
+internal :: Mod f a
+internal = optionMod $ \p -> p { propVisibility = Internal }
