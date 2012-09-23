@@ -19,6 +19,7 @@ module Options.Applicative.Types (
   fromM,
   oneM,
   manyM,
+  someM,
 
   optVisibility,
   optMetaVar,
@@ -131,6 +132,9 @@ manyM p = do
   case mx of
     Nothing -> return []
     Just x -> (x:) <$> manyM p
+
+someM :: Parser a -> ParserM [a]
+someM p = (:) <$> oneM p <*> manyM p
 
 instance Alternative Parser where
   empty = NilP Nothing

@@ -203,5 +203,21 @@ case_issue_19 = do
     Left _ -> assertFailure "unexpected parse error"
     Right r -> Just "foo" @=? r
 
+case_arguments1_none :: Assertion
+case_arguments1_none = do
+  let p = arguments1 str idm
+      i = info (p <**> helper) idm
+      result = run i []
+  assertLeft result $ \(ParserFailure _ _) -> return ()
+
+case_arguments1_some :: Assertion
+case_arguments1_some = do
+  let p = arguments1 str idm
+      i = info (p <**> helper) idm
+      result = run i ["foo", "--", "bar", "baz"]
+  case result of
+    Left _ -> assertFailure "unexpected parse error"
+    Right r -> ["foo", "bar", "baz"] @=? r
+
 main :: IO ()
 main = $(defaultMainGenerator)
