@@ -88,7 +88,7 @@ fieldMod f = Mod f mempty id
 instance Monoid (Mod f a) where
   mempty = Mod id mempty id
   Mod f1 d1 g1 `mappend` Mod f2 d2 g2
-    = Mod (f2 . f1) (d2 <> d1) (g2 . g1)
+    = Mod (f2 . f1) (d2 `mappend` d1) (g2 . g1)
 
 -- | Base default properties.
 baseProps :: OptProperties

@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, FlexibleInstances #-}
+{-# LANGUAGE GADTs, TypeSynonymInstances, FlexibleInstances #-}
 module Options.Applicative.Internal
   ( P
   , Context(..)

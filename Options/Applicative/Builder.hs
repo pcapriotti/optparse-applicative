@@ -156,7 +156,7 @@ action act = completer (bashCompleter act)
 -- A completer is a function String -> IO String which, given a partial
 -- argument, returns all possible completions for that argument.
 completer :: HasCompleter f => Completer -> Mod f a
-completer f = fieldMod $ modCompleter (<> f)
+completer f = fieldMod $ modCompleter (`mappend` f)
 
 -- parsers --
 
@@ -208,7 +208,7 @@ switch = flag False True
 nullOption :: Mod OptionFields a -> Parser a
 nullOption m = mkParser d g rdr
   where
-    Mod f d g = metavar "ARG" <> m
+    Mod f d g = metavar "ARG" `mappend` m
     fields = f (OptionFields [] mempty disabled)
     crdr = CReader (optCompleter fields) (optReader fields)
     rdr = OptReader (optNames fields) crdr
