@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types, PatternGuards, ScopedTypeVariables #-}
+{-# LANGUAGE Rank2Types, ScopedTypeVariables #-}
 module Options.Applicative.Common (
   -- * Option parsers
   --
@@ -80,40 +80,36 @@ type Matcher m a = [String] -> m (a, [String])
 
 optMatches :: MonadP m => Bool -> OptReader a -> String -> Maybe (Matcher m a)
 optMatches disambiguate opt arg = case opt of
-  OptReader names rdr
-    | Just (arg1, val) <- parsed
-    , has_name arg1 names
-    -> Just $ \args -> do
-         let mb_args = uncons $ maybeToList val ++ args
-         (arg', args') <- maybe (missingArgP (crCompleter rdr)) return mb_args
-         r <- liftMaybe $ crReader rdr arg'
-         return (r, args')
-    | otherwise -> Nothing
-  FlagReader names x
-    | Just (arg1, Nothing) <- parsed
-    , has_name arg1 names
-    -> Just $ \args -> return (x, args)
-  ArgReader rdr
-    | Just result <- crReader rdr arg
-    -> Just $ \args -> return (result, args)
-  CmdReader _ f
-    | Just subp <- f arg
-    -> Just $ \args -> do
-         setContext (Just arg) subp
-         runParser (infoParser subp) args
-  _ -> Nothing
+  OptReader names rdr -> do
+    (arg1, val) <- parsed
+    guard $ has_name arg1 names
+    return $ \args -> do
+      let mb_args = uncons $ maybeToList val ++ args
+      (arg', args') <- maybe (missingArgP (crCompleter rdr)) return mb_args
+      r <- liftMaybe $ crReader rdr arg'
+      return (r, args')
+  FlagReader names x -> do
+    (arg1, Nothing) <- parsed
+    guard $ has_name arg1 names
+    return $ \args -> return (x, args)
+  ArgReader rdr ->
+    flip fmap (crReader rdr arg) $ \result args -> return (result, args)
+  CmdReader _ f ->
+    flip fmap (f arg) $ \subp args -> do
+      setContext (Just arg) subp
+      runParser (infoParser subp) args
   where
-    parsed
-      | '-' : '-' : arg1 <- arg
-      = case span (/= '=') arg1 of
-          (_, "") -> Just (OptLong arg1, Nothing)
-          (arg1', _ : rest) -> Just (OptLong arg1', Just rest)
-      | '-' : arg1 <- arg
-      = case arg1 of
-          [] -> Nothing
-          [a] -> Just (OptShort a, Nothing)
-          (a : rest) -> Just (OptShort a, Just rest)
-      | otherwise = Nothing
+    parsed =
+      case arg of
+        '-' : '-' : arg1 ->
+          case span (/= '=') arg1 of
+            (_, "") -> Just (OptLong arg1, Nothing)
+            (arg1', _ : rest) -> Just (OptLong arg1', Just rest)
+        '-' : arg1 ->
+          case arg1 of
+            [] -> Nothing
+            (a : rest) -> Just (OptShort a, if null rest then Nothing else Just rest)
+        _ -> Nothing
     has_name a
       | disambiguate = any (isOptionPrefix a)
       | otherwise = elem a

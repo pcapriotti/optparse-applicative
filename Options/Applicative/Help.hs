@@ -1,4 +1,3 @@
-{-# LANGUAGE PatternGuards #-}
 module Options.Applicative.Help (
   cmdDesc,
   briefDesc,
@@ -56,13 +55,13 @@ optDesc pprefs style info opt =
 cmdDesc :: Parser a -> [String]
 cmdDesc = concat . mapParser desc
   where
-    desc _ opt
-      | CmdReader cmds p <- optMain opt
-      = tabulate [(cmd, d)
-                 | cmd <- reverse cmds
-                 , d <- maybeToList . fmap infoProgDesc $ p cmd ]
-      | otherwise
-      = []
+    desc _ opt =
+      case optMain opt of
+        CmdReader cmds p ->
+          tabulate [(cmd, d)
+                   | cmd <- reverse cmds
+                   , d <- maybeToList . fmap infoProgDesc $ p cmd ]
+        _ -> []
 
 -- | Generate a brief help text for a parser.
 briefDesc :: ParserPrefs -> Parser a -> String

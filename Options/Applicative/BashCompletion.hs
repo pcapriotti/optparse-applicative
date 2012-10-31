@@ -1,4 +1,3 @@
-{-# LANGUAGE PatternGuards #-}
 module Options.Applicative.BashCompletion
   ( bashCompletionParser
   ) where
@@ -58,9 +57,10 @@ bashCompletionQuery parser pprefs ws i _ = case runCompletion compl pprefs of
 
     (ws', ws'') = splitAt i ws
 
-    is_completion
-      | (w:_) <- ws'' = isPrefixOf w
-      | otherwise     = const True
+    is_completion =
+      case ws'' of
+        w:_ -> isPrefixOf w
+        _ -> const True
 
     compl = do
       setParser Nothing parser
