@@ -102,9 +102,10 @@ optMatches disambiguate opt arg = case opt of
     parsed =
       case arg of
         '-' : '-' : arg1 ->
+          Just $
           case span (/= '=') arg1 of
-            (_, "") -> Just (OptLong arg1, Nothing)
-            (arg1', _ : rest) -> Just (OptLong arg1', Just rest)
+            (_, "") -> (OptLong arg1, Nothing)
+            (arg1', _ : rest) -> (OptLong arg1', Just rest)
         '-' : arg1 ->
           case arg1 of
             [] -> Nothing
