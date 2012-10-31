@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 module Options.Applicative.Internal
   ( P
   , Context(..)
@@ -36,7 +36,27 @@ class (Alternative m, MonadPlus m) => MonadP m where
   errorP :: String -> m a
   exitP :: Parser b -> Maybe a -> m a
 
-type P = ErrorT String (WriterT Context (Reader ParserPrefs))
+newtype P a = P (ErrorT String (WriterT Context (Reader ParserPrefs)) a)
+
+instance Functor P where
+  fmap f (P m) = P $ fmap f m
+
+instance Applicative P where
+  pure a = P $ pure a
+  P f <*> P a = P $ f <*> a
+
+instance Alternative P where
+  empty = P empty
+  P x <|> P y = P $ x <|> y
+
+instance Monad P where
+  return a = P $ return a
+  P x >>= k = P $ x >>= \a -> case k a of P y -> y
+
+instance MonadPlus P where
+  mzero = P mzero
+  mplus (P x) (P y) = P $ mplus x y
+
 
 data Context where
   Context :: [String] -> ParserInfo a -> Context
@@ -52,20 +72,20 @@ instance Monoid Context where
   mappend c _ = c
 
 instance MonadP P where
-  setContext name = lift . tell . Context (maybeToList name)
+  setContext name = P . lift . tell . Context (maybeToList name)
   setParser _ _ = return ()
-  getPrefs = lift . lift $ ask
+  getPrefs = P . lift . lift $ ask
 
-  missingArgP _ = empty
-  tryP p = lift $ runErrorT p
-  exitP _ = maybe mzero return
-  errorP = throwError
+  missingArgP _ = P empty
+  tryP (P p) = P $ lift $ runErrorT p
+  exitP _ = P . liftMaybe
+  errorP = P . throwError
 
 liftMaybe :: MonadPlus m => Maybe a -> m a
 liftMaybe = maybe mzero return
 
 runP :: P a -> ParserPrefs -> (Either String a, Context)
-runP = runReader . runWriterT . runErrorT
+runP (P p) = runReader . runWriterT . runErrorT $ p
 
 uncons :: [a] -> Maybe (a, [a])
 uncons [] = Nothing
