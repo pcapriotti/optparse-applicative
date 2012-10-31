@@ -87,6 +87,7 @@ library
                        Options.Applicative.Types,
                        Options.Applicative.Utils
   other-modules:       Options.Applicative.Internal
+  ghc-options:         -Wall
   build-depends:       base == 4.*,
                        transformers >= 0.2 && < 0.4,
                        process == 1.1.*
@@ -94,6 +95,7 @@ test-suite tests
   type:                exitcode-stdio-1.0
   hs-source-dirs:      tests
   main-is:             Tests.hs
+  ghc-options:         -Wall
   build-depends:       base == 4.*,
                        HUnit == 1.2.*,
                        optparse-applicative,
