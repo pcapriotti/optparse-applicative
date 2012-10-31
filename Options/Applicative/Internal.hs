@@ -100,20 +100,40 @@ instance Monad ComplResult where
     ComplParser p -> ComplParser p
     ComplOption c -> ComplOption c
 
-type Completion = ErrorT String (ReaderT ParserPrefs ComplResult)
+newtype Completion a =
+  Completion (ErrorT String (ReaderT ParserPrefs ComplResult) a)
+
+instance Functor Completion where
+  fmap f (Completion m) = Completion $ fmap f m
+
+instance Applicative Completion where
+  pure a = Completion $ pure a
+  Completion f <*> Completion a = Completion $ f <*> a
+
+instance Alternative Completion where
+  empty = Completion empty
+  Completion x <|> Completion y = Completion $ x <|> y
+
+instance Monad Completion where
+  return a = Completion $ return a
+  Completion x >>= k = Completion $ x >>= \a -> case k a of Completion y -> y
+
+instance MonadPlus Completion where
+  mzero = Completion mzero
+  mplus (Completion x) (Completion y) = Completion $ mplus x y
 
 instance MonadP Completion where
   setContext _ _ = return ()
   setParser _ _ = return ()
-  getPrefs = lift ask
+  getPrefs = Completion $ lift ask
 
-  missingArgP = lift . lift . ComplOption
-  tryP p = catchError (Right <$> p) (return . Left)
-  exitP p _ = lift . lift . ComplParser $ SomeParser p
-  errorP = throwError
+  missingArgP = Completion . lift . lift . ComplOption
+  tryP (Completion p) = Completion $ catchError (Right <$> p) (return . Left)
+  exitP p _ = Completion . lift . lift . ComplParser $ SomeParser p
+  errorP = Completion . throwError
 
 runCompletion :: Completion r -> ParserPrefs -> Maybe (Either SomeParser Completer)
-runCompletion c prefs = case runReaderT (runErrorT c) prefs of
+runCompletion (Completion c) prefs = case runReaderT (runErrorT c) prefs of
   ComplResult _ -> Nothing
   ComplParser p' -> Just $ Left p'
   ComplOption compl -> Just $ Right compl
