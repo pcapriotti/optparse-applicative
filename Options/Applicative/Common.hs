@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types, ScopedTypeVariables #-}
+{-# LANGUAGE Rank2Types #-}
 module Options.Applicative.Common (
   -- * Option parsers
   --
