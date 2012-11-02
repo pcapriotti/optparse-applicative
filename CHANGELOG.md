@@ -1,3 +1,7 @@
+## Version 0.5.0 (unreleased)
+
+- Fewer GHC extensions required
+
 ## Version 0.4.1 (04 Sep 2012)
 
 - Fixed bugs
