@@ -70,6 +70,15 @@ category:            System
 build-type:          Simple
 cabal-version:       >= 1.8
 extra-source-files:  README.md
+                     tests/Examples/Alternatives.hs
+                     tests/Examples/Cabal.hs
+                     tests/Examples/Commands.hs
+                     tests/Examples/Hello.hs
+                     tests/alt.err.txt
+                     tests/cabal.err.txt
+                     tests/commands.err.txt
+                     tests/hello.err.txt
+                     tests/nested.err.txt
 homepage:            https://github.com/pcapriotti/optparse-applicative
 bug-reports:         https://github.com/pcapriotti/optparse-applicative/issues
 
