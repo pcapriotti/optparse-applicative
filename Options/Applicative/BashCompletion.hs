@@ -41,10 +41,10 @@ bashCompletionQuery parser pprefs ws i _ = case runCompletion compl pprefs of
       . mapParser (\_ -> opt_completions)
 
     opt_completions opt = case optMain opt of
-      OptReader ns _  -> show_names ns
-      FlagReader ns _ -> show_names ns
-      ArgReader rdr   -> run_completer (crCompleter rdr)
-      CmdReader ns _  -> filter_names ns
+      OptReader ns _ _ -> show_names ns
+      FlagReader ns _  -> show_names ns
+      ArgReader rdr    -> run_completer (crCompleter rdr)
+      CmdReader ns _   -> filter_names ns
 
     show_name (OptShort c) = '-':[c]
     show_name (OptLong name) = "--" ++ name

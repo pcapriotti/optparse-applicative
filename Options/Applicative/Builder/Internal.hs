@@ -30,7 +30,8 @@ import Options.Applicative.Types
 data OptionFields a = OptionFields
   { optNames :: [OptName]
   , optCompleter :: Completer
-  , optReader :: String -> Maybe a }
+  , optReader :: String -> Either ParseError a
+  , optNoArgError :: ParseError }
   deriving Functor
 
 data FlagFields a = FlagFields

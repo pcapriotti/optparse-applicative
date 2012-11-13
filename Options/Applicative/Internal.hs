@@ -7,6 +7,7 @@ module Options.Applicative.Internal
 
   , uncons
   , liftMaybe
+  , liftEither
 
   , runP
 
@@ -27,19 +28,12 @@ import Data.Monoid
 
 import Options.Applicative.Types
 
-data ParseError
-  = ErrorMsg String
-  | ShowHelpText
-
-instance Error ParseError where
-  strMsg = ErrorMsg
-
 class (Alternative m, MonadPlus m) => MonadP m where
   setContext :: Maybe String -> ParserInfo a -> m ()
   setParser :: Maybe String -> Parser a -> m ()
   getPrefs :: m ParserPrefs
 
-  missingArgP :: Completer -> m a
+  missingArgP :: ParseError -> Completer -> m a
   tryP :: m a -> m (Either ParseError a)
   errorP :: ParseError -> m a
   exitP :: Parser b -> Maybe a -> m a
@@ -84,13 +78,16 @@ instance MonadP P where
   setParser _ _ = return ()
   getPrefs = P . lift . lift $ ask
 
-  missingArgP _ = P empty
+  missingArgP e _ = errorP e
   tryP (P p) = P $ lift $ runErrorT p
   exitP _ = P . liftMaybe
   errorP = P . throwError
 
 liftMaybe :: MonadPlus m => Maybe a -> m a
 liftMaybe = maybe mzero return
+
+liftEither :: MonadP m => Either ParseError a -> m a
+liftEither = either errorP return
 
 runP :: P a -> ParserPrefs -> (Either ParseError a, Context)
 runP (P p) = runReader . runWriterT . runErrorT $ p
@@ -155,7 +152,7 @@ instance MonadP Completion where
   setParser _ _ = return ()
   getPrefs = Completion $ lift ask
 
-  missingArgP = Completion . lift . lift . ComplOption
+  missingArgP _ = Completion . lift . lift . ComplOption
   tryP (Completion p) = Completion $ catchError (Right <$> p) (return . Left)
   exitP p _ = Completion . lift . lift . ComplParser $ SomeParser p
   errorP = Completion . throwError

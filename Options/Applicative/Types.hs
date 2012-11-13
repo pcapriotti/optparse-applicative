@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs, DeriveFunctor, Rank2Types #-}
 module Options.Applicative.Types (
+  ParseError(..),
   ParserInfo(..),
   ParserPrefs(..),
 
@@ -32,6 +33,14 @@ import Control.Monad
 import Control.Monad.Trans.Error
 import Data.Monoid
 import System.Exit
+
+data ParseError
+  = ErrorMsg String
+  | ShowHelpText
+  deriving Show
+
+instance Error ParseError where
+  strMsg = ErrorMsg
 
 -- | A full description for a runnable 'Parser' for a program.
 data ParserInfo a = ParserInfo
@@ -75,16 +84,19 @@ data Option a = Option
   , optProps :: OptProperties            -- ^ properties of this option
   } deriving Functor
 
-data CReader a = CReader
+data CReader m a = CReader
   { crCompleter :: Completer
-  , crReader :: String -> Maybe a }
+  , crReader :: String -> m a }
   deriving Functor
+
+type OptCReader = CReader (Either ParseError)
+type ArgCReader = CReader Maybe
 
 -- | An 'OptReader' defines whether an option matches an command line argument.
 data OptReader a
-  = OptReader [OptName] (CReader a)                     -- ^ option reader
+  = OptReader [OptName] (OptCReader a) ParseError       -- ^ option reader
   | FlagReader [OptName] !a                             -- ^ flag reader
-  | ArgReader (CReader a)                               -- ^ argument reader
+  | ArgReader (ArgCReader a)                            -- ^ argument reader
   | CmdReader [String] (String -> Maybe (ParserInfo a)) -- ^ command reader
   deriving Functor
 
