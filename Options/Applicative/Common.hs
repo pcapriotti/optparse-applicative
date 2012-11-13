@@ -168,8 +168,11 @@ runParser p args = case args of
       where parses = stepParser prefs p arg argt
 
 parseError :: MonadP m => String -> m a
-parseError arg@('-':_) = errorP $ "Invalid option `" ++ arg ++ "'"
-parseError arg = errorP $ "Invalid argument `" ++ arg ++ "'"
+parseError arg = errorP . ErrorMsg $ msg
+  where
+    msg = case arg of
+      ('-':_) -> "Invalid option `" ++ arg ++ "'"
+      _       -> "Invalid argument `" ++ arg ++ "'"
 
 runParserFully :: MonadP m => Parser a -> [String] -> m a
 runParserFully p args = do
