@@ -47,6 +47,7 @@ data ParserInfo a = ParserInfo
 data ParserPrefs = ParserPrefs
   { prefMultiSuffix :: String    -- ^ metavar suffix for multiple options
   , prefDisambiguate :: Bool     -- ^ automatically disambiguate abbreviations
+  , prefShowHelpOnError :: Bool  -- ^ always show help text on parse errors
   }
 
 data OptName = OptShort !Char

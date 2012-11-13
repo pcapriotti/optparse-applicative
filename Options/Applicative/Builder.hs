@@ -283,7 +283,8 @@ prefs m = applyPrefsMod m base
   where
     base = ParserPrefs
       { prefMultiSuffix = ""
-      , prefDisambiguate = False }
+      , prefDisambiguate = False
+      , prefShowHelpOnError = False }
 
 -- convenience shortcuts
 

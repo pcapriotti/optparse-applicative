@@ -72,7 +72,7 @@ execParserPure pprefs pinfo args =
       { errMessage = \progn
           -> with_context ctx pinfo $ \names ->
                  return
-               . parserHelpText pprefs
+               . show_help
                . add_error msg
                . add_usage names progn
       , errExitCode = ExitFailure (infoFailureCode pinfo) }
@@ -80,12 +80,23 @@ execParserPure pprefs pinfo args =
     parser = infoParser pinfo
     add_usage names progn i = i
       { infoHeader = vcat
-          [ infoHeader i
-          , usage pprefs (infoParser i) ename ] }
+          ( header_line i ++
+            [ usage pprefs (infoParser i) ename ] ) }
       where
         ename = unwords (progn : names)
     add_error msg i = i
       { infoHeader = vcat [msg, infoHeader i] }
+    show_full_help = prefShowHelpOnError pprefs
+    show_help i
+      | show_full_help
+      = parserHelpText pprefs i
+      | otherwise
+      = unlines $ filter (not . null) [ infoHeader i ]
+    header_line i
+      | show_full_help
+      = [ infoHeader i ]
+      | otherwise
+      = []
 
     with_context :: Context
                  -> ParserInfo a
