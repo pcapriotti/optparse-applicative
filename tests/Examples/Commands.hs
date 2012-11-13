@@ -26,7 +26,7 @@ run (Hello targets) = putStrLn $ "Hello, " ++ intercalate ", " targets ++ "!"
 run Goodbye = putStrLn "Goodbye."
 
 opts :: ParserInfo Sample
-opts = info sample idm
+opts = info (sample <**> helper) idm
 
 main :: IO ()
 main = execParser opts >>= run

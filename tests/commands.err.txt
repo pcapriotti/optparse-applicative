@@ -1,5 +1,8 @@
 Usage: commands COMMAND
 
+Available options:
+  -h,--help                Show this help text
+
 Available commands:
   hello                    Print greeting
   goodbye                  Say goodbye

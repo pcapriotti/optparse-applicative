@@ -162,8 +162,14 @@ runParser p args = case args of
           [m] -> m
           _   -> empty
       | otherwise
-      = msum parses
+      = if null parses
+          then parseError arg
+          else msum parses
       where parses = stepParser prefs p arg argt
+
+parseError :: MonadP m => String -> m a
+parseError arg@('-':_) = errorP $ "Invalid option `" ++ arg ++ "'"
+parseError arg = errorP $ "Invalid argument `" ++ arg ++ "'"
 
 runParserFully :: MonadP m => Parser a -> [String] -> m a
 runParserFully p args = do
