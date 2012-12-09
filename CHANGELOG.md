@@ -1,3 +1,7 @@
+## Version 0.4.3 (09 Dic 2012)
+
+- Updated dependency bounds.
+
 ## Version 0.4.2 (26 Nov 2012)
 
 - Fixed bugs
