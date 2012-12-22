@@ -17,14 +17,16 @@ module Options.Applicative.Internal
   , ComplError(..)
   ) where
 
-import Control.Applicative
-import Control.Monad
-import Control.Monad.Trans.Class
+import Control.Applicative (Applicative(..), Alternative(..), (<$>))
+import Control.Monad (MonadPlus(..), liftM, ap)
+import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Error
+  (runErrorT, ErrorT, Error(..), throwError, catchError)
 import Control.Monad.Trans.Reader
-import Control.Monad.Trans.Writer
-import Data.Maybe
-import Data.Monoid
+  (runReader, runReaderT, Reader, ReaderT, ask)
+import Control.Monad.Trans.Writer (runWriterT, WriterT, tell)
+import Data.Maybe (maybeToList)
+import Data.Monoid (Monoid(..))
 
 import Options.Applicative.Types
 

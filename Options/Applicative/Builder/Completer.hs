@@ -4,11 +4,12 @@ module Options.Applicative.Builder.Completer
   , bashCompleter
   ) where
 
-import Control.Applicative
+import Control.Applicative ((<$>), pure)
 import Control.Exception (IOException, try)
-import Data.List
+import Data.List (isPrefixOf)
+import System.Process (readProcess)
+
 import Options.Applicative.Types
-import System.Process
 
 listIOCompleter :: IO [String] -> Completer
 listIOCompleter ss = Completer $ \s ->

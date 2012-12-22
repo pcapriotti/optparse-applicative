@@ -72,8 +72,8 @@ module Options.Applicative.Builder (
   prefs
   ) where
 
-import Control.Applicative
-import Data.Monoid
+import Control.Applicative (pure, (<|>))
+import Data.Monoid (Monoid (..))
 
 import Options.Applicative.Builder.Completer
 import Options.Applicative.Builder.Arguments

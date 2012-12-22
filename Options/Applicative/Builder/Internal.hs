@@ -20,9 +20,10 @@ module Options.Applicative.Builder.Internal (
   internal
   ) where
 
-import Control.Applicative
-import Control.Monad
-import Data.Monoid
+import Control.Applicative (pure, (<*>), empty, (<|>))
+import Control.Monad (mplus)
+import Data.Monoid (Monoid(..))
+
 import Options.Applicative.Common
 import Options.Applicative.Types
 

@@ -44,11 +44,11 @@ module Options.Applicative.Common (
   optionNames
   ) where
 
-import Control.Applicative
-import Control.Monad
-import Data.List
-import Data.Maybe
-import Data.Monoid
+import Control.Applicative (pure, (<*>), (<$>), (<|>), empty)
+import Control.Monad (guard, msum)
+import Data.List (isPrefixOf)
+import Data.Maybe (maybeToList, isJust)
+import Data.Monoid (Monoid(..))
 
 import Options.Applicative.Internal
 import Options.Applicative.Types

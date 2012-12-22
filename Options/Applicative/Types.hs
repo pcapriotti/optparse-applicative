@@ -29,10 +29,11 @@ module Options.Applicative.Types (
   ) where
 
 import Control.Applicative
-import Control.Monad
-import Control.Monad.Trans.Error
-import Data.Monoid
-import System.Exit
+  (Applicative(..), Alternative(..), (<$>), optional)
+import Control.Monad (ap, liftM)
+import Control.Monad.Trans.Error (Error(..))
+import Data.Monoid (Monoid(..))
+import System.Exit (ExitCode(..))
 
 data ParseError
   = ErrorMsg String

@@ -5,8 +5,9 @@ module Options.Applicative.Help (
   parserHelpText,
   ) where
 
-import Data.List
-import Data.Maybe
+import Data.List (intercalate, sort)
+import Data.Maybe (maybeToList, catMaybes)
+
 import Options.Applicative.Common
 import Options.Applicative.Types
 import Options.Applicative.Utils

@@ -11,7 +11,11 @@ module Options.Applicative.Extra (
   ParserFailure(..),
   ) where
 
-import Control.Applicative
+import Control.Applicative ((<$>), (<|>))
+import System.Environment (getArgs, getProgName)
+import System.Exit (exitWith, ExitCode(..))
+import System.IO (hPutStr, stderr)
+
 import Options.Applicative.BashCompletion
 import Options.Applicative.Common
 import Options.Applicative.Builder hiding (briefDesc)
@@ -19,9 +23,6 @@ import Options.Applicative.Help
 import Options.Applicative.Internal
 import Options.Applicative.Utils
 import Options.Applicative.Types
-import System.Environment
-import System.Exit
-import System.IO
 
 -- | A hidden \"helper\" option which always fails.
 helper :: Parser (a -> a)

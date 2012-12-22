@@ -2,11 +2,11 @@ module Options.Applicative.BashCompletion
   ( bashCompletionParser
   ) where
 
-import Control.Applicative
+import Control.Applicative ((<$>), (<*>), many)
 import Data.Foldable (asum)
-import Data.List
-import Data.Maybe
-import System.Exit
+import Data.List (isPrefixOf)
+import Data.Maybe (fromMaybe, listToMaybe)
+import System.Exit (ExitCode(..))
 
 import Options.Applicative.Builder
 import Options.Applicative.Common

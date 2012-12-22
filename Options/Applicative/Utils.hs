@@ -5,7 +5,7 @@ module Options.Applicative.Utils (
   pad
   ) where
 
-import Data.List
+import Data.List (intercalate)
 
 -- | Concatenate two strings with a space in the middle.
 (<+>) :: String -> String -> String

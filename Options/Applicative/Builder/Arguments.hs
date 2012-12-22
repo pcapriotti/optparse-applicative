@@ -5,10 +5,11 @@ module Options.Applicative.Builder.Arguments
   , arguments1
   ) where
 
-import Control.Applicative
-import Control.Monad
-import Data.Maybe
-import Data.Monoid
+import Control.Applicative ((<$>), pure, (<*>), optional, (<|>), (*>))
+import Control.Monad (guard)
+import Data.Maybe (fromMaybe)
+import Data.Monoid (mempty)
+
 import Options.Applicative.Builder.Internal
 import Options.Applicative.Common
 import Options.Applicative.Types

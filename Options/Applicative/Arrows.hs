@@ -33,7 +33,8 @@ module Options.Applicative.Arrows (
   ) where
 
 import Control.Arrow
-import Control.Category
+import Control.Category (Category(..))
+
 import Options.Applicative
 
 import Prelude hiding ((.), id)
