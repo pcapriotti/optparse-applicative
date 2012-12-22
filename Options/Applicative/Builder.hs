@@ -39,6 +39,7 @@ module Options.Applicative.Builder (
   metavar,
   reader,
   noArgError,
+  ParseError(..),
   hidden,
   internal,
   command,
