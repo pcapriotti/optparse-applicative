@@ -1,4 +1,4 @@
-## Version 0.5.0 (unreleased)
+## Version 0.5.0 (22 Dic 2012)
 
 - Fewer GHC extensions required
 
@@ -7,6 +7,9 @@
 - By default, the full help text is not displayed on parse errors anymore.
   This behavior can be controlled with the `prefShowHelpOnError` field of
   `ParserPrefs`.
+
+- The `(&)` operator is now deprecated. Modifiers can still be combined using
+  `(<>)` or `mappend`.
 
 ## Version 0.4.1 (04 Sep 2012)
 
