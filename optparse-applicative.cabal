@@ -82,6 +82,10 @@ extra-source-files:  README.md
 homepage:            https://github.com/pcapriotti/optparse-applicative
 bug-reports:         https://github.com/pcapriotti/optparse-applicative/issues
 
+source-repository head
+  type:     git
+  location: https://github.com/pcapriotti/optparse-applicative.git
+
 library
   exposed-modules:     Options.Applicative,
                        Options.Applicative.Arrows,
