@@ -2,6 +2,12 @@
 
 - Fewer GHC extensions required
 
+- Improved error handling: unrecognized options now result in an error message.
+
+- By default, the full help text is not displayed on parse errors anymore.
+  This behavior can be controlled with the `prefShowHelpOnError` field of
+  `ParserPrefs`.
+
 ## Version 0.4.1 (04 Sep 2012)
 
 - Fixed bugs
