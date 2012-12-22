@@ -47,12 +47,15 @@ main = execParser opts >>= greet
 
 The `greet` function is the entry point of the program, while `opts` is a
 complete description of the program, used when generating a help text. The
-`helper` combinator takes any parser, and adds a `help` option to it (which
-always fails).
+`helper` combinator takes any parser, and adds a `help` option to it.
 
 The `hello` option in this example is mandatory (since it doesn't have a
-default value), so running the program without any argument will display the
-help text:
+default value), so running the program without any argument will display a
+short option summary:
+
+    Usage: hello --hello TARGET [--quiet]
+
+Running the program with the `--help` option will display the full help text:
 
     hello - a test for optparse-applicative
 
@@ -64,8 +67,7 @@ help text:
       --hello TARGET           Target for the greeting
       --quiet                  Whether to be quiet
 
-containing a short usage summary, and a detailed list of options with
-descriptions.
+containing a detailed list of options with descriptions.
 
  [applicative]: http://www.soi.city.ac.uk/~ross/papers/Applicative.html
 

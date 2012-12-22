@@ -38,6 +38,8 @@ module Options.Applicative.Builder (
   showDefault,
   metavar,
   reader,
+  noArgError,
+  ParseError(..),
   hidden,
   internal,
   command,
@@ -83,18 +85,18 @@ import Options.Applicative.Types
 -- readers --
 
 -- | 'Option' reader based on the 'Read' type class.
-auto :: Read a => String -> Maybe a
+auto :: Monad m => Read a => String -> m a
 auto arg = case reads arg of
-  [(r, "")] -> Just r
-  _         -> Nothing
+  [(r, "")] -> return r
+  _         -> fail "Cannot parse value"
 
 -- | String 'Option' reader.
-str :: String -> Maybe String
-str = Just
+str :: Monad m => String -> m String
+str = return
 
 -- | Null 'Option' reader. All arguments will fail validation.
-disabled :: String -> Maybe a
-disabled = const Nothing
+disabled :: Monad m => String -> m a
+disabled = const . fail $ "Disabled option"
 
 -- modifiers --
 
@@ -123,8 +125,12 @@ help :: String -> Mod f a
 help s = optionMod $ \p -> p { propHelp = s }
 
 -- | Specify the 'Option' reader.
-reader :: (String -> Maybe a) -> Mod OptionFields a
+reader :: (String -> Either ParseError a) -> Mod OptionFields a
 reader f = fieldMod $ \p -> p { optReader = f }
+
+-- | Specify the error to display when no argument is provided to this option.
+noArgError :: ParseError -> Mod OptionFields a
+noArgError e = fieldMod $ \p -> p { optNoArgError = e }
 
 -- | Specify the metavariable.
 metavar :: String -> Mod f a
@@ -209,9 +215,9 @@ nullOption :: Mod OptionFields a -> Parser a
 nullOption m = mkParser d g rdr
   where
     Mod f d g = metavar "ARG" `mappend` m
-    fields = f (OptionFields [] mempty disabled)
+    fields = f (OptionFields [] mempty disabled (ErrorMsg ""))
     crdr = CReader (optCompleter fields) (optReader fields)
-    rdr = OptReader (optNames fields) crdr
+    rdr = OptReader (optNames fields) crdr (optNoArgError fields)
 
 -- | Builder for an option taking a 'String' argument.
 strOption :: Mod OptionFields String -> Parser String
@@ -283,7 +289,8 @@ prefs m = applyPrefsMod m base
   where
     base = ParserPrefs
       { prefMultiSuffix = ""
-      , prefDisambiguate = False }
+      , prefDisambiguate = False
+      , prefShowHelpOnError = False }
 
 -- convenience shortcuts
 

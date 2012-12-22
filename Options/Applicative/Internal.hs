@@ -3,9 +3,11 @@ module Options.Applicative.Internal
   ( P
   , Context(..)
   , MonadP(..)
+  , ParseError(..)
 
   , uncons
   , liftMaybe
+  , liftEither
 
   , runP
 
@@ -31,12 +33,12 @@ class (Alternative m, MonadPlus m) => MonadP m where
   setParser :: Maybe String -> Parser a -> m ()
   getPrefs :: m ParserPrefs
 
-  missingArgP :: Completer -> m a
-  tryP :: m a -> m (Either String a)
-  errorP :: String -> m a
+  missingArgP :: ParseError -> Completer -> m a
+  tryP :: m a -> m (Either ParseError a)
+  errorP :: ParseError -> m a
   exitP :: Parser b -> Maybe a -> m a
 
-newtype P a = P (ErrorT String (WriterT Context (Reader ParserPrefs)) a)
+newtype P a = P (ErrorT ParseError (WriterT Context (Reader ParserPrefs)) a)
 
 instance Functor P where
   fmap f (P m) = P $ fmap f m
@@ -76,7 +78,7 @@ instance MonadP P where
   setParser _ _ = return ()
   getPrefs = P . lift . lift $ ask
 
-  missingArgP _ = P empty
+  missingArgP e _ = errorP e
   tryP (P p) = P $ lift $ runErrorT p
   exitP _ = P . liftMaybe
   errorP = P . throwError
@@ -84,7 +86,10 @@ instance MonadP P where
 liftMaybe :: MonadPlus m => Maybe a -> m a
 liftMaybe = maybe mzero return
 
-runP :: P a -> ParserPrefs -> (Either String a, Context)
+liftEither :: MonadP m => Either ParseError a -> m a
+liftEither = either errorP return
+
+runP :: P a -> ParserPrefs -> (Either ParseError a, Context)
 runP (P p) = runReader . runWriterT . runErrorT $ p
 
 uncons :: [a] -> Maybe (a, [a])
@@ -121,7 +126,7 @@ instance Monad ComplResult where
     ComplOption c -> ComplOption c
 
 newtype Completion a =
-  Completion (ErrorT String (ReaderT ParserPrefs ComplResult) a)
+  Completion (ErrorT ParseError (ReaderT ParserPrefs ComplResult) a)
 
 instance Functor Completion where
   fmap f (Completion m) = Completion $ fmap f m
@@ -147,7 +152,7 @@ instance MonadP Completion where
   setParser _ _ = return ()
   getPrefs = Completion $ lift ask
 
-  missingArgP = Completion . lift . lift . ComplOption
+  missingArgP _ = Completion . lift . lift . ComplOption
   tryP (Completion p) = Completion $ catchError (Right <$> p) (return . Left)
   exitP p _ = Completion . lift . lift . ComplParser $ SomeParser p
   errorP = Completion . throwError

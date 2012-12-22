@@ -195,7 +195,7 @@ case_issue_19 :: Assertion
 case_issue_19 = do
   let p = option
         ( short 'x'
-        & reader (Just . str)
+        & reader (fmap Just . str)
         & value Nothing )
       i = info (p <**> helper) idm
       result = run i ["-x", "foo"]

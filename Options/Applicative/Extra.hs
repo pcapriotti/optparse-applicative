@@ -27,6 +27,8 @@ import System.IO
 helper :: Parser (a -> a)
 helper = nullOption
        ( long "help"
+       & reader (const (Left ShowHelpText))
+       & noArgError ShowHelpText
        & short 'h'
        & help "Show this help text"
        & value id
@@ -68,24 +70,50 @@ execParserPure pprefs pinfo args =
     (Right r, _) -> case r of
       Result a -> Right a
       Extra failure -> Left failure
-    (Left msg, ctx) -> Left ParserFailure
-      { errMessage = \progn
-          -> with_context ctx pinfo $ \names ->
-                 return
-               . parserHelpText pprefs
-               . add_error msg
-               . add_usage names progn
-      , errExitCode = ExitFailure (infoFailureCode pinfo) }
+    (Left msg, ctx) -> Left $
+      parserFailure pprefs pinfo msg ctx
   where
     parser = infoParser pinfo
+    parser' = (Extra <$> bashCompletionParser parser pprefs)
+          <|> (Result <$> parser)
+    p = runParserFully parser' args
+
+parserFailure :: ParserPrefs -> ParserInfo a
+              -> ParseError -> Context
+              -> ParserFailure
+parserFailure pprefs pinfo msg ctx = ParserFailure
+  { errMessage = \progn
+      -> with_context ctx pinfo $ \names ->
+             return
+           . show_help
+           . add_error
+           . add_usage names progn
+  , errExitCode = ExitFailure (infoFailureCode pinfo) }
+  where
     add_usage names progn i = i
       { infoHeader = vcat
-          [ infoHeader i
-          , usage pprefs (infoParser i) ename ] }
+          ( header_line i ++
+            [ usage pprefs (infoParser i) ename ] ) }
       where
         ename = unwords (progn : names)
-    add_error msg i = i
-      { infoHeader = vcat [msg, infoHeader i] }
+    add_error i = i
+      { infoHeader = vcat (error_msg ++ [infoHeader i]) }
+    error_msg = case msg of
+      ShowHelpText -> []
+      ErrorMsg m   -> [m]
+    show_full_help = case msg of
+      ShowHelpText -> True
+      _            -> prefShowHelpOnError pprefs
+    show_help i
+      | show_full_help
+      = parserHelpText pprefs i
+      | otherwise
+      = unlines $ filter (not . null) [ infoHeader i ]
+    header_line i
+      | show_full_help
+      = [ infoHeader i ]
+      | otherwise
+      = []
 
     with_context :: Context
                  -> ParserInfo a
@@ -93,10 +121,6 @@ execParserPure pprefs pinfo args =
                  -> c
     with_context NullContext i f = f [] i
     with_context (Context n i) _ f = f n i
-
-    parser' = (Extra <$> bashCompletionParser parser pprefs)
-          <|> (Result <$> parser)
-    p = runParserFully parser' args
 
 -- | Generate option summary.
 usage :: ParserPrefs -> Parser a -> String -> String

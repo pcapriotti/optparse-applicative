@@ -54,7 +54,7 @@ import Options.Applicative.Internal
 import Options.Applicative.Types
 
 optionNames :: OptReader a -> [OptName]
-optionNames (OptReader names _) = names
+optionNames (OptReader names _ _) = names
 optionNames (FlagReader names _) = names
 optionNames _ = []
 
@@ -80,24 +80,29 @@ type Matcher m a = [String] -> m (a, [String])
 
 optMatches :: MonadP m => Bool -> OptReader a -> String -> Maybe (Matcher m a)
 optMatches disambiguate opt arg = case opt of
-  OptReader names rdr -> do
+  OptReader names rdr no_arg_err -> do
     (arg1, val) <- parsed
     guard $ has_name arg1 names
     return $ \args -> do
       let mb_args = uncons $ maybeToList val ++ args
-      (arg', args') <- maybe (missingArgP (crCompleter rdr)) return mb_args
-      r <- liftMaybe $ crReader rdr arg'
+      let missing_arg = missingArgP no_arg_err (crCompleter rdr)
+      (arg', args') <- maybe missing_arg return mb_args
+      r <- liftEither (crReader rdr arg')
       return (r, args')
   FlagReader names x -> do
     (arg1, Nothing) <- parsed
     guard $ has_name arg1 names
     return $ \args -> return (x, args)
-  ArgReader rdr ->
-    flip fmap (crReader rdr arg) $ \result args -> return (result, args)
+  ArgReader rdr -> do
+    result <- crReader rdr arg
+    return $ \args -> return (result, args)
   CmdReader _ f ->
     flip fmap (f arg) $ \subp args -> do
       setContext (Just arg) subp
-      runParser (infoParser subp) args
+      x <- tryP $ runParser (infoParser subp) args
+      case x of
+        Left e -> errorP e
+        Right r -> return r
   where
     parsed =
       case arg of
@@ -152,7 +157,9 @@ runParser p args = case args of
     prefs <- getPrefs
     x <- tryP $ do_step prefs arg argt
     case x of
-      Left e -> liftMaybe result <|> errorP e
+      Left e -> case (result, e) of
+        (Just r, ErrorMsg _) -> return r
+        _ -> errorP e
       Right (p', args') -> runParser p' args'
   where
     result = (,) <$> evalParser p <*> pure args
@@ -162,8 +169,17 @@ runParser p args = case args of
           [m] -> m
           _   -> empty
       | otherwise
-      = msum parses
+      = case parses of
+          [] -> parseError arg
+          (m : _) -> m
       where parses = stepParser prefs p arg argt
+
+parseError :: MonadP m => String -> m a
+parseError arg = errorP . ErrorMsg $ msg
+  where
+    msg = case arg of
+      ('-':_) -> "Invalid option `" ++ arg ++ "'"
+      _       -> "Invalid argument `" ++ arg ++ "'"
 
 runParserFully :: MonadP m => Parser a -> [String] -> m a
 runParserFully p args = do
