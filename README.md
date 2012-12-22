@@ -18,11 +18,11 @@ sample :: Parser Sample
 sample = Sample
      <$> strOption
          ( long "hello"
-         & metavar "TARGET"
-         & help "Target for the greeting" )
+        <> metavar "TARGET"
+        <> help "Target for the greeting" )
      <*> switch
          ( long "quiet"
-         & help "Whether to be quiet" )
+        <> help "Whether to be quiet" )
 ```
 
 The parser is built using [applicative style][applicative] starting from a set
@@ -41,8 +41,8 @@ main = execParser opts >>= greet
   where
     opts = info (helper <*> sample)
       ( fullDesc
-      & progDesc "Print a greeting for TARGET"
-      & header "hello - a test for optparse-applicative" )
+     <> progDesc "Print a greeting for TARGET"
+     <> header "hello - a test for optparse-applicative" )
 ```
 
 The `greet` function is the entry point of the program, while `opts` is a
@@ -132,9 +132,9 @@ argument. For example:
 lineCount :: Parser Int
 lineCount = option
             ( long "lines"
-            & short 'n'
-            & metavar "K"
-            & help "Output the last K lines" )
+           <> short 'n'
+           <> metavar "K"
+           <> help "Output the last K lines" )
 ```
 
 specifies a regular option with an `Int` argument. We added an explicit type
@@ -256,7 +256,7 @@ stop :: IO ()
 opts :: Parser (IO ())
 opts = subparser
   ( command "start" (info (start <$> argument str idm) idm)
-  & command "stop"  (info (pure stop) idm) )
+ <> command "stop"  (info (pure stop) idm) )
 
 main :: IO ()
 main = join $ execParser (info opts idm)
@@ -300,7 +300,7 @@ data Options = Options
 
 opts :: Parser Options
 opts = runA $ proc () -> do
-  verbosity <- asA (option (short 'v' & value 0)) -< ()
+  verbosity <- asA (option (short 'v' <> value 0)) -< ()
   let verbose = verbosity > 0
   args <- asA (arguments str idm) -< ()
   returnA -< Options args verbose
