@@ -113,10 +113,10 @@ using the `strOption` builder. For example,
 
 ```haskell
 strOption
-( long "output"
-& short 'o'
-& metavar "FILE"
-& help "Write output to FILE" )
+   ( long "output"
+  <> short 'o'
+  <> metavar "FILE"
+  <> help "Write output to FILE" )
 ```
 
 creates a regular option with a string argument (which can be referred to as
@@ -153,8 +153,8 @@ data FluxCapacitor = ...
 parseFluxCapacitor :: String -> Maybe FluxCapacitor
 
 option
-( long "flux-capacitor"
-& reader parseFluxCapacitor )
+  ( long "flux-capacitor"
+ <> reader parseFluxCapacitor )
 ```
 
 ### Flags
@@ -170,9 +170,9 @@ used. For example:
 data Verbosity = Normal | Verbose
 
 flag Normal Verbose
-( long "verbose"
-& short 'v'
-& help "Enable verbose mode"
+  ( long "verbose"
+ <> short 'v'
+ <> help "Enable verbose mode"
 ```
 
 is a flag parser returning a `Verbosity` value.
@@ -181,8 +181,8 @@ Simple boolean flags can be specified using the `switch` builder, like so:
 
 ```haskell
 switch
-( long "keep-tmp-files"
-& help "Retain all intermediate temporary files" )
+  ( long "keep-tmp-files"
+ <> help "Retain all intermediate temporary files" )
 ```
 
 ### Arguments
@@ -218,10 +218,10 @@ added with the `command` modifier. For example
 
 ```haskell
 subparser
-( command "add" (info addOptions
-    ( progDesc "Add a file to the repository" ))
-& command "commit" (info commitOptions
-    ( progDesc "Record changes to the repository" ))
+  ( command "add" (info addOptions
+      ( progDesc "Add a file to the repository" ))
+ <> command "commit" (info commitOptions
+      ( progDesc "Record changes to the repository" ))
 )
 ```
 
@@ -273,11 +273,7 @@ scratch and finally lift it to a single-option parser, which can then be
 combined with other parsers using normal `Applicative` combinators.
 
 Modifiers are instances of the `Monoid` typeclass, so they can be combined
-using the composition function `mappend`, for which the
-`Options.Applicative.Builders` module provides a convenience alias `(&)`.
-
-Feel free to use `mappend` or `(<>)`, if you prefer. `(&)` is mostly there for
-backwards compatibility with the previous implementation.
+using the composition function `mappend` (or simply `(<>)`).
 
 See the haddock documentation for `Options.Applicative.Builder` for a full list
 of builders and modifiers.
