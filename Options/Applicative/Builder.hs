@@ -128,6 +128,7 @@ help s = optionMod $ \p -> p { propHelp = s }
 reader :: (String -> Either ParseError a) -> Mod OptionFields a
 reader f = fieldMod $ \p -> p { optReader = f }
 
+-- | Specify the error to display when no argument is provided to this option.
 noArgError :: ParseError -> Mod OptionFields a
 noArgError e = fieldMod $ \p -> p { optNoArgError = e }
 
