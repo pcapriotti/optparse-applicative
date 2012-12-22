@@ -299,5 +299,6 @@ idm :: Monoid m => m
 idm = mempty
 
 -- | Compose modifiers.
+{-# DEPRECATED (&) "Use (<>) instead" #-}
 (&) :: Monoid m => m -> m -> m
 (&) = mappend
