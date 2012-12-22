@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, DeriveFunctor, Rank2Types #-}
+{-# LANGUAGE GADTs, Rank2Types #-}
 module Options.Applicative.Types (
   ParseError(..),
   ParserInfo(..),
@@ -50,7 +50,10 @@ data ParserInfo a = ParserInfo
   , infoHeader :: String              -- ^ header of the full parser description
   , infoFooter :: String              -- ^ footer of the full parser description
   , infoFailureCode :: Int            -- ^ exit code for a parser failure
-  } deriving Functor
+  }
+
+instance Functor ParserInfo where
+  fmap f i = i { infoParser = fmap f (infoParser i) }
 
 -- | Global preferences for a top-level 'Parser'.
 data ParserPrefs = ParserPrefs
@@ -82,12 +85,17 @@ data OptProperties = OptProperties
 data Option a = Option
   { optMain :: OptReader a               -- ^ reader for this option
   , optProps :: OptProperties            -- ^ properties of this option
-  } deriving Functor
+  }
+
+instance Functor Option where
+  fmap f (Option m p) = Option (fmap f m) p
 
 data CReader m a = CReader
   { crCompleter :: Completer
   , crReader :: String -> m a }
-  deriving Functor
+
+instance Functor m => Functor (CReader m) where
+  fmap f (CReader c r) = CReader c (fmap f . r)
 
 type OptCReader = CReader (Either ParseError)
 type ArgCReader = CReader Maybe
@@ -98,7 +106,12 @@ data OptReader a
   | FlagReader [OptName] !a                             -- ^ flag reader
   | ArgReader (ArgCReader a)                            -- ^ argument reader
   | CmdReader [String] (String -> Maybe (ParserInfo a)) -- ^ command reader
-  deriving Functor
+
+instance Functor OptReader where
+  fmap f (OptReader ns cr e) = OptReader ns (fmap f cr) e
+  fmap f (FlagReader ns x) = FlagReader ns (f x)
+  fmap f (ArgReader cr) = ArgReader (fmap f cr)
+  fmap f (CmdReader cs g) = CmdReader cs ((fmap . fmap) f . g)
 
 -- | A @Parser a@ is an option parser returning a value of type 'a'.
 data Parser a where
@@ -183,7 +196,7 @@ data OptTree a
   = Leaf a
   | MultNode [OptTree a]
   | AltNode [OptTree a]
-  deriving (Functor, Show)
+  deriving Show
 
 optVisibility :: Option a -> OptVisibility
 optVisibility = propVisibility . optProps

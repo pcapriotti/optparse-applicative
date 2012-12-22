@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveFunctor #-}
 module Options.Applicative.Builder.Internal (
   -- * Internals
   Mod(..),
@@ -32,20 +31,16 @@ data OptionFields a = OptionFields
   , optCompleter :: Completer
   , optReader :: String -> Either ParseError a
   , optNoArgError :: ParseError }
-  deriving Functor
 
 data FlagFields a = FlagFields
   { flagNames :: [OptName]
   , flagActive :: a }
-  deriving Functor
 
 data CommandFields a = CommandFields
   { cmdCommands :: [(String, ParserInfo a)] }
-  deriving Functor
 
 data ArgumentFields a = ArgumentFields
   { argCompleter :: Completer }
-  deriving Functor
 
 class HasName f where
   name :: OptName -> f a -> f a

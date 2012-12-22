@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveFunctor #-}
 module Options.Applicative.Builder (
   -- * Parser builders
   --
