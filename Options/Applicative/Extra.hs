@@ -28,13 +28,13 @@ import Options.Applicative.Types
 helper :: Parser (a -> a)
 helper = nullOption
        ( long "help"
-       & reader (const (Left ShowHelpText))
-       & noArgError ShowHelpText
-       & short 'h'
-       & help "Show this help text"
-       & value id
-       & metavar ""
-       & hidden )
+      <> reader (const (Left ShowHelpText))
+      <> noArgError ShowHelpText
+      <> short 'h'
+      <> help "Show this help text"
+      <> value id
+      <> metavar ""
+      <> hidden )
 
 -- | Run a program description.
 --

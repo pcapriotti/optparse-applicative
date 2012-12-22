@@ -87,9 +87,9 @@ case_alts = do
 case_show_default :: Assertion
 case_show_default = do
   let p = option ( short 'n'
-                 & help "set count"
-                 & value (0 :: Int)
-                 & showDefault)
+                <> help "set count"
+                <> value (0 :: Int)
+                <> showDefault)
       i = info (p <**> helper) idm
       result = run i ["--help"]
   case result of
@@ -114,19 +114,19 @@ case_alt_help = do
   let p = p1 <|> p2 <|> p3
       p1 = (Just . Left)
         <$> strOption ( long "virtual-machine"
-                      & metavar "VM"
-                      & help "Virtual machine name" )
+                     <> metavar "VM"
+                     <> help "Virtual machine name" )
       p2 = (Just . Right)
         <$> strOption ( long "cloud-service"
-                      & metavar "CS"
-                      & help "Cloud service name" )
+                     <> metavar "CS"
+                     <> help "Cloud service name" )
       p3 = flag' Nothing ( long "dry-run" )
       i = info (p <**> helper) idm
   checkHelpText "alt" i ["--help"]
 
 case_nested_commands :: Assertion
 case_nested_commands = do
-  let p3 = strOption (short 'a' & metavar "A")
+  let p3 = strOption (short 'a'<> metavar "A")
       p2 = subparser (command "b" (info p3 idm))
       p1 = subparser (command "c" (info p2 idm))
       i = info (p1 <**> helper) idm
@@ -167,8 +167,8 @@ case_ambiguous = do
 case_completion :: Assertion
 case_completion = do
   let p = (,)
-        <$> strOption (long "foo" & value "")
-        <*> strOption (long "bar" & value "")
+        <$> strOption (long "foo"<> value "")
+        <*> strOption (long "bar"<> value "")
       i = info p idm
       result = run i ["--bash-completion-index", "0"]
   case result of
@@ -195,8 +195,8 @@ case_issue_19 :: Assertion
 case_issue_19 = do
   let p = option
         ( short 'x'
-        & reader (fmap Just . str)
-        & value Nothing )
+       <> reader (fmap Just . str)
+       <> value Nothing )
       i = info (p <**> helper) idm
       result = run i ["-x", "foo"]
   case result of

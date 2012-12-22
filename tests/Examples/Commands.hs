@@ -16,7 +16,7 @@ sample = subparser
        ( command "hello"
          (info hello
                (progDesc "Print greeting"))
-       & command "goodbye"
+      <> command "goodbye"
          (info (pure Goodbye)
                (progDesc "Say goodbye"))
        )

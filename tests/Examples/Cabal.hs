@@ -39,13 +39,13 @@ parser = runA $ proc () -> do
             ( command "install"
               (info installParser
                     (progDesc "Installs a list of packages"))
-            & command "update"
+           <> command "update"
               (info updateParser
                     (progDesc "Updates list of known packages"))
-            & command "configure"
+           <> command "configure"
               (info configureParser
                     (progDesc "Prepare to build the package"))
-            & command "build"
+           <> command "build"
               (info buildParser
                     (progDesc "Make this package ready for installation")) ) -< ()
   A helper -< Args opts cmds
@@ -54,10 +54,10 @@ commonOpts :: Parser CommonOpts
 commonOpts = CommonOpts
   <$> option
       ( short 'v'
-      & long "verbose"
-      & metavar "LEVEL"
-      & help "Set verbosity to LEVEL"
-      & value 0 )
+     <> long "verbose"
+     <> metavar "LEVEL"
+     <> help "Set verbosity to LEVEL"
+     <> value 0 )
 
 installParser :: Parser Command
 installParser = runA $ proc () -> do
@@ -86,12 +86,12 @@ configureOpts :: Parser ConfigureOpts
 configureOpts = runA $ proc () -> do
   tests <- (asA . switch)
              ( long "enable-tests"
-             & help "Enable compilation of test suites" ) -< ()
+            <> help "Enable compilation of test suites" ) -< ()
   flags <- (asA . many . strOption)
              ( short 'f'
-             & long "flags"
-             & metavar "FLAGS"
-             & help "Enable the given flag" ) -< ()
+            <> long "flags"
+            <> metavar "FLAGS"
+            <> help "Enable the given flag" ) -< ()
   returnA -< ConfigureOpts tests flags
 
 buildParser :: Parser Command
@@ -103,8 +103,8 @@ buildOpts :: Parser BuildOpts
 buildOpts = runA $ proc () -> do
   bdir <- (asA . strOption)
             ( long "builddir"
-            & metavar "DIR"
-            & value "dist" ) -< ()
+           <> metavar "DIR"
+           <> value "dist" ) -< ()
   returnA -< BuildOpts bdir
 
 pinfo :: ParserInfo Args

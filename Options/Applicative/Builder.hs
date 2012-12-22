@@ -12,8 +12,8 @@ module Options.Applicative.Builder (
   --
   -- > out = strOption
   -- >     ( long "output"
-  -- >     & short 'o'
-  -- >     & metavar "FILENAME" )
+  -- >    <> short 'o'
+  -- >    <> metavar "FILENAME" )
   --
   -- creates a parser for an option called \"output\".
   subparser,
@@ -47,6 +47,7 @@ module Options.Applicative.Builder (
   completer,
   idm,
   (&),
+  (<>),
 
   -- * Readers
   --
@@ -73,7 +74,7 @@ module Options.Applicative.Builder (
   ) where
 
 import Control.Applicative (pure, (<|>))
-import Data.Monoid (Monoid (..))
+import Data.Monoid (Monoid (..), (<>))
 
 import Options.Applicative.Builder.Completer
 import Options.Applicative.Builder.Arguments
@@ -170,7 +171,7 @@ completer f = fieldMod $ modCompleter (`mappend` f)
 subparser :: Mod CommandFields a -> Parser a
 subparser m = mkParser d g rdr
   where
-    Mod f d g = m & metavar "COMMAND"
+    Mod f d g = m <> metavar "COMMAND"
     CommandFields cmds = f (CommandFields [])
     rdr = CmdReader (map fst cmds) (`lookup` cmds)
 -- | Builder for a flag parser.
@@ -220,11 +221,11 @@ nullOption m = mkParser d g rdr
 
 -- | Builder for an option taking a 'String' argument.
 strOption :: Mod OptionFields String -> Parser String
-strOption m = nullOption $ reader str & m
+strOption m = nullOption $ reader str <> m
 
 -- | Builder for an option using the 'auto' reader.
 option :: Read a => Mod OptionFields a -> Parser a
-option m = nullOption $ reader auto & m
+option m = nullOption $ reader auto <> m
 
 -- | Modifier for 'ParserInfo'.
 newtype InfoMod a = InfoMod
