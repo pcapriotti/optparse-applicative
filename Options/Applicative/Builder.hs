@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Options.Applicative.Builder (
   -- * Parser builders
   --
@@ -47,7 +48,10 @@ module Options.Applicative.Builder (
   completer,
   idm,
   (&),
+#if __GLASGOW_HASKELL__ > 702
   (<>),
+#endif
+  mappend,
 
   -- * Readers
   --
@@ -76,7 +80,11 @@ module Options.Applicative.Builder (
   ) where
 
 import Control.Applicative (pure, (<|>))
-import Data.Monoid (Monoid (..), (<>))
+import Data.Monoid (Monoid (..)
+#if __GLASGOW_HASKELL__ > 702
+  , (<>)
+#endif
+  )
 
 import Options.Applicative.Builder.Completer
 import Options.Applicative.Builder.Arguments
@@ -173,7 +181,7 @@ completer f = fieldMod $ modCompleter (`mappend` f)
 subparser :: Mod CommandFields a -> Parser a
 subparser m = mkParser d g rdr
   where
-    Mod f d g = m <> metavar "COMMAND"
+    Mod f d g = m `mappend` metavar "COMMAND"
     CommandFields cmds = f (CommandFields [])
     rdr = CmdReader (map fst cmds) (`lookup` cmds)
 -- | Builder for a flag parser.
@@ -223,11 +231,11 @@ nullOption m = mkParser d g rdr
 
 -- | Builder for an option taking a 'String' argument.
 strOption :: Mod OptionFields String -> Parser String
-strOption m = nullOption $ reader str <> m
+strOption m = nullOption $ reader str `mappend` m
 
 -- | Builder for an option using the 'auto' reader.
 option :: Read a => Mod OptionFields a -> Parser a
-option m = nullOption $ reader auto <> m
+option m = nullOption $ reader auto `mappend` m
 
 -- | Modifier for 'ParserInfo'.
 newtype InfoMod a = InfoMod

@@ -23,11 +23,12 @@ bashCompletionParser parser pprefs = complParser
     complParser = asum
       [ failure <$>
         (   bashCompletionQuery parser pprefs
-        <$> (many . strOption) (long "bash-completion-word" <> internal)
-        <*> option (long "bash-completion-index" <> internal) )
+        <$> (many . strOption) (long "bash-completion-word"
+                                  `mappend` internal)
+        <*> option (long "bash-completion-index" `mappend` internal) )
       , failure <$>
           (bashCompletionScript <$>
-            strOption (long "bash-completion-script" <> internal)) ]
+            strOption (long "bash-completion-script" `mappend` internal)) ]
 
 bashCompletionQuery :: Parser a -> ParserPrefs -> [String] -> Int -> String -> IO [String]
 bashCompletionQuery parser pprefs ws i _ = case runCompletion compl pprefs of

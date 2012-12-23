@@ -12,6 +12,7 @@ module Options.Applicative.Extra (
   ) where
 
 import Control.Applicative ((<$>), (<|>))
+import Data.Monoid (mconcat)
 import System.Environment (getArgs, getProgName)
 import System.Exit (exitWith, ExitCode(..))
 import System.IO (hPutStr, stderr)
@@ -26,15 +27,15 @@ import Options.Applicative.Types
 
 -- | A hidden \"helper\" option which always fails.
 helper :: Parser (a -> a)
-helper = nullOption
-       ( long "help"
-      <> reader (const (Left ShowHelpText))
-      <> noArgError ShowHelpText
-      <> short 'h'
-      <> help "Show this help text"
-      <> value id
-      <> metavar ""
-      <> hidden )
+helper = nullOption $ mconcat
+       [ long "help"
+       , reader (const (Left ShowHelpText))
+       , noArgError ShowHelpText
+       , short 'h'
+       , help "Show this help text"
+       , value id
+       , metavar ""
+       , hidden ]
 
 -- | Run a program description.
 --
