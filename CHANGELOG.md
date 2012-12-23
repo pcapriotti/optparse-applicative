@@ -1,3 +1,17 @@
+## Version 0.5.1 (unreleased)
+
+- There is a new parser preference `noBacktrack`, that controls whether how a
+  failure in a subparser is propagated. By default, an unknown option in a
+  subparser causes the option to be looked up in parent parsers. When
+  `noBacktrack` is used, this behavior is disabled. This is useful to implement
+  subcommands that have no relations with their parent commands.
+
+- Fixed bugs
+    * \#35 - Artifacts of "hidden"
+    * \#31 - Backtracking on commands
+    * \#25 - Allow for using Maybe in options types to specify optional arguments
+    * \#34 - No simple/obvious way to add a --version switch
+
 ## Version 0.5.0 (22 Dic 2012)
 
 - Fewer GHC extensions required
@@ -10,6 +24,9 @@
 
 - The `(&)` operator is now deprecated. Modifiers can still be combined using
   `(<>)` or `mappend`.
+
+- Fixed bugs
+    * \#37 - Use (\<\>) instead of (&) in documentation
 
 ## Version 0.4.1 (04 Sep 2012)
 
