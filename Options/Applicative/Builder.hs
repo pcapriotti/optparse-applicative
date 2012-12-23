@@ -70,6 +70,7 @@ module Options.Applicative.Builder (
   PrefsMod,
   multiSuffix,
   disambiguate,
+  noBacktrack,
   prefs
   ) where
 
@@ -284,13 +285,17 @@ multiSuffix s = PrefsMod $ \p -> p { prefMultiSuffix = s }
 disambiguate :: PrefsMod
 disambiguate = PrefsMod $ \p -> p { prefDisambiguate = True }
 
+noBacktrack :: PrefsMod
+noBacktrack = PrefsMod $ \p -> p { prefBacktrack = False }
+
 prefs :: PrefsMod -> ParserPrefs
 prefs m = applyPrefsMod m base
   where
     base = ParserPrefs
       { prefMultiSuffix = ""
       , prefDisambiguate = False
-      , prefShowHelpOnError = False }
+      , prefShowHelpOnError = False
+      , prefBacktrack = True }
 
 -- convenience shortcuts
 

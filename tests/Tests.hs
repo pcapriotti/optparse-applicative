@@ -126,7 +126,7 @@ case_alt_help = do
 
 case_nested_commands :: Assertion
 case_nested_commands = do
-  let p3 = strOption (short 'a'<> metavar "A")
+  let p3 = strOption (short 'a' <> metavar "A")
       p2 = subparser (command "b" (info p3 idm))
       p1 = subparser (command "c" (info p2 idm))
       i = info (p1 <**> helper) idm
@@ -231,6 +231,16 @@ case_issue_35 = do
       "Usage: test -f" @=? text
     Right val ->
       assertFailure $ "unexpected result " ++ show val
+
+case_backtracking :: Assertion
+case_backtracking = do
+  let p2 = switch (short 'a')
+      p1 = (,)
+        <$> subparser (command "c" (info p2 idm))
+        <*> switch (short 'b')
+      i = info (p1 <**> helper) idm
+      result = execParserPure (prefs noBacktrack) i ["c", "-b"]
+  assertLeft result $ \ _ -> return ()
 
 main :: IO ()
 main = $(defaultMainGenerator)
