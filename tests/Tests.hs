@@ -219,5 +219,18 @@ case_arguments1_some = do
     Left _ -> assertFailure "unexpected parse error"
     Right r -> ["foo", "bar", "baz"] @=? r
 
+case_issue_35 :: Assertion
+case_issue_35 = do
+  let p =  flag' True (short 't' <> hidden)
+       <|> flag' False (short 'f')
+      i = info p idm
+      result = run i []
+  case result of
+    Left (ParserFailure err _) -> do
+      text <- head . lines <$> err "test"
+      "Usage: test -f" @=? text
+    Right val ->
+      assertFailure $ "unexpected result " ++ show val
+
 main :: IO ()
 main = $(defaultMainGenerator)

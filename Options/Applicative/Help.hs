@@ -75,7 +75,10 @@ briefDesc pprefs = fold_tree . treeMapParser (optDesc pprefs style)
 
     fold_tree (Leaf x) = x
     fold_tree (MultNode xs) = unwords (fold_trees xs)
-    fold_tree (AltNode xs) = "(" ++ intercalate " | " (fold_trees xs) ++ ")"
+    fold_tree (AltNode xs) = alt_node (fold_trees xs)
+
+    alt_node [n] = n
+    alt_node ns = "(" ++ intercalate " | " ns ++ ")"
 
     fold_trees = filter (not . null) . map fold_tree
 
