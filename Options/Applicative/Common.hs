@@ -99,10 +99,7 @@ optMatches disambiguate opt arg = case opt of
   CmdReader _ f ->
     flip fmap (f arg) $ \subp args -> do
       setContext (Just arg) subp
-      x <- tryP $ runParser (infoParser subp) args
-      case x of
-        Left e -> errorP e
-        Right r -> return r
+      runParser (infoParser subp) args
   where
     parsed =
       case arg of
