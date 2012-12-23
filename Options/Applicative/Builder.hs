@@ -70,6 +70,7 @@ module Options.Applicative.Builder (
   PrefsMod,
   multiSuffix,
   disambiguate,
+  showHelpOnError,
   noBacktrack,
   prefs
   ) where
@@ -284,6 +285,9 @@ multiSuffix s = PrefsMod $ \p -> p { prefMultiSuffix = s }
 
 disambiguate :: PrefsMod
 disambiguate = PrefsMod $ \p -> p { prefDisambiguate = True }
+
+showHelpOnError :: PrefsMod
+showHelpOnError = PrefsMod $ \p -> p { prefShowHelpOnError = True }
 
 noBacktrack :: PrefsMod
 noBacktrack = PrefsMod $ \p -> p { prefBacktrack = False }
