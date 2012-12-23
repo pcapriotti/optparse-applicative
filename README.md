@@ -326,6 +326,10 @@ arrow is converted back to a `Parser` with `runA`.
 See `tests/Examples/Cabal.hs` for a slightly more elaborate example using the
 arrow syntax for defining parsers.
 
+Note that the `Arrow` interface is provided only for convenience. The API based
+on `Applicative` is just as expressive, although it might be cumbersome to use
+in certain cases.
+
 ## How it works
 
 A `Parser a` is essentially a heterogeneous list of `Option`s, implemented with
