@@ -11,6 +11,7 @@
     * \#31 - Backtracking on commands
     * \#25 - Allow for using Maybe in options types to specify optional arguments
     * \#34 - No simple/obvious way to add a --version switch
+    * \#29 - Document Mod
 
 ## Version 0.5.0 (22 Dic 2012)
 
@@ -56,7 +57,7 @@ like:
 - Fixed bugs
     * \#8 - Long options not disambiguated
     * \#10 - Shell completions
-    * \#12 - Possible memory leak?
+    * \#16 - Possible memory leak?
 
 ## Version 0.3.2 (31 Jul 2012)
 
