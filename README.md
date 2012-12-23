@@ -185,6 +185,13 @@ switch
  <> help "Retain all intermediate temporary files" )
 ```
 
+There is also a `flag'` builder, which has no default value. For example, to
+add a `--version` switch to a program, you could write:
+
+```haskell
+flag' Nothing (long "version" <> hidden) <|> (Just <$> normal_options)
+```
+
 ### Arguments
 
 An **argument** parser specifies a positional command line argument.
