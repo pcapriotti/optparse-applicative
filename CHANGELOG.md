@@ -1,3 +1,7 @@
+## Version 0.5.2 (23 Dic 2012)
+
+- Fixed compatibility with GHC 7.2.
+
 ## Version 0.5.1 (23 Dic 2012)
 
 - There is a new parser preference `noBacktrack`, that controls whether how a
