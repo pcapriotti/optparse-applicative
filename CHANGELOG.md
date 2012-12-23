@@ -1,4 +1,4 @@
-## Version 0.5.1 (unreleased)
+## Version 0.5.1 (23 Dic 2012)
 
 - There is a new parser preference `noBacktrack`, that controls whether how a
   failure in a subparser is propagated. By default, an unknown option in a
@@ -12,6 +12,7 @@
     * \#25 - Allow for using Maybe in options types to specify optional arguments
     * \#34 - No simple/obvious way to add a --version switch
     * \#29 - Document Mod
+    * \#26 - Improve docs for the `Arrow` interface
 
 ## Version 0.5.0 (22 Dic 2012)
 
