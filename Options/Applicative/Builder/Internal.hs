@@ -72,6 +72,31 @@ instance Monoid (DefaultProp a) where
   mappend (DefaultProp d1 s1) (DefaultProp d2 s2) =
     DefaultProp (d1 `mplus` d2) (s1 `mplus` s2)
 
+-- | An option modifier.
+--
+-- Option modifiers are values that represent a modification of the properties
+-- of an option.
+--
+-- The type parameter @a@ is the return type of the option, while @f@ is a
+-- record containing its properties (e.g. 'OptionFields' for regular options,
+-- 'FlagFields' for flags, etc...).
+--
+-- An option modifier consists of 3 elements:
+--
+--  - A field modifier, of the form @f a -> f a@. These are essentially
+--  (compositions of) setters for some of the properties supported by @f@.
+--
+--  - An optional default value and function to display it.
+--
+--  - A property modifier, of the form @OptProperties -> OptProperties@. This
+--  is just like the field modifier, but for properties applicable to any
+--  option.
+--
+-- Modifiers are instances of 'Monoid', and can be composed as such.
+--
+-- You rarely need to deal with modifiers directly, as most of the times it is
+-- sufficient to pass them to builders (such as 'strOption' or 'flag') to
+-- create options (see 'Options.Applicative.Builder').
 data Mod f a = Mod (f a -> f a)
                    (DefaultProp a)
                    (OptProperties -> OptProperties)
