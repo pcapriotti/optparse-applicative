@@ -69,6 +69,17 @@ Running the program with the `--help` option will display the full help text:
 
 containing a detailed list of options with descriptions.
 
+Parsers are instances of both `Applicative` and `Alternative`, and work with
+any generic combinator, like `many` and `some`. For example, to make a option
+return `Nothing` instead of failing when it's not supplied, you can use the
+`optional` combinator in `Control.Applicative`:
+
+```haskell
+optional $ strOption
+  ( long "output"
+  & metavar "DIRECTORY" )
+```
+
  [applicative]: http://www.soi.city.ac.uk/~ross/papers/Applicative.html
 
 ## Supported options
