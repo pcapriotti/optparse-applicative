@@ -1,3 +1,7 @@
+## Version 0.5.2.1 (24 Dic 2012)
+
+- Minor docs fixes
+
 ## Version 0.5.2 (23 Dic 2012)
 
 - Fixed compatibility with GHC 7.2.
