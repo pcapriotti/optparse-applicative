@@ -38,6 +38,15 @@
 - Fixed bugs
     * \#37 - Use (\<\>) instead of (&) in documentation
 
+## Version 0.4.3 (09 Dic 2012)
+
+- Updated dependency bounds.
+
+## Version 0.4.2 (26 Nov 2012)
+
+- Fixed bugs
+    * \#27 - Please include the test source files in the cabal sdist tarball
+
 ## Version 0.4.1 (04 Sep 2012)
 
 - Fixed bugs
