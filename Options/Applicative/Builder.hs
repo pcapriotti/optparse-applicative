@@ -7,7 +7,7 @@ module Options.Applicative.Builder (
   --
   -- Each parser builder takes an option modifier. A modifier can be created by
   -- composing the basic modifiers provided by this module using the 'Monoid'
-  -- operations 'mempty' and 'mappend', or their aliases 'idm' and '&'.
+  -- operations 'mempty' and 'mappend', or their aliases 'idm' and '<>'.
   --
   -- For example:
   --
