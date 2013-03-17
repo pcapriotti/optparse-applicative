@@ -6,6 +6,7 @@ import qualified Examples.Commands as Commands
 import qualified Examples.Cabal as Cabal
 import qualified Examples.Alternatives as Alternatives
 
+import Data.List
 import Options.Applicative
 import System.Exit
 import Test.HUnit
@@ -241,6 +242,26 @@ case_backtracking = do
       i = info (p1 <**> helper) idm
       result = execParserPure (prefs noBacktrack) i ["c", "-b"]
   assertLeft result $ \ _ -> return ()
+
+case_error_context :: Assertion
+case_error_context = do
+  let p = pk <$> option (long "port")
+             <*> option (long "key")
+      i = info p idm
+      result = run i ["--port", "foo", "--key", "291"]
+  case result of
+    Left (ParserFailure err _) -> do
+      msg <- err "test"
+      let errMsg = head $ lines msg
+      assertBool "no context in error message (option)"
+                 ("port" `isInfixOf` errMsg)
+      assertBool "no context in error message (value)"
+                 ("foo" `isInfixOf` errMsg)
+    Right val ->
+      assertFailure $ "unexpected result " ++ show val
+  where
+    pk :: Int -> Int -> (Int, Int)
+    pk = (,)
 
 main :: IO ()
 main = $(defaultMainGenerator)

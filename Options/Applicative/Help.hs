@@ -12,10 +12,6 @@ import Options.Applicative.Common
 import Options.Applicative.Types
 import Options.Applicative.Utils
 
-showOption :: OptName -> String
-showOption (OptLong n) = "--" ++ n
-showOption (OptShort n) = '-' : [n]
-
 -- | Style for rendering an option.
 data OptDescStyle = OptDescStyle
   { descSep :: String

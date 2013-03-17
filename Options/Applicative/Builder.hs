@@ -98,7 +98,7 @@ import Options.Applicative.Types
 auto :: Monad m => Read a => String -> m a
 auto arg = case reads arg of
   [(r, "")] -> return r
-  _         -> fail "Cannot parse value"
+  _         -> fail $ "cannot parse value `" ++ arg ++ "'"
 
 -- | String 'Option' reader.
 str :: Monad m => String -> m String
@@ -106,7 +106,7 @@ str = return
 
 -- | Null 'Option' reader. All arguments will fail validation.
 disabled :: Monad m => String -> m a
-disabled = const . fail $ "Disabled option"
+disabled = const . fail $ "disabled option"
 
 -- modifiers --
 

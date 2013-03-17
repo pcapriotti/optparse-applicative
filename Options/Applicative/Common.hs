@@ -21,6 +21,7 @@ module Options.Applicative.Common (
   --
   Parser,
   liftOpt,
+  showOption,
 
   -- * Program descriptions
   --
@@ -52,6 +53,10 @@ import Data.Monoid (Monoid(..))
 
 import Options.Applicative.Internal
 import Options.Applicative.Types
+
+showOption :: OptName -> String
+showOption (OptLong n) = "--" ++ n
+showOption (OptShort n) = '-' : [n]
 
 optionNames :: OptReader a -> [OptName]
 optionNames (OptReader names _ _) = names
@@ -87,8 +92,9 @@ optMatches disambiguate opt arg = case opt of
       let mb_args = uncons $ maybeToList val ++ args
       let missing_arg = missingArgP no_arg_err (crCompleter rdr)
       (arg', args') <- maybe missing_arg return mb_args
-      r <- liftEither (runReadM (crReader rdr arg'))
-      return (r, args')
+      case runReadM (crReader rdr arg') of
+        Left e -> errorFor arg1 e
+        Right r -> return (r, args')
   FlagReader names x -> do
     (arg1, Nothing) <- parsed
     guard $ has_name arg1 names
@@ -106,6 +112,10 @@ optMatches disambiguate opt arg = case opt of
             -> (,) <$> runParserFully p a <*> pure []
       runSubparser (infoParser subp) args
   where
+    errorFor name (ErrorMsg msg) =
+      errorP (ErrorMsg ("option " ++ showOption name ++ ": " ++ msg))
+    errorFor _ e = errorP e
+
     parsed =
       case arg of
         '-' : '-' : arg1 ->
