@@ -161,7 +161,7 @@ builder:
 ```haskell
 data FluxCapacitor = ...
 
-parseFluxCapacitor :: String -> Maybe FluxCapacitor
+parseFluxCapacitor :: Monad m => String -> m FluxCapacitor
 
 option
   ( long "flux-capacitor"

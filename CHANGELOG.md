@@ -2,6 +2,7 @@
 
 - Fixed bugs
     * \#40 - Add context information to error messages
+    * \#41 - Readme uses old reader API
 
 ## Version 0.5.2.1 (24 Dic 2012)
 
