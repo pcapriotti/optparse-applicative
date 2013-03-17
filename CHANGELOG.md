@@ -1,3 +1,8 @@
+## Version 0.6.0 (unreleased)
+
+- Fixed bugs
+    * \#40 - Add context information to error messages
+
 ## Version 0.5.2.1 (24 Dic 2012)
 
 - Minor docs fixes
