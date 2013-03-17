@@ -76,7 +76,14 @@ module Options.Applicative.Builder (
   disambiguate,
   showHelpOnError,
   noBacktrack,
-  prefs
+  prefs,
+
+  -- * Types
+  Mod,
+  OptionFields,
+  FlagFields,
+  ArgumentFields,
+  CommandFields
   ) where
 
 import Control.Applicative (pure, (<|>))
