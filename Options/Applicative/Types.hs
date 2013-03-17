@@ -9,6 +9,7 @@ module Options.Applicative.Types (
   OptReader(..),
   OptProperties(..),
   OptVisibility(..),
+  ReadM(..),
   CReader(..),
   Parser(..),
   ParserM(..),
@@ -99,7 +100,18 @@ data CReader m a = CReader
 instance Functor m => Functor (CReader m) where
   fmap f (CReader c r) = CReader c (fmap f . r)
 
-type OptCReader = CReader (Either ParseError)
+newtype ReadM a = ReadM
+  { runReadM :: Either ParseError a }
+
+instance Functor ReadM where
+  fmap f (ReadM m) = ReadM (fmap f m)
+
+instance Monad ReadM where
+  return = ReadM . Right
+  ReadM m >>= f = ReadM $ m >>= runReadM . f
+  fail = ReadM . Left . ErrorMsg
+
+type OptCReader = CReader ReadM
 type ArgCReader = CReader Maybe
 
 -- | An 'OptReader' defines whether an option matches an command line argument.

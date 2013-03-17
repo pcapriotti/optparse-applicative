@@ -135,7 +135,7 @@ help :: String -> Mod f a
 help s = optionMod $ \p -> p { propHelp = s }
 
 -- | Specify the 'Option' reader.
-reader :: (String -> Either ParseError a) -> Mod OptionFields a
+reader :: (String -> ReadM a) -> Mod OptionFields a
 reader f = fieldMod $ \p -> p { optReader = f }
 
 -- | Specify the error to display when no argument is provided to this option.

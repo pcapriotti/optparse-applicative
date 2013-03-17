@@ -87,7 +87,7 @@ optMatches disambiguate opt arg = case opt of
       let mb_args = uncons $ maybeToList val ++ args
       let missing_arg = missingArgP no_arg_err (crCompleter rdr)
       (arg', args') <- maybe missing_arg return mb_args
-      r <- liftEither (crReader rdr arg')
+      r <- liftEither (runReadM (crReader rdr arg'))
       return (r, args')
   FlagReader names x -> do
     (arg1, Nothing) <- parsed

@@ -29,7 +29,7 @@ import Options.Applicative.Types
 helper :: Parser (a -> a)
 helper = nullOption $ mconcat
        [ long "help"
-       , reader (const (Left ShowHelpText))
+       , reader (const (ReadM (Left ShowHelpText)))
        , noArgError ShowHelpText
        , short 'h'
        , help "Show this help text"
