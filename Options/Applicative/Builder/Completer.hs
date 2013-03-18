@@ -1,5 +1,7 @@
 module Options.Applicative.Builder.Completer
-  ( listIOCompleter
+  ( Completer
+  , mkCompleter
+  , listIOCompleter
   , listCompleter
   , bashCompleter
   ) where

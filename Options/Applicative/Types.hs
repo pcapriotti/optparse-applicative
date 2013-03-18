@@ -14,6 +14,7 @@ module Options.Applicative.Types (
   Parser(..),
   ParserM(..),
   Completer(..),
+  mkCompleter,
   ParserFailure(..),
   OptHelpInfo(..),
   OptTree(..),
@@ -184,6 +185,9 @@ instance Alternative Parser where
 
 newtype Completer = Completer
   { runCompleter :: String -> IO [String] }
+
+mkCompleter :: (String -> IO [String]) -> Completer
+mkCompleter = Completer
 
 instance Monoid Completer where
   mempty = Completer $ \_ -> return []
