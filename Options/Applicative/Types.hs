@@ -107,6 +107,10 @@ newtype ReadM a = ReadM
 instance Functor ReadM where
   fmap f (ReadM m) = ReadM (fmap f m)
 
+instance Applicative ReadM where
+  pure = ReadM . Right
+  ReadM b <*> ReadM a = ReadM (b <*> a)
+
 instance Monad ReadM where
   return = ReadM . Right
   ReadM m >>= f = ReadM $ m >>= runReadM . f
