@@ -1,8 +1,14 @@
-{-# LANGUAGE Arrows #-}
+{-# LANGUAGE Arrows, CPP #-}
 module Examples.Cabal where
 
 import Options.Applicative
 import Options.Applicative.Arrows
+
+#if __GLASGOW_HASKELL__ <= 702
+import Data.Monoid
+(<>) :: Monoid a => a -> a -> a
+(<>) = mappend
+#endif
 
 data Args = Args CommonOpts Command
   deriving Show

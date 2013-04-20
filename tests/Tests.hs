@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, CPP #-}
 module Main where
 
 import qualified Examples.Hello as Hello
@@ -12,6 +12,12 @@ import System.Exit
 import Test.HUnit
 import Test.Framework.Providers.HUnit
 import Test.Framework.TH.Prime
+
+#if __GLASGOW_HASKELL__ <= 702
+import Data.Monoid
+(<>) :: Monoid a => a -> a -> a
+(<>) = mappend
+#endif
 
 run :: ParserInfo a -> [String] -> Either ParserFailure a
 run = execParserPure (prefs idm)
