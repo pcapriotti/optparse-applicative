@@ -6,13 +6,14 @@ module Options.Applicative.Extra (
   helper,
   execParser,
   execParserPure,
+  execParserMaybe,
   customExecParser,
   usage,
   ParserFailure(..),
   ) where
 
 import Control.Applicative ((<$>), (<|>))
-import Data.Monoid (mconcat)
+import Data.Monoid (mconcat, mempty)
 import System.Environment (getArgs, getProgName)
 import System.Exit (exitWith, ExitCode(..))
 import System.IO (hPutStr, stderr)
@@ -79,6 +80,12 @@ execParserPure pprefs pinfo args =
     parser' = (Extra <$> bashCompletionParser parser pprefs)
           <|> (Result <$> parser)
     p = runParserFully parser' args
+
+execParserMaybe :: (Parser a) -> [String] -> Maybe a
+execParserMaybe parser = eitherToMaybe . execParserPure preferences information
+  where information   = (info parser mempty)
+        preferences   = prefs mempty
+        eitherToMaybe = either (const Nothing) Just
 
 parserFailure :: ParserPrefs -> ParserInfo a
               -> ParseError -> Context
