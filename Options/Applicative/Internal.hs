@@ -6,8 +6,8 @@ module Options.Applicative.Internal
   , ParseError(..)
 
   , uncons
-  , liftMaybe
-  , liftEither
+  , hoistMaybe
+  , hoistEither
 
   , runP
 
@@ -86,14 +86,14 @@ instance MonadP P where
 
   missingArgP e _ = errorP e
   tryP (P p) = P $ lift $ runErrorT p
-  exitP _ = P . liftMaybe
+  exitP _ = P . hoistMaybe
   errorP = P . throwError
 
-liftMaybe :: MonadPlus m => Maybe a -> m a
-liftMaybe = maybe mzero return
+hoistMaybe :: MonadPlus m => Maybe a -> m a
+hoistMaybe = maybe mzero return
 
-liftEither :: MonadP m => Either ParseError a -> m a
-liftEither = either errorP return
+hoistEither :: MonadP m => Either ParseError a -> m a
+hoistEither = either errorP return
 
 runP :: P a -> ParserPrefs -> (Either ParseError a, Context)
 runP (P p) = runReader . runWriterT . runErrorT $ p

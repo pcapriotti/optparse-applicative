@@ -156,7 +156,7 @@ stepParser prefs arg (AltP p1 p2) = msum
   , stepParser prefs arg p2 ]
 stepParser prefs arg (BindP p k) = do
   p' <- stepParser prefs arg p
-  x <- liftMaybe $ evalParser p'
+  x <- hoistMaybe $ evalParser p'
   return (k x)
 
 -- | Apply a 'Parser' to a command line, and return a result and leftover
