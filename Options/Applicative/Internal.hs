@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GADTs, RankNTypes #-}
 module Options.Applicative.Internal
   ( P
   , Context(..)
@@ -15,13 +15,17 @@ module Options.Applicative.Internal
   , runCompletion
   , SomeParser(..)
   , ComplError(..)
+
+  , ListT
+  , takeListT
+  , runListT
   ) where
 
 import Control.Applicative (Applicative(..), Alternative(..), (<$>))
 import Control.Monad (MonadPlus(..), liftM, ap)
-import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Class (MonadTrans, lift)
 import Control.Monad.Trans.Error
-  (runErrorT, ErrorT, Error(..), throwError, catchError)
+  (runErrorT, ErrorT(..), Error(..), throwError, catchError)
 import Control.Monad.Trans.Reader
   (runReader, runReaderT, Reader, ReaderT, ask)
 import Control.Monad.Trans.Writer (runWriterT, WriterT, tell)
@@ -164,3 +168,62 @@ runCompletion (Completion c) prefs = case runReaderT (runErrorT c) prefs of
   ComplResult _ -> Nothing
   ComplParser p' -> Just $ Left p'
   ComplOption compl -> Just $ Right compl
+
+-- A "ListT done right" implementation
+
+newtype ListT m a = ListT
+  { stepListT :: m (TStep a (ListT m a)) }
+
+data TStep a x
+  = TNil
+  | TCons a x
+
+bimapTStep :: (a -> b) -> (x -> y) -> TStep a x -> TStep b y
+bimapTStep _ _ TNil = TNil
+bimapTStep f g (TCons a x) = TCons (f a) (g x)
+
+hoistList :: Monad m => [a] -> ListT m a
+hoistList = foldr (\x xt -> ListT (return (TCons x xt))) mzero
+
+takeListT :: Monad m => Int -> ListT m a -> ListT m a
+takeListT 0 = const mzero
+takeListT n = ListT . liftM (bimapTStep id (takeListT (n - 1))) . stepListT
+
+runListT :: Monad m => ListT m a -> m [a]
+runListT xs = do
+  s <- stepListT xs
+  case s of
+    TNil -> return []
+    TCons x xt -> liftM (x :) (runListT xt)
+
+instance Monad m => Functor (ListT m) where
+  fmap f = ListT
+         . liftM (bimapTStep f (fmap f))
+         . stepListT
+
+instance Monad m => Applicative (ListT m) where
+  pure = hoistList . pure
+  (<*>) = ap
+
+instance Monad m => Monad (ListT m) where
+  return = pure
+  xs >>= f = ListT $ do
+    s <- stepListT xs
+    case s of
+      TNil -> return TNil
+      TCons x xt -> stepListT $ f x `mplus` (xt >>= f)
+
+instance Monad m => Alternative (ListT m) where
+  empty = mzero
+  (<|>) = mplus
+
+instance MonadTrans ListT where
+  lift = ListT . liftM (`TCons` mzero)
+
+instance Monad m => MonadPlus (ListT m) where
+  mzero = ListT (return TNil)
+  mplus xs ys = ListT $ do
+    s <- stepListT xs
+    case s of
+      TNil -> stepListT ys
+      TCons x xt -> return $ TCons x (xt `mplus` ys)
