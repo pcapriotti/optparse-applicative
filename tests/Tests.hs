@@ -6,6 +6,7 @@ import qualified Examples.Commands as Commands
 import qualified Examples.Cabal as Cabal
 import qualified Examples.Alternatives as Alternatives
 
+import Control.Monad
 import Data.List
 import Options.Applicative
 import System.Exit
@@ -268,6 +269,29 @@ case_error_context = do
   where
     pk :: Int -> Int -> (Int, Int)
     pk = (,)
+
+case_arg_order :: Assertion
+case_arg_order = do
+  let r f arg = do x <- auto arg
+                   guard (f (x :: Int))
+                   return x
+      p = (,) <$> argument (r even) idm <*> argument (r odd) idm
+      i = info p idm
+      result = run i ["3", "6"]
+  assertLeft result $ \_ -> return ()
+
+case_arg_order_alt :: Assertion
+case_arg_order_alt = do
+  let r f arg = do x <- auto arg
+                   guard (f (x :: Int))
+                   return x
+      p = (,) <$> (argument (r even) idm <|> option (short 'n')) <*> argument (r odd) idm
+      i = info p idm
+      result = run i ["-n", "3", "5"]
+  case result of
+    Left _ ->
+      assertFailure "unexpected parse error"
+    Right res -> (3, 5) @=? res
 
 main :: IO ()
 main = $(defaultMainGenerator)
