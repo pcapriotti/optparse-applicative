@@ -1,8 +1,12 @@
 ## Version 0.6.0 (unreleased)
 
+- Arguments are now always parsed in order.
+
 - Fixed bugs
     * \#40 - Add context information to error messages
     * \#41 - Readme uses old reader API
+    * \#38 - Internal types leaking into public API
+    * \#44 - Can the build input restriction process == 1.1.* be relaxed?
 
 ## Version 0.5.2.1 (24 Dic 2012)
 
