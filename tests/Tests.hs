@@ -270,22 +270,39 @@ case_error_context = do
     pk :: Int -> Int -> (Int, Int)
     pk = (,)
 
-case_arg_order :: Assertion
-case_arg_order = do
-  let r f arg = do x <- auto arg
-                   guard (f (x :: Int))
-                   return x
-      p = (,) <$> argument (r even) idm <*> argument (r odd) idm
+condr :: MonadPlus m => (Int -> Bool) -> String -> m Int
+condr f arg = do
+  x <- auto arg
+  guard (f (x :: Int))
+  return x
+
+case_arg_order_1 :: Assertion
+case_arg_order_1 = do
+  let p = (,)
+          <$> argument (condr even) idm
+          <*> argument (condr odd) idm
       i = info p idm
       result = run i ["3", "6"]
   assertLeft result $ \_ -> return ()
 
-case_arg_order_alt :: Assertion
-case_arg_order_alt = do
-  let r f arg = do x <- auto arg
-                   guard (f (x :: Int))
-                   return x
-      p = (,) <$> (argument (r even) idm <|> option (short 'n')) <*> argument (r odd) idm
+case_arg_order_2 :: Assertion
+case_arg_order_2 = do
+  let p = (,,)
+        <$> argument (condr even) idm
+        <*> option (reader (condr even) <> short 'a')
+        <*> option (reader (condr odd) <> short 'b')
+      i = info p idm
+      result = run i ["2", "-b", "3", "-a", "6"]
+  case result of
+    Left _ -> assertFailure "unexpected parse error"
+    Right res -> (2, 6, 3) @=? res
+
+case_arg_order_3 :: Assertion
+case_arg_order_3 = do
+  let p = (,)
+          <$> (  argument (condr even) idm
+             <|> option (short 'n') )
+          <*> argument (condr odd) idm
       i = info p idm
       result = run i ["-n", "3", "5"]
   case result of
