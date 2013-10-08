@@ -46,7 +46,7 @@ module Options.Applicative.Common (
   ) where
 
 import Control.Applicative (pure, (<*>), (<$>), (<|>))
-import Control.Monad (guard, mzero, msum)
+import Control.Monad (guard, mzero, msum, when)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), get, put, runStateT)
 import Data.List (isPrefixOf)
@@ -136,17 +136,22 @@ optMatches disambiguate opt arg = case opt of
       | disambiguate = any (isOptionPrefix a)
       | otherwise = elem a
 
+isArg :: OptReader a -> Bool
+isArg (ArgReader _) = True
+isArg _ = False
+
 stepParser :: MonadP m => ParserPrefs -> String -> Parser a
-           -> ListT (StateT Args m) (Parser a)
+           -> NondetT (StateT Args m) (Parser a)
 stepParser _ _ (NilP _) = mzero
 stepParser prefs arg (OptP opt) = do
+  when (isArg (optMain opt)) cut
   case optMatches disambiguate (optMain opt) arg of
     Just matcher -> pure <$> lift matcher
     Nothing -> mzero
   where
     disambiguate = prefDisambiguate prefs
                 && optVisibility opt > Internal
-stepParser prefs arg (MultP p1 p2) = msum
+stepParser prefs arg (MultP p1 p2) = foldr1 (<!>)
   [ do p1' <- stepParser prefs arg p1
        return (p1' <*> p2)
   , do p2' <- stepParser prefs arg p2
@@ -180,13 +185,6 @@ runParser p args = case args of
                            . (>>= maybe ((lift . parseError) arg) return)
                            . disamb (not (prefDisambiguate prefs))
                            $ stepParser prefs arg p
-
-disamb :: Monad m => Bool -> ListT m a -> m (Maybe a)
-disamb allow_amb xs = do
-  xs' <- runListT . takeListT (if allow_amb then 1 else 2) $ xs
-  return $ case xs' of
-    [x] -> Just x
-    _   -> Nothing
 
 parseError :: MonadP m => String -> m a
 parseError arg = errorP . ErrorMsg $ msg

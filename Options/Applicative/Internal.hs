@@ -19,16 +19,22 @@ module Options.Applicative.Internal
   , ListT
   , takeListT
   , runListT
+
+  , NondetT
+  , cut
+  , (<!>)
+  , disamb
   ) where
 
 import Control.Applicative (Applicative(..), Alternative(..), (<$>))
-import Control.Monad (MonadPlus(..), liftM, ap)
+import Control.Monad (MonadPlus(..), liftM, ap, guard)
 import Control.Monad.Trans.Class (MonadTrans, lift)
 import Control.Monad.Trans.Error
   (runErrorT, ErrorT(..), Error(..), throwError, catchError)
 import Control.Monad.Trans.Reader
   (runReader, runReaderT, Reader, ReaderT, ask)
 import Control.Monad.Trans.Writer (runWriterT, WriterT, tell)
+import Control.Monad.Trans.State (StateT, get, put, evalStateT)
 import Data.Maybe (maybeToList)
 import Data.Monoid (Monoid(..))
 
@@ -227,3 +233,49 @@ instance Monad m => MonadPlus (ListT m) where
     case s of
       TNil -> stepListT ys
       TCons x xt -> return $ TCons x (xt `mplus` ys)
+
+-- nondeterminism monad with cut operator
+
+newtype NondetT m a = NondetT
+  { runNondetT :: ListT (StateT Bool m) a }
+
+instance Monad m => Functor (NondetT m) where
+  fmap f = NondetT . fmap f . runNondetT
+
+instance Monad m => Applicative (NondetT m) where
+  pure = NondetT . pure
+  NondetT m1 <*> NondetT m2 = NondetT (m1 <*> m2)
+
+instance Monad m => Monad (NondetT m) where
+  return = pure
+  NondetT m1 >>= f = NondetT $ m1 >>= runNondetT . f
+
+instance Monad m => MonadPlus (NondetT m) where
+  mzero = NondetT mzero
+  NondetT m1 `mplus` NondetT m2 = NondetT (m1 `mplus` m2)
+
+instance Monad m => Alternative (NondetT m) where
+  empty = mzero
+  (<|>) = mplus
+
+instance MonadTrans NondetT where
+  lift = NondetT . lift . lift
+
+(<!>) :: Monad m => NondetT m a -> NondetT m a -> NondetT m a
+(<!>) m1 m2 = NondetT . mplus (runNondetT m1) $ do
+  s <- lift get
+  guard (not s)
+  runNondetT m2
+
+cut :: Monad m => NondetT m ()
+cut = NondetT $ lift (put True)
+
+disamb :: Monad m => Bool -> NondetT m a -> m (Maybe a)
+disamb allow_amb xs = do
+  xs' <- (`evalStateT` False)
+       . runListT
+       . takeListT (if allow_amb then 1 else 2)
+       . runNondetT $ xs
+  return $ case xs' of
+    [x] -> Just x
+    _   -> Nothing
