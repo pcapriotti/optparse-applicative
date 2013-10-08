@@ -32,7 +32,7 @@ module Options.Applicative.Types (
 
 import Control.Applicative
   (Applicative(..), Alternative(..), (<$>), optional)
-import Control.Monad (ap, liftM)
+import Control.Monad (ap, liftM, MonadPlus, mzero, mplus)
 import Control.Monad.Trans.Error (Error(..))
 import Data.Monoid (Monoid(..))
 import System.Exit (ExitCode(..))
@@ -115,6 +115,12 @@ instance Monad ReadM where
   return = ReadM . Right
   ReadM m >>= f = ReadM $ m >>= runReadM . f
   fail = ReadM . Left . ErrorMsg
+
+instance MonadPlus ReadM where
+  mzero = ReadM $ Left (strMsg "")
+  mplus m1 m2 = case runReadM m1 of
+    Left _ -> m2
+    Right r -> return r
 
 type OptCReader = CReader ReadM
 type ArgCReader = CReader Maybe
