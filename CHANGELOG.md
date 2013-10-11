@@ -1,3 +1,9 @@
+## Version 0.6.1 (unreleased)
+
+- Add builders for options that always fail. This makes it easier
+  to create options that just print an error message or display some
+  brief information and then exit (like --version).
+
 ## Version 0.6.0 (11 Oct 2013)
 
 - Arguments are now always parsed in order.
