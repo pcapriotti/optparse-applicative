@@ -4,6 +4,7 @@ module Options.Applicative.Extra (
   --
   -- | This module contains high-level functions to run parsers.
   helper,
+  hsubparser,
   execParser,
   execParserPure,
   customExecParser,
@@ -11,19 +12,20 @@ module Options.Applicative.Extra (
   ParserFailure(..),
   ) where
 
-import Control.Applicative ((<$>), (<|>))
+import Control.Applicative ((<$>), (<|>), (<**>))
 import Data.Monoid (mconcat)
 import System.Environment (getArgs, getProgName)
 import System.Exit (exitWith, ExitCode(..))
 import System.IO (hPutStr, stderr)
 
 import Options.Applicative.BashCompletion
-import Options.Applicative.Common
 import Options.Applicative.Builder hiding (briefDesc)
+import Options.Applicative.Builder.Internal
+import Options.Applicative.Common
 import Options.Applicative.Help
 import Options.Applicative.Internal
-import Options.Applicative.Utils
 import Options.Applicative.Types
+import Options.Applicative.Utils
 
 -- | A hidden \"helper\" option which always fails.
 helper :: Parser (a -> a)
@@ -36,6 +38,15 @@ helper = nullOption $ mconcat
        , value id
        , metavar ""
        , hidden ]
+
+hsubparser :: Mod CommandFields a -> Parser a
+hsubparser m = mkParser d g rdr
+  where
+    Mod _ d g = m `mappend` metavar "COMMAND"
+    (cmds, subs) = mkCommand m
+    rdr = CmdReader cmds (fmap add_helper . subs)
+    add_helper pinfo = pinfo
+      { infoParser = infoParser pinfo <**> helper }
 
 -- | Run a program description.
 --

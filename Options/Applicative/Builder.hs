@@ -188,9 +188,9 @@ completer f = fieldMod $ modCompleter (`mappend` f)
 subparser :: Mod CommandFields a -> Parser a
 subparser m = mkParser d g rdr
   where
-    Mod f d g = m `mappend` metavar "COMMAND"
-    CommandFields cmds = f (CommandFields [])
-    rdr = CmdReader (map fst cmds) (`lookup` cmds)
+    Mod _ d g = m `mappend` metavar "COMMAND"
+    rdr = uncurry CmdReader (mkCommand m)
+
 -- | Builder for a flag parser.
 --
 -- A flag that switches from a \"default value\" to an \"active value\" when

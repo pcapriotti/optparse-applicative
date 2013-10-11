@@ -41,7 +41,7 @@ data BuildOpts = BuildOpts
 parser :: Parser Args
 parser = runA $ proc () -> do
   opts <- asA commonOpts -< ()
-  cmds <- (asA . subparser)
+  cmds <- (asA . hsubparser)
             ( command "install"
               (info installParser
                     (progDesc "Installs a list of packages"))
@@ -69,7 +69,7 @@ installParser :: Parser Command
 installParser = runA $ proc () -> do
   config <- asA configureOpts -< ()
   inst <- asA installOpts -< ()
-  A helper -< Install config inst
+  returnA -< Install config inst
 
 installOpts :: Parser InstallOpts
 installOpts = runA $ proc () -> do
@@ -80,13 +80,12 @@ installOpts = runA $ proc () -> do
              , instForce = force }
 
 updateParser :: Parser Command
-updateParser = runA $ proc () ->
-  A helper -< Update
+updateParser = pure Update
 
 configureParser :: Parser Command
 configureParser = runA $ proc () -> do
   config <- asA configureOpts -< ()
-  A helper -< Configure config
+  returnA -< Configure config
 
 configureOpts :: Parser ConfigureOpts
 configureOpts = runA $ proc () -> do
@@ -103,7 +102,7 @@ configureOpts = runA $ proc () -> do
 buildParser :: Parser Command
 buildParser = runA $ proc () -> do
   opts <- asA buildOpts -< ()
-  A helper -< Build opts
+  returnA -< Build opts
 
 buildOpts :: Parser BuildOpts
 buildOpts = runA $ proc () -> do
