@@ -1,4 +1,4 @@
-## Version 0.6.0 (unreleased)
+## Version 0.6.0 (11 Oct 2013)
 
 - Arguments are now always parsed in order.
 
@@ -7,6 +7,7 @@
     * \#41 - Readme uses old reader API
     * \#38 - Internal types leaking into public API
     * \#44 - Can the build input restriction process == 1.1.* be relaxed?
+    * \#28 - Help for subcommands
 
 ## Version 0.5.2.1 (24 Dic 2012)
 
