@@ -39,6 +39,7 @@ import System.Exit (ExitCode(..))
 
 data ParseError
   = ErrorMsg String
+  | InfoMsg String
   | ShowHelpText
   deriving Show
 

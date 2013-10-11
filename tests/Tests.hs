@@ -48,8 +48,8 @@ case_hello = checkHelpText "hello" Hello.opts ["--help"]
 case_modes :: Assertion
 case_modes = checkHelpText "commands" Commands.opts ["--help"]
 
-case_cabal :: Assertion
-case_cabal = checkHelpText "cabal" Cabal.pinfo ["configure", "--help"]
+case_cabal_conf :: Assertion
+case_cabal_conf = checkHelpText "cabal" Cabal.pinfo ["configure", "--help"]
 
 case_args :: Assertion
 case_args = do

@@ -26,6 +26,8 @@ module Options.Applicative.Builder (
   flag',
   switch,
   nullOption,
+  abortOption,
+  infoOption,
   strOption,
   option,
 
@@ -235,6 +237,23 @@ nullOption m = mkParser d g rdr
     fields = f (OptionFields [] mempty disabled (ErrorMsg ""))
     crdr = CReader (optCompleter fields) (optReader fields)
     rdr = OptReader (optNames fields) crdr (optNoArgError fields)
+
+-- | An option that always fails.
+--
+-- When this option is encountered, the option parser immediately aborts with
+-- the given parse error.  If you simply want to output a message, use
+-- 'infoOption' instead.
+abortOption :: ParseError -> Mod OptionFields (a -> a) -> Parser (a -> a)
+abortOption err m = nullOption . (<> m) $ mconcat
+  [ reader (const (ReadM (Left err)))
+  , noArgError err
+  , value id
+  , metavar ""
+  , hidden ]
+
+-- | An option that always fails and displays a message.
+infoOption :: String -> Mod OptionFields (a -> a) -> Parser (a -> a)
+infoOption = abortOption . InfoMsg
 
 -- | Builder for an option taking a 'String' argument.
 strOption :: Mod OptionFields String -> Parser String

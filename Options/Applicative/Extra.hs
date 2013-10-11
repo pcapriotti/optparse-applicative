@@ -29,15 +29,10 @@ import Options.Applicative.Utils
 
 -- | A hidden \"helper\" option which always fails.
 helper :: Parser (a -> a)
-helper = nullOption $ mconcat
-       [ long "help"
-       , reader (const (ReadM (Left ShowHelpText)))
-       , noArgError ShowHelpText
-       , short 'h'
-       , help "Show this help text"
-       , value id
-       , metavar ""
-       , hidden ]
+helper = abortOption ShowHelpText $ mconcat
+  [ long "help"
+  , short 'h'
+  , help "Show this help text" ]
 
 hsubparser :: Mod CommandFields a -> Parser a
 hsubparser m = mkParser d g rdr
@@ -101,12 +96,14 @@ parserFailure pprefs pinfo msg ctx = ParserFailure
            . show_help
            . add_error
            . add_usage names progn
-  , errExitCode = ExitFailure (infoFailureCode pinfo) }
+  , errExitCode = exit_code }
   where
-    add_usage names progn i = i
-      { infoHeader = vcat
-          ( header_line i ++
-            [ usage pprefs (infoParser i) ename ] ) }
+    add_usage names progn i = case msg of
+      InfoMsg _ -> i
+      _         -> i
+        { infoHeader = vcat
+            ( header_line i ++
+              [ usage pprefs (infoParser i) ename ] ) }
       where
         ename = unwords (progn : names)
     add_error i = i
@@ -114,6 +111,10 @@ parserFailure pprefs pinfo msg ctx = ParserFailure
     error_msg = case msg of
       ShowHelpText -> []
       ErrorMsg m   -> [m]
+      InfoMsg  m   -> [m]
+    exit_code = case msg of
+      InfoMsg _ -> ExitSuccess
+      _         -> ExitFailure (infoFailureCode pinfo)
     show_full_help = case msg of
       ShowHelpText -> True
       _            -> prefShowHelpOnError pprefs
