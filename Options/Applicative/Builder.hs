@@ -40,6 +40,7 @@ module Options.Applicative.Builder (
   showDefault,
   metavar,
   reader,
+  eitherReader,
   noArgError,
   ParseError(..),
   hidden,
@@ -146,6 +147,10 @@ help s = optionMod $ \p -> p { propHelp = s }
 -- | Specify the 'Option' reader.
 reader :: (String -> ReadM a) -> Mod OptionFields a
 reader f = fieldMod $ \p -> p { optReader = f }
+
+-- | Specify the 'Option' reader as a function in the 'Either' monad.
+eitherReader :: (String -> Either String a) -> Mod OptionFields a
+eitherReader f = reader (either readerError return . f)
 
 -- | Specify the error to display when no argument is provided to this option.
 noArgError :: ParseError -> Mod OptionFields a

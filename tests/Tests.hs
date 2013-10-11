@@ -314,7 +314,7 @@ case_arg_order_3 = do
 case_issue_47 :: Assertion
 case_issue_47 = do
   let p = nullOption (long "test" <> reader r <> value 9) :: Parser Int
-      r _ = ReadM . Left . ErrorMsg $ "error message"
+      r _ = readerError "error message"
       result = run (info p idm) ["--test", "x"]
   assertLeft result $ \(ParserFailure err _) -> do
     text <- head . lines <$> err "test"

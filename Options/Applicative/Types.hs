@@ -10,6 +10,8 @@ module Options.Applicative.Types (
   OptProperties(..),
   OptVisibility(..),
   ReadM(..),
+  readerAbort,
+  readerError,
   CReader(..),
   Parser(..),
   ParserM(..),
@@ -122,6 +124,12 @@ instance MonadPlus ReadM where
   mplus m1 m2 = case runReadM m1 of
     Left _ -> m2
     Right r -> return r
+
+readerAbort :: ParseError -> ReadM a
+readerAbort = ReadM . Left
+
+readerError :: String -> ReadM a
+readerError = readerAbort . ErrorMsg
 
 type OptCReader = CReader ReadM
 type ArgCReader = CReader Maybe
