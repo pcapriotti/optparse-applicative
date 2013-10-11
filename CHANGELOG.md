@@ -7,6 +7,10 @@
 - Add `execParserMaybe` and `customExecParserMaybe` functions
   (pull request #49).
 
+- Fixed bugs
+    * \#47 - Current master prints help text instead of error
+    * \#48 - Can we have an eitherReader convenience function?
+
 ## Version 0.6.0 (11 Oct 2013)
 
 - Arguments are now always parsed in order.
