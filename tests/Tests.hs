@@ -9,6 +9,7 @@ import qualified Examples.Alternatives as Alternatives
 import Control.Monad
 import Data.List
 import Options.Applicative
+import Options.Applicative.Types
 import System.Exit
 import Test.HUnit
 import Test.Framework.Providers.HUnit
@@ -309,6 +310,16 @@ case_arg_order_3 = do
     Left _ ->
       assertFailure "unexpected parse error"
     Right res -> (3, 5) @=? res
+
+case_issue_47 :: Assertion
+case_issue_47 = do
+  let p = nullOption (long "test" <> reader r <> value 9) :: Parser Int
+      r _ = ReadM . Left . ErrorMsg $ "error message"
+      result = run (info p idm) ["--test", "x"]
+  assertLeft result $ \(ParserFailure err _) -> do
+    text <- head . lines <$> err "test"
+    assertBool "no error message"
+               ("error message" `isInfixOf` text)
 
 main :: IO ()
 main = $(defaultMainGenerator)

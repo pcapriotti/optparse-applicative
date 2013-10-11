@@ -172,17 +172,13 @@ runParser p args = case args of
   [] -> exitP p result
   (arg : argt) -> do
     prefs <- getPrefs
-    x <- do_step prefs arg argt
-    case x of
-      Left e -> case (result, e) of
-        (Just r, ErrorMsg _) -> return r
-        _ -> errorP e
-      Right (p', args') -> runParser p' args'
+    (mp', args') <- do_step prefs arg argt
+    case mp' of
+      Nothing -> hoistMaybe result <|> parseError arg
+      Just p' -> runParser p' args'
   where
     result = (,) <$> evalParser p <*> pure args
-    do_step prefs arg argt = tryP
-                           . (`runStateT` argt)
-                           . (>>= maybe ((lift . parseError) arg) return)
+    do_step prefs arg argt = (`runStateT` argt)
                            . disamb (not (prefDisambiguate prefs))
                            $ stepParser prefs arg p
 
