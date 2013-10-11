@@ -6,8 +6,10 @@ module Options.Applicative.Extra (
   helper,
   hsubparser,
   execParser,
-  execParserPure,
+  execParserMaybe,
   customExecParser,
+  customExecParserMaybe,
+  execParserPure,
   usage,
   ParserFailure(..),
   ) where
@@ -65,10 +67,28 @@ customExecParser pprefs pinfo = do
         _           -> hPutStr stderr msg
       exitWith c
 
+-- | Run a program description in pure code.
+--
+-- This function behaves like 'execParser', but can be called from pure code.
+-- Note that, in case of errors, no message is displayed, and this function
+-- simply returns 'Nothing'.
+--
+-- If you need to keep track of error messages, use 'execParserPure' instead.
+execParserMaybe :: ParserInfo a -> [String] -> Maybe a
+execParserMaybe = customExecParserMaybe (prefs idm)
+
+-- | Run a program description with custom preferences in pure code.
+--
+-- See 'execParserMaybe' for details.
+customExecParserMaybe :: ParserPrefs -> ParserInfo a -> [String] -> Maybe a
+customExecParserMaybe pprefs pinfo
+  = either (const Nothing) Just
+  . execParserPure pprefs pinfo
+
 data Result a = Result a
               | Extra ParserFailure
 
--- | A pure version 'execParser'.
+-- | The most general way to run a program description in pure code.
 execParserPure :: ParserPrefs       -- ^ Global preferences for this parser
                -> ParserInfo a      -- ^ Description of the program to run
                -> [String]          -- ^ Program arguments
