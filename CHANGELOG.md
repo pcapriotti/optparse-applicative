@@ -2,7 +2,10 @@
 
 - Add builders for options that always fail. This makes it easier
   to create options that just print an error message or display some
-  brief information and then exit (like --version).
+  brief information and then exit (like `--version`).
+
+- Add `execParserMaybe` and `customExecParserMaybe` functions
+  (pull request #49).
 
 ## Version 0.6.0 (11 Oct 2013)
 
