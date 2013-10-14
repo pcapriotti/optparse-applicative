@@ -127,7 +127,9 @@ parserFailure pprefs pinfo msg ctx = ParserFailure
     with_context (Context n i) _ f = f n i
 
     render_help :: ParserHelp -> String
-    render_help = (`displayS` "") . renderPretty 1.0 80 . helpText
+    render_help = (`displayS` "")
+                . renderPretty 1.0 (prefColumns pprefs)
+                . helpText
 
     show_full_help = case msg of
       ShowHelpText -> True

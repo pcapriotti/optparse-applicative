@@ -54,7 +54,8 @@ instance Error ParseError where
 -- | A full description for a runnable 'Parser' for a program.
 data ParserInfo a = ParserInfo
   { infoParser :: Parser a            -- ^ the option parser for the program
-  , infoFullDesc :: Bool              -- ^ whether the help text should contain full documentation
+  , infoFullDesc :: Bool              -- ^ whether the help text should contain
+                                      -- full documentation
   , infoProgDesc :: Chunk Doc         -- ^ brief parser description
   , infoHeader :: Chunk Doc           -- ^ header of the full parser description
   , infoFooter :: Chunk Doc           -- ^ footer of the full parser description
@@ -67,9 +68,14 @@ instance Functor ParserInfo where
 -- | Global preferences for a top-level 'Parser'.
 data ParserPrefs = ParserPrefs
   { prefMultiSuffix :: String    -- ^ metavar suffix for multiple options
-  , prefDisambiguate :: Bool     -- ^ automatically disambiguate abbreviations (default: False)
-  , prefShowHelpOnError :: Bool  -- ^ always show help text on parse errors (default: False)
-  , prefBacktrack :: Bool        -- ^ backtrack to parent parser when a subcommand fails (default: True)
+  , prefDisambiguate :: Bool     -- ^ automatically disambiguate abbreviations
+                                 -- (default: False)
+  , prefShowHelpOnError :: Bool  -- ^ always show help text on parse errors
+                                 -- (default: False)
+  , prefBacktrack :: Bool        -- ^ backtrack to parent parser when a
+                                 -- subcommand fails (default: True)
+  , prefColumns :: Int           -- ^ number of columns in the terminal, used to
+                                 -- format the help page (default: 80)
   }
 
 data OptName = OptShort !Char

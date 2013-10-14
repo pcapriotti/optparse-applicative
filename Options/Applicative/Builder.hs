@@ -83,6 +83,7 @@ module Options.Applicative.Builder (
   disambiguate,
   showHelpOnError,
   noBacktrack,
+  columns,
   prefs,
 
   -- * Types
@@ -357,6 +358,9 @@ showHelpOnError = PrefsMod $ \p -> p { prefShowHelpOnError = True }
 noBacktrack :: PrefsMod
 noBacktrack = PrefsMod $ \p -> p { prefBacktrack = False }
 
+columns :: Int -> PrefsMod
+columns cols = PrefsMod $ \p -> p { prefColumns = cols }
+
 prefs :: PrefsMod -> ParserPrefs
 prefs m = applyPrefsMod m base
   where
@@ -364,7 +368,8 @@ prefs m = applyPrefsMod m base
       { prefMultiSuffix = ""
       , prefDisambiguate = False
       , prefShowHelpOnError = False
-      , prefBacktrack = True }
+      , prefBacktrack = True
+      , prefColumns = 80 }
 
 -- convenience shortcuts
 

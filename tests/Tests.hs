@@ -35,14 +35,18 @@ assertHasLine l s
   | l `elem` lines s = return ()
   | otherwise = assertFailure $ "expected line:\n\t" ++ l ++ "\nnot found"
 
-checkHelpText :: Show a => String -> ParserInfo a -> [String] -> Assertion
-checkHelpText name p args = do
-  let result = run p args
+checkHelpTextWith :: Show a => ParserPrefs -> String
+                  -> ParserInfo a -> [String] -> Assertion
+checkHelpTextWith pprefs name p args = do
+  let result = execParserPure pprefs p args
   assertLeft result $ \(ParserFailure err code) -> do
     expected <- readFile $ "tests/" ++ name ++ ".err.txt"
     msg <- err name
     expected @=? msg ++ "\n"
     ExitFailure 1 @=? code
+
+checkHelpText :: Show a => String -> ParserInfo a -> [String] -> Assertion
+checkHelpText = checkHelpTextWith (prefs idm)
 
 case_hello :: Assertion
 case_hello = checkHelpText "hello" Hello.opts ["--help"]
@@ -330,7 +334,7 @@ case_long_help = do
             [ "This is a very long program description. "
             , "This text should be automatically wrapped "
             , "to fit the size of the terminal" ]) )
-  checkHelpText "formatting" i ["--help"]
+  checkHelpTextWith (prefs (columns 50)) "formatting" i ["--help"]
 
 main :: IO ()
 main = $(defaultMainGenerator)
