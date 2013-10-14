@@ -138,7 +138,7 @@ parserFailure pprefs pinfo msg ctx = ParserFailure
       InfoMsg _ -> mempty
       _         -> usageHelp $ vcatChunks
         [ pure . usage pprefs (infoParser i) . unwords $ progn : names
-        , fmap (indent 2) . stringChunk . infoProgDesc $ pinfo ]
+        , fmap (indent 2) . stringChunk . infoProgDesc $ i ]
 
     error_help = headerHelp $ case msg of
       ShowHelpText -> mempty
@@ -146,9 +146,9 @@ parserFailure pprefs pinfo msg ctx = ParserFailure
       InfoMsg  m   -> stringChunk m
 
     base_help :: ParserInfo a -> ParserHelp
-    base_help pinfo'
+    base_help i
       | show_full_help
-      = parserHelp pprefs $ pinfo'
+      = parserHelp pprefs $ i
       | otherwise
       = headerHelp (stringChunk (infoHeader pinfo))
 

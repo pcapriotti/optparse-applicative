@@ -85,7 +85,7 @@ briefDesc pprefs = fold_tree . treeMapParser (optDesc pprefs style)
     alt_node :: [Chunk Doc] -> Chunk Doc
     alt_node [n] = n
     alt_node ns = fmap parens
-                . foldr (chunked (mappendWith (char '|'))) mempty
+                . foldr (chunked (mappendWith (string " | "))) mempty
                 $ ns
 
 -- | Generate a full help text for a parser.
