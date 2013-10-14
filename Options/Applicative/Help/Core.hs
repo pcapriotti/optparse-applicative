@@ -16,9 +16,8 @@ import Data.Monoid (Monoid, mempty, mappend, mconcat)
 
 import Options.Applicative.Common
 import Options.Applicative.Types
+import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
-
-import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
 
 -- | Style for rendering an option.
 data OptDescStyle = OptDescStyle
