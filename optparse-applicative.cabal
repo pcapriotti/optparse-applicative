@@ -97,8 +97,10 @@ library
                        Options.Applicative.Common,
                        Options.Applicative.Extra,
                        Options.Applicative.Help,
-                       Options.Applicative.Types,
-                       Options.Applicative.Utils
+                       Options.Applicative.Help.Pretty,
+                       Options.Applicative.Help.Chunk,
+                       Options.Applicative.Help.Core,
+                       Options.Applicative.Types
   other-modules:       Options.Applicative.Internal
   ghc-options:         -Wall
   build-depends:       base == 4.*,

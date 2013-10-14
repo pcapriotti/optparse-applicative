@@ -27,7 +27,6 @@ import Options.Applicative.Common
 import Options.Applicative.Help
 import Options.Applicative.Internal
 import Options.Applicative.Types
-import Options.Applicative.Utils
 
 -- | A hidden \"helper\" option which always fails.
 helper :: Parser (a -> a)

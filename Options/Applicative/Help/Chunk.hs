@@ -1,4 +1,4 @@
-module Options.Applicative.Utils
+module Options.Applicative.Help.Chunk
   ( mappendWith
   , Chunk(..)
   , chunked
@@ -17,9 +17,8 @@ import Control.Applicative
 import Control.Monad
 import Data.Maybe
 import Data.Monoid hiding ((<>))
-import Text.PrettyPrint.ANSI.Leijen
 
-import qualified Text.PrettyPrint.ANSI.Leijen as PP
+import Options.Applicative.Help.Pretty
 
 mappendWith :: Monoid a => a -> a -> a -> a
 mappendWith s x y = mconcat [x, s, y]
@@ -77,10 +76,10 @@ duplicate = fmap pure
 (<<+>>) = chunked (<+>)
 
 vcatChunks :: [Chunk Doc] -> Chunk Doc
-vcatChunks = foldr (chunked (PP.<$>)) mempty
+vcatChunks = foldr (chunked (.$.)) mempty
 
 vsepChunks :: [Chunk Doc] -> Chunk Doc
-vsepChunks = foldr (chunked (\x y -> x PP.<$> mempty PP.<$> y)) mempty
+vsepChunks = foldr (chunked (\x y -> x .$. mempty .$. y)) mempty
 
 isEmpty :: Chunk a -> Bool
 isEmpty = isNothing . unChunk
