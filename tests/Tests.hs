@@ -40,7 +40,7 @@ checkHelpText name p args = do
   assertLeft result $ \(ParserFailure err code) -> do
     expected <- readFile $ "tests/" ++ name ++ ".err.txt"
     msg <- err name
-    expected @=? msg
+    expected @=? msg ++ "\n"
     ExitFailure 1 @=? code
 
 case_hello :: Assertion
