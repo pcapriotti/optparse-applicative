@@ -4,6 +4,7 @@ module Options.Applicative.Help.Chunk
   , chunked
   , listToChunk
   , (<<+>>)
+  , (<</>>)
   , vcatChunks
   , vsepChunks
   , isEmpty
@@ -75,6 +76,11 @@ duplicate = fmap pure
 -- 'Chunk.
 (<<+>>) :: Chunk Doc -> Chunk Doc -> Chunk Doc
 (<<+>>) = chunked (<+>)
+
+-- | Concatenates two 'Chunk's with a softline in between.  This is exactly like
+-- '(<<+>>)', but uses a softline instead of a space.
+(<</>>) :: Chunk Doc -> Chunk Doc -> Chunk Doc
+(<</>>) = chunked (</>)
 
 vcatChunks :: [Chunk Doc] -> Chunk Doc
 vcatChunks = foldr (chunked (.$.)) mempty

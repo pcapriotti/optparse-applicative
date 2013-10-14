@@ -158,4 +158,4 @@ usage :: ParserPrefs -> Parser a -> String -> Doc
 usage pprefs p progn = hsep $
   [ string "Usage:"
   , string progn
-  , extract (briefDesc pprefs p) ]
+  , align (extract (briefDesc pprefs p)) ]
