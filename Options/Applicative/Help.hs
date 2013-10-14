@@ -5,6 +5,7 @@ module Options.Applicative.Help (
   ParserHelp(..),
   helpText,
   parserHelp,
+  headerHelp,
   module Text.PrettyPrint.ANSI.Leijen
   ) where
 
@@ -106,23 +107,27 @@ fullDesc pprefs = tabulate . catMaybes . mapParser doc
 
 data ParserHelp = ParserHelp
   { helpHeader :: Chunk Doc
+  , helpUsage :: Chunk Doc
   , helpBody :: Chunk Doc
   , helpFooter :: Chunk Doc }
 
 instance Monoid ParserHelp where
-  mempty = ParserHelp mempty mempty mempty
-  mappend (ParserHelp h1 b1 f1) (ParserHelp h2 b2 f2)
-    = ParserHelp (mappend h1 h2) (mappend b1 b2) (mappend f1 f2)
+  mempty = ParserHelp mempty mempty mempty mempty
+  mappend (ParserHelp h1 u1 b1 f1) (ParserHelp h2 u2 b2 f2)
+    = ParserHelp (mappend h1 h2) (mappend u1 u2)
+                 (mappend b1 b2) (mappend f1 f2)
+
+headerHelp :: Chunk Doc -> ParserHelp
+headerHelp chunk = ParserHelp chunk mempty mempty mempty
 
 helpText :: ParserHelp -> Doc
-helpText (ParserHelp h b f) = extract . vsepChunks $ [h, b, f]
+helpText (ParserHelp h u b f) = extract . vsepChunks $ [h, u, b, f]
 
 -- | Generate the help text for a program.
 parserHelp :: ParserPrefs -> ParserInfo a -> ParserHelp
 parserHelp pprefs pinfo = ParserHelp
-  { helpHeader = vcatChunks
-      [ stringChunk . infoHeader $ pinfo
-      , fmap (nest 2) . stringChunk . infoProgDesc $ pinfo ]
+  { helpHeader = stringChunk . infoHeader $ pinfo
+  , helpUsage = mempty
   , helpBody = vsepChunks
       [ do guard (infoFullDesc pinfo)
            doc <- fullDesc pprefs p

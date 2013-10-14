@@ -14,8 +14,8 @@ module Options.Applicative.Extra (
   ParserFailure(..),
   ) where
 
-import Control.Applicative ((<$>), (<|>), (<**>))
-import Data.Monoid (mconcat)
+import Control.Applicative (pure, (<$>), (<|>), (<**>))
+import Data.Monoid (mempty, mconcat)
 import System.Environment (getArgs, getProgName)
 import System.Exit (exitWith, ExitCode(..))
 import System.IO (hPutStrLn, stderr)
@@ -150,8 +150,10 @@ parserFailure pprefs pinfo msg ctx = ParserFailure
 --      = []
 
   { errMessage = \progn -> do
-      let doc = with_context ctx pinfo (help_doc progn)
-      return . render_help $ doc
+      let h = with_context ctx pinfo $ \names pinfo'
+               -> add_usage progn names pinfo'
+                $ generate_help progn names pinfo'
+      return . render_help $ h
   , errExitCode = case msg of
       InfoMsg _ -> ExitSuccess
       _         -> ExitFailure (infoFailureCode pinfo) }
@@ -163,19 +165,26 @@ parserFailure pprefs pinfo msg ctx = ParserFailure
     with_context NullContext i f = f [] i
     with_context (Context n i) _ f = f n i
 
-    render_help :: Doc -> String
-    render_help = (`displayS` "") . renderPretty 1.0 80
+    render_help :: ParserHelp -> String
+    render_help = (`displayS` "") . renderPretty 1.0 80 . helpText
 
     show_full_help = case msg of
       ShowHelpText -> True
       _            -> prefShowHelpOnError pprefs
 
-    help_doc :: String -> [String] -> ParserInfo a -> Doc
-    help_doc progn names pinfo
+    add_usage progn names i = case msg of
+      InfoMsg _ -> id
+      _         -> \h -> h {
+        helpUsage = vcatChunks
+            [ pure . usage pprefs (infoParser i) . unwords $ progn : names
+            , fmap (nest 2) . stringChunk . infoProgDesc $ pinfo ] }
+
+    generate_help :: String -> [String] -> ParserInfo a -> ParserHelp
+    generate_help progn names pinfo
       | show_full_help
-      = helpText . parserHelp pprefs $ pinfo
+      = parserHelp pprefs $ pinfo
       | otherwise
-      = string (infoHeader pinfo)
+      = headerHelp (stringChunk (infoHeader pinfo))
 
 -- parserFailure :: ParserPrefs -> ParserInfo a
 --               -> ParseError -> Context
