@@ -2,29 +2,36 @@ module Options.Applicative.Help (
   cmdDesc,
   briefDesc,
   fullDesc,
-  parserHelpText,
+  ParserHelp(..),
+  helpText,
+  parserHelp,
+  module Text.PrettyPrint.ANSI.Leijen
   ) where
 
-import Data.List (intercalate, sort)
+import Control.Monad (guard)
+import Data.List (intersperse, sort)
 import Data.Maybe (maybeToList, catMaybes)
+import Data.Monoid (Monoid, mempty, mappend, mconcat)
 
 import Options.Applicative.Common
 import Options.Applicative.Types
 import Options.Applicative.Utils
 
+import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
+
 -- | Style for rendering an option.
 data OptDescStyle = OptDescStyle
-  { descSep :: String
+  { descSep :: Doc
   , descHidden :: Bool
   , descSurround :: Bool }
 
 -- | Generate description for a single option.
-optDesc :: ParserPrefs -> OptDescStyle -> OptHelpInfo -> Option a -> String
+optDesc :: ParserPrefs -> OptDescStyle -> OptHelpInfo -> Option a -> Chunk Doc
 optDesc pprefs style info opt =
   let ns = optionNames $ optMain opt
-      mv = optMetaVar opt
-      descs = map showOption (sort ns)
-      desc' = intercalate (descSep style) descs <+> mv
+      mv = stringChunk $ optMetaVar opt
+      descs = map (string . showOption) (sort ns)
+      desc' = listToChunk (intersperse (descSep style) descs) <<+>> mv
       show_opt
         | optVisibility opt == Hidden
         = descHidden style
@@ -32,84 +39,99 @@ optDesc pprefs style info opt =
         = optVisibility opt == Visible
       suffix
         | hinfoMulti info
-        = prefMultiSuffix pprefs
+        = stringChunk . prefMultiSuffix $ pprefs
         | otherwise
-        = ""
-      render text
+        = mempty
+      render chunk
         | not show_opt
-        = ""
-        | null text || not (descSurround style)
-        = text ++ suffix
+        = mempty
+        | isEmpty chunk || not (descSurround style)
+        = mappend chunk suffix
         | hinfoDefault info
-        = "[" ++ text ++ "]" ++ suffix
+        = mappend (fmap brackets chunk) suffix
         | null (drop 1 descs)
-        = text ++ suffix
+        = mappend chunk suffix
         | otherwise
-        = "(" ++ text ++ ")" ++ suffix
+        = mappend (fmap parens chunk) suffix
   in render desc'
 
 -- | Generate descriptions for commands.
-cmdDesc :: Parser a -> [String]
-cmdDesc = concat . mapParser desc
+cmdDesc :: Parser a -> Chunk Doc
+cmdDesc = mconcat . mapParser desc
   where
     desc _ opt =
       case optMain opt of
         CmdReader cmds p ->
-          tabulate [(cmd, d)
+          tabulate [(string cmd, string d)
                    | cmd <- reverse cmds
                    , d <- maybeToList . fmap infoProgDesc $ p cmd ]
-        _ -> []
+        _ -> mempty
 
 -- | Generate a brief help text for a parser.
-briefDesc :: ParserPrefs -> Parser a -> String
+briefDesc :: ParserPrefs -> Parser a -> Chunk Doc
 briefDesc pprefs = fold_tree . treeMapParser (optDesc pprefs style)
   where
     style = OptDescStyle
-      { descSep = "|"
+      { descSep = string "|"
       , descHidden = False
       , descSurround = True }
 
     fold_tree (Leaf x) = x
-    fold_tree (MultNode xs) = unwords (fold_trees xs)
-    fold_tree (AltNode xs) = alt_node (fold_trees xs)
+    fold_tree (MultNode xs) = foldr (<<+>>) mempty . map fold_tree $ xs
+    fold_tree (AltNode xs) = alt_node . map fold_tree $ xs
 
+    alt_node :: [Chunk Doc] -> Chunk Doc
     alt_node [n] = n
-    alt_node ns = "(" ++ intercalate " | " ns ++ ")"
-
-    fold_trees = filter (not . null) . map fold_tree
+    alt_node ns = fmap parens
+                . foldr (chunked (mappendWith (char '|'))) mempty
+                $ ns
 
 -- | Generate a full help text for a parser.
-fullDesc :: ParserPrefs -> Parser a -> [String]
+fullDesc :: ParserPrefs -> Parser a -> Chunk Doc
 fullDesc pprefs = tabulate . catMaybes . mapParser doc
   where
-    doc info opt
-      | null n = Nothing
-      | null h = Nothing
-      | otherwise = Just (n, h ++ hdef)
-      where n = optDesc pprefs style info opt
-            h = optHelp opt
-            hdef = maybe "" show_def (optShowDefault opt)
-            show_def s = " (default: " ++ s ++ ")"
+    doc info opt = do
+      guard . not . isEmpty $ n
+      guard . not . isEmpty $ h
+      return (extract n, extract (h <<+>> hdef))
+      where
+        n = optDesc pprefs style info opt
+        h = stringChunk . optHelp $ opt
+        hdef = Chunk . fmap show_def . optShowDefault $ opt
+        show_def s = parens (string "default:" <+> string s)
     style = OptDescStyle
-      { descSep = ","
+      { descSep = string ","
       , descHidden = True
       , descSurround = False }
 
+data ParserHelp = ParserHelp
+  { helpHeader :: Chunk Doc
+  , helpBody :: Chunk Doc
+  , helpFooter :: Chunk Doc }
+
+instance Monoid ParserHelp where
+  mempty = ParserHelp mempty mempty mempty
+  mappend (ParserHelp h1 b1 f1) (ParserHelp h2 b2 f2)
+    = ParserHelp (mappend h1 h2) (mappend b1 b2) (mappend f1 f2)
+
+helpText :: ParserHelp -> Doc
+helpText (ParserHelp h b f) = extract . vcatChunks $ [h, b, f]
+
 -- | Generate the help text for a program.
-parserHelpText :: ParserPrefs -> ParserInfo a -> String
-parserHelpText pprefs pinfo = unlines
-   $ nn [infoHeader pinfo]
-  ++ [ "  " ++ line | line <- nn [infoProgDesc pinfo] ]
-  ++ [ line | let opts = fullDesc pprefs p
-            , not (null opts)
-            , line <- ["", "Available options:"] ++ opts
-            , infoFullDesc pinfo ]
-  ++ [ line | let cmds = cmdDesc p
-            , not (null cmds)
-            , line <- ["", "Available commands:"] ++ cmds
-            , infoFullDesc pinfo ]
-  ++ [ line | footer <- nn [infoFooter pinfo]
-            , line <- ["", footer] ]
+parserHelp :: ParserPrefs -> ParserInfo a -> ParserHelp
+parserHelp pprefs pinfo = ParserHelp
+  { helpHeader = vcatChunks
+      [ stringChunk . infoHeader $ pinfo
+      , fmap (nest 2) . stringChunk . infoProgDesc $ pinfo ]
+  , helpBody = vcatChunks
+      [ do guard (infoFullDesc pinfo)
+           doc <- fullDesc pprefs p
+           return $ vsep [mempty, string "Available options:", doc]
+      , do guard (infoFullDesc pinfo)
+           doc <- cmdDesc p
+           return $ vsep [mempty, string "Available commands:", doc] ]
+  , helpFooter = do
+      footer <- stringChunk (infoFooter pinfo)
+      return $ vsep [mempty, footer] }
   where
-    nn = filter (not . null)
     p = infoParser pinfo
