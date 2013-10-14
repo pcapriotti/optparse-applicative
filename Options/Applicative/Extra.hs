@@ -150,9 +150,10 @@ parserFailure pprefs pinfo msg ctx = ParserFailure
 --      = []
 
   { errMessage = \progn -> do
-      let h = with_context ctx pinfo $ \names pinfo'
-               -> add_usage progn names pinfo'
-                $ generate_help progn names pinfo'
+      let h = with_context ctx pinfo $ \names pinfo' -> mconcat
+                [ base_help names pinfo'
+                , usage_help progn names pinfo'
+                , error_help ]
       return . render_help $ h
   , errExitCode = case msg of
       InfoMsg _ -> ExitSuccess
@@ -172,15 +173,19 @@ parserFailure pprefs pinfo msg ctx = ParserFailure
       ShowHelpText -> True
       _            -> prefShowHelpOnError pprefs
 
-    add_usage progn names i = case msg of
-      InfoMsg _ -> id
-      _         -> \h -> h {
-        helpUsage = vcatChunks
-            [ pure . usage pprefs (infoParser i) . unwords $ progn : names
-            , fmap (indent 2) . stringChunk . infoProgDesc $ pinfo ] }
+    usage_help progn names i = case msg of
+      InfoMsg _ -> mempty
+      _         -> usageHelp $ vcatChunks
+        [ pure . usage pprefs (infoParser i) . unwords $ progn : names
+        , fmap (indent 2) . stringChunk . infoProgDesc $ pinfo ]
 
-    generate_help :: String -> [String] -> ParserInfo a -> ParserHelp
-    generate_help progn names pinfo
+    error_help = headerHelp $ case msg of
+      ShowHelpText -> mempty
+      ErrorMsg m   -> stringChunk m
+      InfoMsg  m   -> stringChunk m
+
+    base_help :: [String] -> ParserInfo a -> ParserHelp
+    base_help names pinfo
       | show_full_help
       = parserHelp pprefs $ pinfo
       | otherwise

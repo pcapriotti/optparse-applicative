@@ -6,6 +6,7 @@ module Options.Applicative.Help (
   helpText,
   parserHelp,
   headerHelp,
+  usageHelp,
   module Text.PrettyPrint.ANSI.Leijen
   ) where
 
@@ -119,6 +120,9 @@ instance Monoid ParserHelp where
 
 headerHelp :: Chunk Doc -> ParserHelp
 headerHelp chunk = ParserHelp chunk mempty mempty mempty
+
+usageHelp :: Chunk Doc -> ParserHelp
+usageHelp chunk = ParserHelp mempty chunk mempty mempty
 
 helpText :: ParserHelp -> Doc
 helpText (ParserHelp h u b f) = extract . vsepChunks $ [h, u, b, f]
