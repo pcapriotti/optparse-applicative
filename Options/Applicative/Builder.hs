@@ -35,6 +35,7 @@ module Options.Applicative.Builder (
   short,
   long,
   help,
+  helpDoc,
   value,
   showDefaultWith,
   showDefault,
@@ -68,8 +69,11 @@ module Options.Applicative.Builder (
   fullDesc,
   briefDesc,
   header,
-  progDesc,
+  headerDoc,
   footer,
+  footerDoc,
+  progDesc,
+  progDescDoc,
   failureCode,
   info,
 
@@ -101,6 +105,8 @@ import Options.Applicative.Builder.Arguments
 import Options.Applicative.Builder.Internal
 import Options.Applicative.Common
 import Options.Applicative.Types
+import Options.Applicative.Help.Pretty
+import Options.Applicative.Help.Chunk
 
 -- readers --
 
@@ -142,7 +148,12 @@ showDefault = showDefaultWith show
 
 -- | Specify the help text for an option.
 help :: String -> Mod f a
-help s = optionMod $ \p -> p { propHelp = s }
+help s = optionMod $ \p -> p { propHelp = paragraph s }
+
+-- | Specify the help text for an option as a 'Text.PrettyPrint.ANSI.Leijen.Doc'
+-- value.
+helpDoc :: Maybe Doc -> Mod f a
+helpDoc doc = optionMod $ \p -> p { propHelp = Chunk doc }
 
 -- | Specify the 'Option' reader.
 reader :: (String -> ReadM a) -> Mod OptionFields a
@@ -286,15 +297,30 @@ briefDesc = InfoMod $ \i -> i { infoFullDesc = False }
 
 -- | Specify a header for this parser.
 header :: String -> InfoMod a
-header s = InfoMod $ \i -> i { infoHeader = s }
+header s = InfoMod $ \i -> i { infoHeader = paragraph s }
+
+-- | Specify a header for this parser as a 'Text.PrettyPrint.ANSI.Leijen.Doc'
+-- value.
+headerDoc :: Maybe Doc -> InfoMod a
+headerDoc doc = InfoMod $ \i -> i { infoHeader = Chunk doc }
 
 -- | Specify a footer for this parser.
 footer :: String -> InfoMod a
-footer s = InfoMod $ \i -> i { infoFooter = s }
+footer s = InfoMod $ \i -> i { infoFooter = paragraph s }
+
+-- | Specify a footer for this parser as a 'Text.PrettyPrint.ANSI.Leijen.Doc'
+-- value.
+footerDoc :: Maybe Doc -> InfoMod a
+footerDoc doc = InfoMod $ \i -> i { infoFooter = Chunk doc }
 
 -- | Specify a short program description.
 progDesc :: String -> InfoMod a
-progDesc s = InfoMod $ \i -> i { infoProgDesc = s }
+progDesc s = InfoMod $ \i -> i { infoProgDesc = paragraph s }
+
+-- | Specify a short program description as a 'Text.PrettyPrint.ANSI.Leijen.Doc'
+-- value.
+progDescDoc :: Maybe Doc -> InfoMod a
+progDescDoc doc = InfoMod $ \i -> i { infoProgDesc = Chunk doc }
 
 -- | Specify an exit code if a parse error occurs.
 failureCode :: Int -> InfoMod a
@@ -307,9 +333,9 @@ info parser m = applyInfoMod m base
     base = ParserInfo
       { infoParser = parser
       , infoFullDesc = True
-      , infoProgDesc = ""
-      , infoHeader = ""
-      , infoFooter = ""
+      , infoProgDesc = mempty
+      , infoHeader = mempty
+      , infoFooter = mempty
       , infoFailureCode = 1 }
 
 newtype PrefsMod = PrefsMod

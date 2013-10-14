@@ -62,7 +62,7 @@ cmdDesc = mconcat . mapParser desc
     desc _ opt =
       case optMain opt of
         CmdReader cmds p ->
-          tabulate [(string cmd, string d)
+          tabulate [(string cmd, align (extract d))
                    | cmd <- reverse cmds
                    , d <- maybeToList . fmap infoProgDesc $ p cmd ]
         _ -> mempty
@@ -95,10 +95,10 @@ fullDesc pprefs = tabulate . catMaybes . mapParser doc
     doc info opt = do
       guard . not . isEmpty $ n
       guard . not . isEmpty $ h
-      return (extract n, extract (h <<+>> hdef))
+      return (extract n, align . extract $ h <<+>> hdef)
       where
         n = optDesc pprefs style info opt
-        h = stringChunk . optHelp $ opt
+        h = optHelp $ opt
         hdef = Chunk . fmap show_def . optShowDefault $ opt
         show_def s = parens (string "default:" <+> string s)
     style = OptDescStyle
@@ -130,7 +130,7 @@ helpText (ParserHelp h u b f) = extract . vsepChunks $ [h, u, b, f]
 -- | Generate the help text for a program.
 parserHelp :: ParserPrefs -> ParserInfo a -> ParserHelp
 parserHelp pprefs pinfo = ParserHelp
-  { helpHeader = stringChunk . infoHeader $ pinfo
+  { helpHeader = infoHeader pinfo
   , helpUsage = mempty
   , helpBody = vsepChunks
       [ do guard (infoFullDesc pinfo)
@@ -139,6 +139,6 @@ parserHelp pprefs pinfo = ParserHelp
       , do guard (infoFullDesc pinfo)
            doc <- cmdDesc p
            return $ vsep [string "Available commands:", doc] ]
-  , helpFooter = stringChunk (infoFooter pinfo) }
+  , helpFooter = infoFooter pinfo }
   where
     p = infoParser pinfo

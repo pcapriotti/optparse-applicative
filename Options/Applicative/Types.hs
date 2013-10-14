@@ -39,6 +39,9 @@ import Control.Monad.Trans.Error (Error(..))
 import Data.Monoid (Monoid(..))
 import System.Exit (ExitCode(..))
 
+import Options.Applicative.Help.Pretty
+import Options.Applicative.Help.Chunk
+
 data ParseError
   = ErrorMsg String
   | InfoMsg String
@@ -52,9 +55,9 @@ instance Error ParseError where
 data ParserInfo a = ParserInfo
   { infoParser :: Parser a            -- ^ the option parser for the program
   , infoFullDesc :: Bool              -- ^ whether the help text should contain full documentation
-  , infoProgDesc :: String            -- ^ brief parser description
-  , infoHeader :: String              -- ^ header of the full parser description
-  , infoFooter :: String              -- ^ footer of the full parser description
+  , infoProgDesc :: Chunk Doc         -- ^ brief parser description
+  , infoHeader :: Chunk Doc           -- ^ header of the full parser description
+  , infoFooter :: Chunk Doc           -- ^ footer of the full parser description
   , infoFailureCode :: Int            -- ^ exit code for a parser failure
   }
 
@@ -83,7 +86,7 @@ data OptVisibility
 -- | Specification for an individual parser option.
 data OptProperties = OptProperties
   { propVisibility :: OptVisibility       -- ^ whether this flag is shown is the brief description
-  , propHelp :: String                    -- ^ help text for this option
+  , propHelp :: Chunk Doc                 -- ^ help text for this option
   , propMetaVar :: String                 -- ^ metavariable for this option
   , propShowDefault :: Maybe String       -- ^ what to show in the help text as the default
   }
@@ -238,7 +241,7 @@ data OptTree a
 optVisibility :: Option a -> OptVisibility
 optVisibility = propVisibility . optProps
 
-optHelp :: Option a -> String
+optHelp :: Option a -> Chunk Doc
 optHelp  = propHelp . optProps
 
 optMetaVar :: Option a -> String

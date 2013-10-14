@@ -5,6 +5,7 @@ import qualified Examples.Hello as Hello
 import qualified Examples.Commands as Commands
 import qualified Examples.Cabal as Cabal
 import qualified Examples.Alternatives as Alternatives
+import qualified Examples.Formatting as Formatting
 
 import Control.Monad
 import Data.List
@@ -320,6 +321,16 @@ case_issue_47 = do
     text <- head . lines <$> err "test"
     assertBool "no error message"
                ("error message" `isInfixOf` text)
+
+case_long_help :: Assertion
+case_long_help = do
+  let p = Formatting.opts <**> helper
+      i = info p
+        ( progDesc (concat
+            [ "This is a very long program description. "
+            , "This text should be automatically wrapped "
+            , "to fit the size of the terminal" ]) )
+  checkHelpText "formatting" i ["--help"]
 
 main :: IO ()
 main = $(defaultMainGenerator)

@@ -118,7 +118,7 @@ baseProps :: OptProperties
 baseProps = OptProperties
   { propMetaVar = ""
   , propVisibility = Visible
-  , propHelp = ""
+  , propHelp = mempty
   , propShowDefault = Nothing }
 
 mkCommand :: Mod CommandFields a -> ([String], String -> Maybe (ParserInfo a))

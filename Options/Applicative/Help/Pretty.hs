@@ -3,7 +3,7 @@ module Options.Applicative.Help.Pretty
   , (.$.)
   ) where
 
-import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
+import Text.PrettyPrint.ANSI.Leijen hiding ((<$>), (<>))
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 
 (.$.) :: Doc -> Doc -> Doc

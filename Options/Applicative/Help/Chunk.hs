@@ -8,6 +8,7 @@ module Options.Applicative.Help.Chunk
   , vsepChunks
   , isEmpty
   , stringChunk
+  , paragraph
   , extract
   , duplicate
   , tabulate
@@ -87,6 +88,11 @@ isEmpty = isNothing . unChunk
 stringChunk :: String -> Chunk Doc
 stringChunk "" = mempty
 stringChunk s = pure (string s)
+
+paragraph :: String -> Chunk Doc
+paragraph = foldr (chunked (</>)) mempty
+          . map stringChunk
+          . words
 
 tabulate' :: Int -> [(Doc, Doc)] -> Chunk Doc
 tabulate' _ [] = mempty
