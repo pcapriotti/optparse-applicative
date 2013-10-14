@@ -177,7 +177,7 @@ parserFailure pprefs pinfo msg ctx = ParserFailure
       _         -> \h -> h {
         helpUsage = vcatChunks
             [ pure . usage pprefs (infoParser i) . unwords $ progn : names
-            , fmap (nest 2) . stringChunk . infoProgDesc $ pinfo ] }
+            , fmap (indent 2) . stringChunk . infoProgDesc $ pinfo ] }
 
     generate_help :: String -> [String] -> ParserInfo a -> ParserHelp
     generate_help progn names pinfo

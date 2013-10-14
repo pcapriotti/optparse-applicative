@@ -92,7 +92,7 @@ stringChunk s = pure (string s)
 tabulate' :: Int -> [(Doc, Doc)] -> Chunk Doc
 tabulate' _ [] = mempty
 tabulate' size table = pure $ vcat
-  [ nest 2 (fillBreak size key <+> value)
+  [ indent 2 (fillBreak size key <+> value)
   | (key, value) <- table ]
 
 -- | Display pairs of strings in a table.
