@@ -80,7 +80,9 @@ briefDesc pprefs = fold_tree . treeMapParser (optDesc pprefs style)
 
     fold_tree (Leaf x) = x
     fold_tree (MultNode xs) = foldr (<<+>>) mempty . map fold_tree $ xs
-    fold_tree (AltNode xs) = alt_node . map fold_tree $ xs
+    fold_tree (AltNode xs) = alt_node
+                           . filter (not . isEmpty)
+                           . map fold_tree $ xs
 
     alt_node :: [Chunk Doc] -> Chunk Doc
     alt_node [n] = n
