@@ -110,48 +110,9 @@ parserFailure :: ParserPrefs -> ParserInfo a
               -> ParseError -> Context
               -> ParserFailure
 parserFailure pprefs pinfo msg ctx = ParserFailure
---  { errMessage = \progn
---      -> with_context ctx pinfo $ \names ->
---             return
---           . show_help
---           . add_error
---           . add_usage names progn
---  , errExitCode = exit_code }
---  where
---    add_usage names progn i = case msg of
---      InfoMsg _ -> i
---      _         -> i
---        { infoHeader = vcat
---            ( header_line i ++
---              [ usage pprefs (infoParser i) ename ] ) }
---      where
---        ename = unwords (progn : names)
---    add_error i = i
---      { infoHeader = vcat (error_msg ++ [infoHeader i]) }
---    error_msg = case msg of
---      ShowHelpText -> []
---      ErrorMsg m   -> [m]
---      InfoMsg  m   -> [m]
---    exit_code = case msg of
---      InfoMsg _ -> ExitSuccess
---      _         -> ExitFailure (infoFailureCode pinfo)
---    show_full_help = case msg of
---      ShowHelpText -> True
---      _            -> prefShowHelpOnError pprefs
---    show_help i
---      | show_full_help
---      = parserHelpText pprefs i
---      | otherwise
---      = unlines $ filter (not . null) [ infoHeader i ]
---    header_line i
---      | show_full_help
---      = [ infoHeader i ]
---      | otherwise
---      = []
-
   { errMessage = \progn -> do
       let h = with_context ctx pinfo $ \names pinfo' -> mconcat
-                [ base_help names pinfo'
+                [ base_help pinfo'
                 , usage_help progn names pinfo'
                 , error_help ]
       return . render_help $ h
@@ -184,62 +145,12 @@ parserFailure pprefs pinfo msg ctx = ParserFailure
       ErrorMsg m   -> stringChunk m
       InfoMsg  m   -> stringChunk m
 
-    base_help :: [String] -> ParserInfo a -> ParserHelp
-    base_help names pinfo
+    base_help :: ParserInfo a -> ParserHelp
+    base_help pinfo'
       | show_full_help
-      = parserHelp pprefs $ pinfo
+      = parserHelp pprefs $ pinfo'
       | otherwise
       = headerHelp (stringChunk (infoHeader pinfo))
-
--- parserFailure :: ParserPrefs -> ParserInfo a
---               -> ParseError -> Context
---               -> ParserFailure
--- parserFailure pprefs pinfo msg ctx = ParserFailure
---   { errMessage = \progn
---       -> with_context ctx pinfo $ \names ->
---              return
---            . show_help
---            . add_error
---            . add_usage names progn
---   , errExitCode = exit_code }
---   where
---     add_usage names progn i = case msg of
---       InfoMsg _ -> i
---       _         -> i
---         { infoHeader = vcat
---             ( header_line i ++
---               [ usage pprefs (infoParser i) ename ] ) }
---       where
---         ename = unwords (progn : names)
---     add_error i = i
---       { infoHeader = vcat (error_msg ++ [infoHeader i]) }
---     error_msg = case msg of
---       ShowHelpText -> []
---       ErrorMsg m   -> [m]
---       InfoMsg  m   -> [m]
---     exit_code = case msg of
---       InfoMsg _ -> ExitSuccess
---       _         -> ExitFailure (infoFailureCode pinfo)
---     show_full_help = case msg of
---       ShowHelpText -> True
---       _            -> prefShowHelpOnError pprefs
---     show_help i
---       | show_full_help
---       = parserHelpText pprefs i
---       | otherwise
---       = unlines $ filter (not . null) [ infoHeader i ]
---     header_line i
---       | show_full_help
---       = stringChunk (infoHeader i)
---       | otherwise
---       = mempty
--- 
---     with_context :: Context
---                  -> ParserInfo a
---                  -> (forall b . [String] -> ParserInfo b -> c)
---                  -> c
---     with_context NullContext i f = f [] i
---     with_context (Context n i) _ f = f n i
 
 -- | Generate option summary.
 usage :: ParserPrefs -> Parser a -> String -> Doc
