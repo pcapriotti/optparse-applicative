@@ -5,6 +5,7 @@ module Options.Applicative.Utils
   , listToChunk
   , (<<+>>)
   , vcatChunks
+  , vsepChunks
   , isEmpty
   , stringChunk
   , extract
@@ -78,8 +79,11 @@ duplicate = fmap pure
 vcatChunks :: [Chunk Doc] -> Chunk Doc
 vcatChunks = foldr (chunked (PP.<$>)) mempty
 
+vsepChunks :: [Chunk Doc] -> Chunk Doc
+vsepChunks = foldr (chunked (\x y -> x PP.<$> mempty PP.<$> y)) mempty
+
 isEmpty :: Chunk a -> Bool
-isEmpty = isJust . unChunk
+isEmpty = isNothing . unChunk
 
 stringChunk :: String -> Chunk Doc
 stringChunk "" = mempty

@@ -15,10 +15,10 @@ module Options.Applicative.Extra (
   ) where
 
 import Control.Applicative ((<$>), (<|>), (<**>))
-import Data.Monoid (mempty, mconcat)
+import Data.Monoid (mconcat)
 import System.Environment (getArgs, getProgName)
 import System.Exit (exitWith, ExitCode(..))
-import System.IO (hPutStr, stderr)
+import System.IO (hPutStrLn, stderr)
 
 import Options.Applicative.BashCompletion
 import Options.Applicative.Builder hiding (briefDesc)
@@ -63,8 +63,8 @@ customExecParser pprefs pinfo = do
       let c = errExitCode failure
       msg <- errMessage failure progn
       case c of
-        ExitSuccess -> putStr msg
-        _           -> hPutStr stderr msg
+        ExitSuccess -> putStrLn msg
+        _           -> hPutStrLn stderr msg
       exitWith c
 
 -- | Run a program description in pure code.

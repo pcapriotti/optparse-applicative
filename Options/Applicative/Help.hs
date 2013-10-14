@@ -115,7 +115,7 @@ instance Monoid ParserHelp where
     = ParserHelp (mappend h1 h2) (mappend b1 b2) (mappend f1 f2)
 
 helpText :: ParserHelp -> Doc
-helpText (ParserHelp h b f) = extract . vcatChunks $ [h, b, f]
+helpText (ParserHelp h b f) = extract . vsepChunks $ [h, b, f]
 
 -- | Generate the help text for a program.
 parserHelp :: ParserPrefs -> ParserInfo a -> ParserHelp
@@ -123,15 +123,13 @@ parserHelp pprefs pinfo = ParserHelp
   { helpHeader = vcatChunks
       [ stringChunk . infoHeader $ pinfo
       , fmap (nest 2) . stringChunk . infoProgDesc $ pinfo ]
-  , helpBody = vcatChunks
+  , helpBody = vsepChunks
       [ do guard (infoFullDesc pinfo)
            doc <- fullDesc pprefs p
-           return $ vsep [mempty, string "Available options:", doc]
+           return $ vsep [string "Available options:", doc]
       , do guard (infoFullDesc pinfo)
            doc <- cmdDesc p
-           return $ vsep [mempty, string "Available commands:", doc] ]
-  , helpFooter = do
-      footer <- stringChunk (infoFooter pinfo)
-      return $ vsep [mempty, footer] }
+           return $ vsep [string "Available commands:", doc] ]
+  , helpFooter = stringChunk (infoFooter pinfo) }
   where
     p = infoParser pinfo
