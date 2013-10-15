@@ -17,7 +17,9 @@ module Options.Applicative.Types (
   ParserM(..),
   Completer(..),
   mkCompleter,
+  CompletionResult(..),
   ParserFailure(..),
+  ParserResult(..),
   OptHelpInfo(..),
   OptTree(..),
 
@@ -222,17 +224,17 @@ instance Monoid Completer where
   mappend (Completer c1) (Completer c2) =
     Completer $ \s -> (++) <$> c1 s <*> c2 s
 
--- | Result after a parse error.
-data ParserFailure = ParserFailure
-  { errMessage :: String -> IO String -- ^ Function which takes the program name
-                                      -- as input and returns an error message
-  , errExitCode :: ExitCode           -- ^ Exit code to use for this error
-  }
+newtype CompletionResult = CompletionResult
+  { execCompletion :: String -> IO String }
 
-instance Error ParserFailure where
-  strMsg msg = ParserFailure
-    { errMessage = \_ -> return msg
-    , errExitCode = ExitFailure 1 }
+newtype ParserFailure = ParserFailure
+  { execFailure :: String -> (String, ExitCode) }
+
+-- | Result of 'execParserPure'.
+data ParserResult a
+  = Success a
+  | Failure ParserFailure
+  | CompletionInvoked CompletionResult
 
 data OptHelpInfo = OptHelpInfo
   { hinfoMulti :: Bool

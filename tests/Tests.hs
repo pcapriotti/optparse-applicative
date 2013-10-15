@@ -22,13 +22,14 @@ import Data.Monoid
 (<>) = mappend
 #endif
 
-run :: ParserInfo a -> [String] -> Either ParserFailure a
+run :: ParserInfo a -> [String] -> ParserResult a
 run = execParserPure (prefs idm)
 
-assertLeft :: Show b => Either a b -> (a -> Assertion) -> Assertion
-assertLeft x f = either f err x
-  where
-    err b = assertFailure $ "expected Left, got " ++ show b
+assertError :: Show a => ParserResult a -> (ParserFailure -> Assertion) -> Assertion
+assertError x f = case x of
+  Success r -> assertFailure $ "expected failure, got success: " ++ show r
+  Failure e -> f e
+  CompletionInvoked _ -> assertFailure $ "expected failure, got completion"
 
 assertHasLine :: String -> String -> Assertion
 assertHasLine l s
@@ -39,9 +40,9 @@ checkHelpTextWith :: Show a => ParserPrefs -> String
                   -> ParserInfo a -> [String] -> Assertion
 checkHelpTextWith pprefs name p args = do
   let result = execParserPure pprefs p args
-  assertLeft result $ \(ParserFailure err code) -> do
+  assertError result $ \(ParserFailure err) -> do
     expected <- readFile $ "tests/" ++ name ++ ".err.txt"
-    msg <- err name
+    let (msg, code) = err name
     expected @=? msg ++ "\n"
     ExitFailure 1 @=? code
 
@@ -61,42 +62,41 @@ case_args :: Assertion
 case_args = do
   let result = run Commands.opts ["hello", "foo", "bar"]
   case result of
-    Left _ ->
-      assertFailure "unexpected parse error"
-    Right (Commands.Hello args) ->
+    Success (Commands.Hello args) ->
       ["foo", "bar"] @=? args
-    Right Commands.Goodbye ->
+    Success Commands.Goodbye ->
       assertFailure "unexpected result: Goodbye"
+    _ ->
+      assertFailure "unexpected parse error"
 
 case_args_opts :: Assertion
 case_args_opts = do
   let result = run Commands.opts ["hello", "foo", "--bar"]
   case result of
-    Left _ -> return ()
-    Right (Commands.Hello xs) ->
+    Success (Commands.Hello xs) ->
       assertFailure $ "unexpected result: Hello " ++ show xs
-    Right Commands.Goodbye ->
+    Success Commands.Goodbye ->
       assertFailure "unexpected result: Goodbye"
+    _ -> return ()
 
 case_args_ddash :: Assertion
 case_args_ddash = do
   let result = run Commands.opts ["hello", "foo", "--", "--bar", "baz"]
   case result of
-    Left _ ->
-      assertFailure "unexpected parse error"
-    Right (Commands.Hello args) ->
+    Success (Commands.Hello args) ->
       ["foo", "--bar", "baz"] @=? args
-    Right Commands.Goodbye ->
+    Success Commands.Goodbye ->
       assertFailure "unexpected result: Goodbye"
+    _ -> assertFailure "unexpected parse error"
 
 case_alts :: Assertion
 case_alts = do
   let result = run Alternatives.opts ["-b", "-a", "-b", "-a", "-a", "-b"]
   case result of
-    Left _ -> assertFailure "unexpected parse error"
-    Right xs -> [b, a, b, a, a, b] @=? xs
+    Success xs -> [b, a, b, a, a, b] @=? xs
       where a = Alternatives.A
             b = Alternatives.B
+    _ -> assertFailure "unexpected parse error"
 
 case_show_default :: Assertion
 case_show_default = do
@@ -107,12 +107,13 @@ case_show_default = do
       i = info (p <**> helper) idm
       result = run i ["--help"]
   case result of
-    Left (ParserFailure err _) -> do
-      msg <- err "test"
+    Failure (ParserFailure err) -> do
+      let (msg, _) = err "test"
       assertHasLine
         "  -n ARG                   set count (default: 0)"
         msg
-    Right r  -> assertFailure $ "unexpected result: " ++ show r
+    Success r -> assertFailure $ "unexpected result: " ++ show r
+    CompletionInvoked _ -> assertFailure "unexpected completion"
 
 case_alt_cont :: Assertion
 case_alt_cont = do
@@ -120,8 +121,8 @@ case_alt_cont = do
       i = info p idm
       result = run i ["-a", "-b"]
   case result of
-    Left _ -> return ()
-    Right r -> assertFailure $ "unexpected result: " ++ show r
+    Success r -> assertFailure $ "unexpected result: " ++ show r
+    _ -> return ()
 
 case_alt_help :: Assertion
 case_alt_help = do
@@ -153,8 +154,8 @@ case_many_args = do
       nargs = 20000
       result = run i (replicate nargs "foo")
   case result of
-    Left _ -> assertFailure "unexpected parse error"
-    Right xs -> nargs @=? length xs
+    Success xs -> nargs @=? length xs
+    _ -> assertFailure "unexpected parse error"
 
 case_disambiguate :: Assertion
 case_disambiguate = do
@@ -164,8 +165,8 @@ case_disambiguate = do
       i = info p idm
       result = execParserPure (prefs disambiguate) i ["--f"]
   case result of
-    Left _ -> assertFailure "unexpected parse error"
-    Right val -> 1 @=? val
+    Success val -> 1 @=? val
+    _ -> assertFailure "unexpected parse error"
 
 case_ambiguous :: Assertion
 case_ambiguous = do
@@ -175,8 +176,8 @@ case_ambiguous = do
       i = info p idm
       result = execParserPure (prefs disambiguate) i ["--ba"]
   case result of
-    Left _ -> return ()
-    Right val -> assertFailure $ "unexpected result " ++ show val
+    Success val -> assertFailure $ "unexpected result " ++ show val
+    _ -> return ()
 
 case_completion :: Assertion
 case_completion = do
@@ -186,12 +187,11 @@ case_completion = do
       i = info p idm
       result = run i ["--bash-completion-index", "0"]
   case result of
-    Left (ParserFailure err code) -> do
-      ExitSuccess @=? code
+    CompletionInvoked (CompletionResult err) -> do
       completions <- lines <$> err "test"
       ["--foo", "--bar"] @=? completions
-    Right val ->
-      assertFailure $ "unexpected result " ++ show val
+    Failure _ -> assertFailure "unexpected failure"
+    Success val -> assertFailure $ "unexpected result " ++ show val
 
 case_bind_usage :: Assertion
 case_bind_usage = do
@@ -199,11 +199,12 @@ case_bind_usage = do
       i = info (p <**> helper) briefDesc
       result = run i ["--help"]
   case result of
-    Left (ParserFailure err _) -> do
-      text <- head . lines <$> err "test"
+    Failure (ParserFailure err) -> do
+      let text = head . lines . fst $ err "test"
       "Usage: test [ARGS...]" @=? text
-    Right val ->
+    Success val ->
       assertFailure $ "unexpected result " ++ show val
+    CompletionInvoked _ -> assertFailure "unexpected completion"
 
 case_issue_19 :: Assertion
 case_issue_19 = do
@@ -214,15 +215,15 @@ case_issue_19 = do
       i = info (p <**> helper) idm
       result = run i ["-x", "foo"]
   case result of
-    Left _ -> assertFailure "unexpected parse error"
-    Right r -> Just "foo" @=? r
+    Success r -> Just "foo" @=? r
+    _ -> assertFailure "unexpected parse error"
 
 case_arguments1_none :: Assertion
 case_arguments1_none = do
   let p = arguments1 str idm
       i = info (p <**> helper) idm
       result = run i []
-  assertLeft result $ \(ParserFailure _ _) -> return ()
+  assertError result $ \(ParserFailure _) -> return ()
 
 case_arguments1_some :: Assertion
 case_arguments1_some = do
@@ -230,8 +231,8 @@ case_arguments1_some = do
       i = info (p <**> helper) idm
       result = run i ["foo", "--", "bar", "baz"]
   case result of
-    Left _ -> assertFailure "unexpected parse error"
-    Right r -> ["foo", "bar", "baz"] @=? r
+    Success r -> ["foo", "bar", "baz"] @=? r
+    _ -> assertFailure "unexpected parse error"
 
 case_issue_35 :: Assertion
 case_issue_35 = do
@@ -239,12 +240,9 @@ case_issue_35 = do
        <|> flag' False (short 'f')
       i = info p idm
       result = run i []
-  case result of
-    Left (ParserFailure err _) -> do
-      text <- head . lines <$> err "test"
-      "Usage: test -f" @=? text
-    Right val ->
-      assertFailure $ "unexpected result " ++ show val
+  assertError result $ \(ParserFailure err) -> do
+    let text = head . lines . fst . err $ "test"
+    "Usage: test -f" @=? text
 
 case_backtracking :: Assertion
 case_backtracking = do
@@ -254,7 +252,7 @@ case_backtracking = do
         <*> switch (short 'b')
       i = info (p1 <**> helper) idm
       result = execParserPure (prefs noBacktrack) i ["c", "-b"]
-  assertLeft result $ \ _ -> return ()
+  assertError result $ \ _ -> return ()
 
 case_error_context :: Assertion
 case_error_context = do
@@ -262,16 +260,13 @@ case_error_context = do
              <*> option (long "key")
       i = info p idm
       result = run i ["--port", "foo", "--key", "291"]
-  case result of
-    Left (ParserFailure err _) -> do
-      msg <- err "test"
+  assertError result $ \(ParserFailure err) -> do
+      let (msg, _) = err "test"
       let errMsg = head $ lines msg
       assertBool "no context in error message (option)"
                  ("port" `isInfixOf` errMsg)
       assertBool "no context in error message (value)"
                  ("foo" `isInfixOf` errMsg)
-    Right val ->
-      assertFailure $ "unexpected result " ++ show val
   where
     pk :: Int -> Int -> (Int, Int)
     pk = (,)
@@ -289,7 +284,7 @@ case_arg_order_1 = do
           <*> argument (condr odd) idm
       i = info p idm
       result = run i ["3", "6"]
-  assertLeft result $ \_ -> return ()
+  assertError result $ \_ -> return ()
 
 case_arg_order_2 :: Assertion
 case_arg_order_2 = do
@@ -300,8 +295,8 @@ case_arg_order_2 = do
       i = info p idm
       result = run i ["2", "-b", "3", "-a", "6"]
   case result of
-    Left _ -> assertFailure "unexpected parse error"
-    Right res -> (2, 6, 3) @=? res
+    Success res -> (2, 6, 3) @=? res
+    _ -> assertFailure "unexpected parse error"
 
 case_arg_order_3 :: Assertion
 case_arg_order_3 = do
@@ -312,17 +307,16 @@ case_arg_order_3 = do
       i = info p idm
       result = run i ["-n", "3", "5"]
   case result of
-    Left _ ->
-      assertFailure "unexpected parse error"
-    Right res -> (3, 5) @=? res
+    Success res -> (3, 5) @=? res
+    _ -> assertFailure "unexpected parse error"
 
 case_issue_47 :: Assertion
 case_issue_47 = do
   let p = nullOption (long "test" <> reader r <> value 9) :: Parser Int
       r _ = readerError "error message"
       result = run (info p idm) ["--test", "x"]
-  assertLeft result $ \(ParserFailure err _) -> do
-    text <- head . lines <$> err "test"
+  assertError result $ \(ParserFailure err) -> do
+    let text = head . lines . fst . err $ "test"
     assertBool "no error message"
                ("error message" `isInfixOf` text)
 

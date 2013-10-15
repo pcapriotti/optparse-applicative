@@ -6,19 +6,17 @@ import Control.Applicative ((<$>), (<*>), many)
 import Data.Foldable (asum)
 import Data.List (isPrefixOf)
 import Data.Maybe (fromMaybe, listToMaybe)
-import System.Exit (ExitCode(..))
 
 import Options.Applicative.Builder
 import Options.Applicative.Common
 import Options.Applicative.Internal
 import Options.Applicative.Types
 
-bashCompletionParser :: Parser a -> ParserPrefs -> Parser ParserFailure
+bashCompletionParser :: Parser a -> ParserPrefs -> Parser CompletionResult
 bashCompletionParser parser pprefs = complParser
   where
-    failure opts = ParserFailure
-      { errMessage = \progn -> unlines <$> opts progn
-      , errExitCode = ExitSuccess }
+    failure opts = CompletionResult
+      { execCompletion = \progn -> unlines <$> opts progn }
 
     complParser = asum
       [ failure <$>

@@ -55,15 +55,19 @@ customExecParser :: ParserPrefs -> ParserInfo a -> IO a
 customExecParser pprefs pinfo = do
   args <- getArgs
   case execParserPure pprefs pinfo args of
-    Right a -> return a
-    Left failure -> do
+    Success a -> return a
+    Failure failure -> do
       progn <- getProgName
-      let c = errExitCode failure
-      msg <- errMessage failure progn
-      case c of
+      let (msg, exit) = execFailure failure progn
+      case exit of
         ExitSuccess -> putStrLn msg
         _           -> hPutStrLn stderr msg
-      exitWith c
+      exitWith exit
+    CompletionInvoked compl -> do
+      progn <- getProgName
+      msg <- execCompletion compl progn
+      putStr msg
+      exitWith ExitSuccess
 
 -- | Run a program description in pure code.
 --
@@ -79,45 +83,40 @@ execParserMaybe = customExecParserMaybe (prefs idm)
 --
 -- See 'execParserMaybe' for details.
 customExecParserMaybe :: ParserPrefs -> ParserInfo a -> [String] -> Maybe a
-customExecParserMaybe pprefs pinfo
-  = either (const Nothing) Just
-  . execParserPure pprefs pinfo
-
-data Result a = Result a
-              | Extra ParserFailure
+customExecParserMaybe pprefs pinfo args = case execParserPure pprefs pinfo args of
+  Success r -> Just r
+  _         -> Nothing
 
 -- | The most general way to run a program description in pure code.
 execParserPure :: ParserPrefs       -- ^ Global preferences for this parser
                -> ParserInfo a      -- ^ Description of the program to run
                -> [String]          -- ^ Program arguments
-               -> Either ParserFailure a
+               -> ParserResult a
 execParserPure pprefs pinfo args =
   case runP p pprefs of
-    (Right r, _) -> case r of
-      Result a -> Right a
-      Extra failure -> Left failure
-    (Left msg, ctx) -> Left $
-      parserFailure pprefs pinfo msg ctx
+    (Right (Right r), _) -> Success r
+    (Right (Left c), _) -> CompletionInvoked c
+    (Left err, ctx) -> Failure $ parserFailure pprefs pinfo err ctx
   where
     parser = infoParser pinfo
-    parser' = (Extra <$> bashCompletionParser parser pprefs)
-          <|> (Result <$> parser)
+    parser' = (Left <$> bashCompletionParser parser pprefs)
+          <|> (Right <$> parser)
     p = runParserFully parser' args
 
 parserFailure :: ParserPrefs -> ParserInfo a
               -> ParseError -> Context
               -> ParserFailure
-parserFailure pprefs pinfo msg ctx = ParserFailure
-  { errMessage = \progn -> do
-      let h = with_context ctx pinfo $ \names pinfo' -> mconcat
-                [ base_help pinfo'
-                , usage_help progn names pinfo'
-                , error_help ]
-      return . render_help $ h
-  , errExitCode = case msg of
-      InfoMsg _ -> ExitSuccess
-      _         -> ExitFailure (infoFailureCode pinfo) }
+parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
+  let h = with_context ctx pinfo $ \names pinfo' -> mconcat
+            [ base_help pinfo'
+            , usage_help progn names pinfo'
+            , error_help ]
+  in (render_help h, exit_code)
   where
+    exit_code = case msg of
+      InfoMsg _ -> ExitSuccess
+      _         -> ExitFailure (infoFailureCode pinfo)
+
     with_context :: Context
                  -> ParserInfo a
                  -> (forall b . [String] -> ParserInfo b -> c)
