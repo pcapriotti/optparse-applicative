@@ -22,8 +22,7 @@ listCompleter = listIOCompleter . pure
 
 bashCompleter :: String -> Completer
 bashCompleter action = Completer $ \word -> do
-  let cmd = unwords ["compgen", "-A", action, word]
-
+  let cmd = unwords ["compgen", "-A", action, "--", word]
   result <- tryIO $ readProcess "bash" ["-c", cmd] ""
   return . lines . either (const []) id $ result
 
