@@ -3,6 +3,8 @@ module Options.Applicative.Builder.Internal (
   Mod(..),
   HasName(..),
   HasCompleter(..),
+  HasValue,
+  HasMetavar,
   OptionFields(..),
   FlagFields(..),
   CommandFields(..),
@@ -61,6 +63,23 @@ instance HasCompleter OptionFields where
 
 instance HasCompleter ArgumentFields where
   modCompleter f p = p { argCompleter = f (argCompleter p) }
+
+class HasValue f where
+  -- this is just so that it is not necessary to specify the kind of f
+  hasValueDummy :: f a -> ()
+instance HasValue OptionFields where
+  hasValueDummy _ = ()
+instance HasValue ArgumentFields where
+  hasValueDummy _ = ()
+
+class HasMetavar f where
+  hasMetavarDummy :: f a -> ()
+instance HasMetavar OptionFields where
+  hasMetavarDummy _ = ()
+instance HasMetavar ArgumentFields where
+  hasMetavarDummy _ = ()
+instance HasMetavar CommandFields where
+  hasMetavarDummy _ = ()
 
 -- mod --
 

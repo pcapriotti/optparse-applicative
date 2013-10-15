@@ -136,7 +136,7 @@ long :: HasName f => String -> Mod f a
 long = fieldMod . name . OptLong
 
 -- | Specify a default value for an option.
-value :: a -> Mod f a
+value :: HasValue f => a -> Mod f a
 value x = Mod id (DefaultProp (Just x) Nothing) id
 
 -- | Specify a function to show the default value for an option.
@@ -169,7 +169,7 @@ noArgError :: ParseError -> Mod OptionFields a
 noArgError e = fieldMod $ \p -> p { optNoArgError = e }
 
 -- | Specify the metavariable.
-metavar :: String -> Mod f a
+metavar :: HasMetavar f => String -> Mod f a
 metavar var = optionMod $ \p -> p { propMetaVar = var }
 
 -- | Hide this option from the brief description.
