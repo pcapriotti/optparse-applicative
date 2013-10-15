@@ -40,22 +40,27 @@ bashCompletionQuery parser pprefs ws i _ = case runCompletion compl pprefs of
       . mapParser (\_ -> opt_completions)
 
     opt_completions opt = case optMain opt of
-      OptReader ns _ _ -> show_names ns
-      FlagReader ns _  -> show_names ns
+      OptReader ns _ _ -> return $ show_names ns
+      FlagReader ns _  -> return $ show_names ns
       ArgReader rdr    -> run_completer (crCompleter rdr)
-      CmdReader ns _   -> filter_names ns
+      CmdReader ns _   -> return $ filter_names ns
 
+    show_name :: OptName -> String
     show_name (OptShort c) = '-':[c]
     show_name (OptLong name) = "--" ++ name
 
+    show_names :: [OptName] -> [String]
     show_names = filter_names . map show_name
-    filter_names = return . filter is_completion
+
+    filter_names :: [String] -> [String]
+    filter_names = filter is_completion
 
     run_completer :: Completer -> IO [String]
     run_completer c = runCompleter c (fromMaybe "" (listToMaybe ws''))
 
     (ws', ws'') = splitAt i ws
 
+    is_completion :: String -> Bool
     is_completion =
       case ws'' of
         w:_ -> isPrefixOf w
