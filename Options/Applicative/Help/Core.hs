@@ -4,9 +4,12 @@ module Options.Applicative.Help.Core (
   fullDesc,
   ParserHelp(..),
   helpText,
-  parserHelp,
   headerHelp,
   usageHelp,
+  bodyHelp,
+  footerHelp,
+  parserHelp,
+  parserUsage,
   ) where
 
 import Control.Monad (guard)
@@ -124,21 +127,27 @@ headerHelp chunk = ParserHelp chunk mempty mempty mempty
 usageHelp :: Chunk Doc -> ParserHelp
 usageHelp chunk = ParserHelp mempty chunk mempty mempty
 
+bodyHelp :: Chunk Doc -> ParserHelp
+bodyHelp chunk = ParserHelp mempty mempty chunk mempty
+
+footerHelp :: Chunk Doc -> ParserHelp
+footerHelp chunk = ParserHelp mempty mempty mempty chunk
+
 helpText :: ParserHelp -> Doc
 helpText (ParserHelp h u b f) = extract . vsepChunks $ [h, u, b, f]
 
 -- | Generate the help text for a program.
-parserHelp :: ParserPrefs -> ParserInfo a -> ParserHelp
-parserHelp pprefs pinfo = ParserHelp
-  { helpHeader = infoHeader pinfo
-  , helpUsage = mempty
-  , helpBody = vsepChunks
-      [ do guard (infoFullDesc pinfo)
-           doc <- fullDesc pprefs p
-           return $ vsep [string "Available options:", doc]
-      , do guard (infoFullDesc pinfo)
-           doc <- cmdDesc p
-           return $ vsep [string "Available commands:", doc] ]
-  , helpFooter = infoFooter pinfo }
+parserHelp :: ParserPrefs -> Parser a -> ParserHelp
+parserHelp pprefs p = bodyHelp . vsepChunks $
+  [ with_title "Available options:" (fullDesc pprefs p)
+  , with_title "Available commands:" (cmdDesc p) ]
   where
-    p = infoParser pinfo
+    with_title :: String -> Chunk Doc -> Chunk Doc
+    with_title title = fmap (string title .$.)
+
+-- | Generate option summary.
+parserUsage :: ParserPrefs -> Parser a -> String -> Doc
+parserUsage pprefs p progn = hsep $
+  [ string "Usage:"
+  , string progn
+  , align (extract (briefDesc pprefs p)) ]

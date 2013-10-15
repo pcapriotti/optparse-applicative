@@ -10,7 +10,6 @@ module Options.Applicative.Extra (
   customExecParser,
   customExecParserMaybe,
   execParserPure,
-  usage,
   ParserFailure(..),
   ) where
 
@@ -138,7 +137,7 @@ parserFailure pprefs pinfo msg ctx = ParserFailure
     usage_help progn names i = case msg of
       InfoMsg _ -> mempty
       _         -> usageHelp $ vcatChunks
-        [ pure . usage pprefs (infoParser i) . unwords $ progn : names
+        [ pure . parserUsage pprefs (infoParser i) . unwords $ progn : names
         , fmap (indent 2) . infoProgDesc $ i ]
 
     error_help = headerHelp $ case msg of
@@ -149,13 +148,9 @@ parserFailure pprefs pinfo msg ctx = ParserFailure
     base_help :: ParserInfo a -> ParserHelp
     base_help i
       | show_full_help
-      = parserHelp pprefs $ i
+      = mconcat [h, f, parserHelp pprefs (infoParser i)]
       | otherwise
-      = headerHelp (infoHeader pinfo)
-
--- | Generate option summary.
-usage :: ParserPrefs -> Parser a -> String -> Doc
-usage pprefs p progn = hsep $
-  [ string "Usage:"
-  , string progn
-  , align (extract (briefDesc pprefs p)) ]
+      = h
+      where
+        h = headerHelp (infoHeader i)
+        f = footerHelp (infoFooter i)
