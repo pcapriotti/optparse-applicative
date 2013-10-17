@@ -131,7 +131,7 @@ strOption
 ```
 
 creates a regular option with a string argument (which can be referred to as
-`FILE` in the help text and documentation), a long name "option" and a short
+`FILE` in the help text and documentation), a long name "output" and a short
 name "o". See below for more information on the builder syntax and modifiers.
 
 A regular option can return an object of any type, provided you specify a
@@ -163,7 +163,7 @@ data FluxCapacitor = ...
 
 parseFluxCapacitor :: Monad m => String -> m FluxCapacitor
 
-option
+nullOption
   ( long "flux-capacitor"
  <> reader parseFluxCapacitor )
 ```
@@ -280,7 +280,7 @@ main :: IO ()
 main = join $ execParser (info opts idm)
 ```
 
-# Option builders
+## Option builders
 
 Builders allow you to define parsers using a convenient combinator-based
 syntax. Each builder takes a **modifier** as parameter, and returns a parser.
@@ -296,7 +296,7 @@ using the composition function `mappend` (or simply `(<>)`).
 See the haddock documentation for `Options.Applicative.Builder` for a full list
 of builders and modifiers.
 
-# Arrow interface
+## Arrow interface
 
 It is also possible to use the [Arrow syntax][arrows] to combine basic parsers.
 
