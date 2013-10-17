@@ -221,6 +221,13 @@ Arguments are only displayed in the brief help text, so there's no need to
 attach a description to them. They should be manually documented in the program
 description.
 
+Note that arguments starting with `-` are considered options by default, and
+will not be considered by an `argument` parser.
+
+However, parsers always accept a special argument: `--`. When a `--` is found on
+the command line, all the following words are considered by `argument` parsers,
+regardless of whether they start with `-` or not.
+
 ### Commands
 
 A **command** can be used to specify a sub-parser to be used when a certain
