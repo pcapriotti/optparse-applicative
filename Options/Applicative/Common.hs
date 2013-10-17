@@ -45,12 +45,12 @@ module Options.Applicative.Common (
   optionNames
   ) where
 
-import Control.Applicative (pure, (<*>), (<$>), (<|>), Applicative)
+import Control.Applicative (pure, (<*>), (<$>), (<|>), (<$))
 import Control.Monad (guard, mzero, msum, when, liftM, MonadPlus)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), get, put, runStateT)
 import Data.List (isPrefixOf)
-import Data.Maybe (maybeToList, isJust)
+import Data.Maybe (maybeToList, isJust, isNothing)
 import Data.Monoid (Monoid(..))
 
 import Options.Applicative.Internal
@@ -85,24 +85,9 @@ instance Monoid MatchResult where
 
 type Args = [String]
 
-optMatches :: MonadP m => Bool -> OptReader a -> String -> Maybe (StateT Args m a)
-optMatches disambiguate opt arg = case opt of
-  OptReader names rdr no_arg_err -> do
-    (arg1, val) <- parsed
-    guard $ has_name arg1 names
-    Just $ do
-      args <- get
-      let mb_args = uncons $ maybeToList val ++ args
-      let missing_arg = lift $ missingArgP no_arg_err (crCompleter rdr)
-      (arg', args') <- maybe missing_arg return mb_args
-      put args'
-      case runReadM (crReader rdr arg') of
-        Left e -> lift $ errorFor arg1 e
-        Right r -> return r
-  FlagReader names x -> do
-    (arg1, Nothing) <- parsed
-    guard $ has_name arg1 names
-    Just $ return x
+argMatches :: MonadP m => OptReader a -> String
+           -> Maybe (StateT Args m a)
+argMatches opt arg = case opt of
   ArgReader rdr -> do
     result <- crReader rdr arg
     Just $ return result
@@ -115,23 +100,31 @@ optMatches disambiguate opt arg = case opt of
             | otherwise = \p a
             -> (,) <$> runParserFully p a <*> pure []
       runSubparser (infoParser subp) args
+  _ -> Nothing
+
+optMatches :: MonadP m => Bool -> OptReader a -> OptWord -> Maybe (StateT Args m a)
+optMatches disambiguate opt (OptWord arg1 val) = case opt of
+  OptReader names rdr no_arg_err -> do
+    guard $ has_name arg1 names
+    Just $ do
+      args <- get
+      let mb_args = uncons $ maybeToList val ++ args
+      let missing_arg = lift $ missingArgP no_arg_err (crCompleter rdr)
+      (arg', args') <- maybe missing_arg return mb_args
+      put args'
+      case runReadM (crReader rdr arg') of
+        Left e -> lift $ errorFor arg1 e
+        Right r -> return r
+  FlagReader names x -> do
+    guard $ has_name arg1 names
+    guard $ isNothing val
+    Just $ return x
+  _ -> Nothing
   where
     errorFor name (ErrorMsg msg) =
       errorP (ErrorMsg ("option " ++ showOption name ++ ": " ++ msg))
     errorFor _ e = errorP e
 
-    parsed =
-      case arg of
-        '-' : '-' : arg1 ->
-          Just $
-          case span (/= '=') arg1 of
-            (_, "") -> (OptLong arg1, Nothing)
-            (arg1', _ : rest) -> (OptLong arg1', Just rest)
-        '-' : arg1 ->
-          case arg1 of
-            [] -> Nothing
-            (a : rest) -> Just (OptShort a, if null rest then Nothing else Just rest)
-        _ -> Nothing
     has_name a
       | disambiguate = any (isOptionPrefix a)
       | otherwise = elem a
@@ -139,6 +132,21 @@ optMatches disambiguate opt arg = case opt of
 isArg :: OptReader a -> Bool
 isArg (ArgReader _) = True
 isArg _ = False
+
+data OptWord = OptWord OptName (Maybe String)
+
+parseWord :: String -> Maybe OptWord
+parseWord ('-' : '-' : w) = Just $ let
+  (opt, arg) = case span (/= '=') w of
+    (_, "") -> (w, Nothing)
+    (w', _ : rest) -> (w', Just rest)
+  in OptWord (OptLong opt) arg
+parseWord ('-' : w) = case w of
+  [] -> Nothing
+  (a : rest) -> Just $ let
+    arg = rest <$ guard (not (null rest))
+    in OptWord (OptShort a) arg
+parseWord _ = Nothing
 
 searchParser :: Monad m
              => (forall r . Option r -> NondetT m r)
@@ -158,29 +166,29 @@ searchParser f (BindP p k) = do
   x <- hoistMaybe (evalParser p')
   return (k x)
 
-searchOpt :: MonadP m => ParserPrefs -> String -> Parser a
+searchOpt :: MonadP m => ParserPrefs -> OptWord -> Parser a
           -> NondetT (StateT Args m) (Parser a)
-searchOpt pprefs arg = searchParser $ \opt -> do
-  guard . not . isArg . optMain $ opt
+searchOpt pprefs w = searchParser $ \opt -> do
   let disambiguate = prefDisambiguate pprefs
                   && optVisibility opt > Internal
-  case optMatches disambiguate (optMain opt) arg of
+  case optMatches disambiguate (optMain opt) w of
     Just matcher -> lift matcher
     Nothing -> mzero
 
 searchArg :: MonadP m => String -> Parser a
           -> NondetT (StateT Args m) (Parser a)
 searchArg arg = searchParser $ \opt -> do
-  guard . isArg . optMain $ opt
-  cut
-  case optMatches False (optMain opt) arg of
+  when (isArg (optMain opt)) cut
+  case argMatches (optMain opt) arg of
     Just matcher -> lift matcher
     Nothing -> mzero
 
 stepParser :: MonadP m => ParserPrefs -> String -> Parser a
            -> NondetT (StateT Args m) (Parser a)
-stepParser pprefs arg p =
-  searchOpt pprefs arg p <|> searchArg arg p
+stepParser pprefs arg p = msum
+  [ do w <- hoistMaybe $ parseWord arg
+       searchOpt pprefs w p
+  , searchArg arg p ]
 
 -- | Apply a 'Parser' to a command line, and return a result and leftover
 -- arguments.  This function returns an error if any parsing error occurs, or
