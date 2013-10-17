@@ -45,8 +45,8 @@ module Options.Applicative.Common (
   optionNames
   ) where
 
-import Control.Applicative (pure, (<*>), (<$>), (<|>))
-import Control.Monad (guard, mzero, msum, when)
+import Control.Applicative (pure, (<*>), (<$>), (<|>), Applicative)
+import Control.Monad (guard, mzero, msum, when, liftM, MonadPlus)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), get, put, runStateT)
 import Data.List (isPrefixOf)
@@ -140,29 +140,47 @@ isArg :: OptReader a -> Bool
 isArg (ArgReader _) = True
 isArg _ = False
 
+searchParser :: Monad m
+             => (forall r . Option r -> NondetT m r)
+             -> Parser a -> NondetT m (Parser a)
+searchParser _ (NilP _) = mzero
+searchParser f (OptP opt) = liftM pure (f opt)
+searchParser f (MultP p1 p2) = foldr1 (<!>)
+  [ do p1' <- searchParser f p1
+       return (p1' <*> p2)
+  , do p2' <- searchParser f p2
+       return (p1 <*> p2') ]
+searchParser f (AltP p1 p2) = msum
+  [ searchParser f p1
+  , searchParser f p2 ]
+searchParser f (BindP p k) = do
+  p' <- searchParser f p
+  x <- hoistMaybe (evalParser p')
+  return (k x)
+
+searchOpt :: MonadP m => ParserPrefs -> String -> Parser a
+          -> NondetT (StateT Args m) (Parser a)
+searchOpt pprefs arg = searchParser $ \opt -> do
+  guard . not . isArg . optMain $ opt
+  let disambiguate = prefDisambiguate pprefs
+                  && optVisibility opt > Internal
+  case optMatches disambiguate (optMain opt) arg of
+    Just matcher -> lift matcher
+    Nothing -> mzero
+
+searchArg :: MonadP m => String -> Parser a
+          -> NondetT (StateT Args m) (Parser a)
+searchArg arg = searchParser $ \opt -> do
+  guard . isArg . optMain $ opt
+  cut
+  case optMatches False (optMain opt) arg of
+    Just matcher -> lift matcher
+    Nothing -> mzero
+
 stepParser :: MonadP m => ParserPrefs -> String -> Parser a
            -> NondetT (StateT Args m) (Parser a)
-stepParser _ _ (NilP _) = mzero
-stepParser prefs arg (OptP opt) = do
-  when (isArg (optMain opt)) cut
-  case optMatches disambiguate (optMain opt) arg of
-    Just matcher -> pure <$> lift matcher
-    Nothing -> mzero
-  where
-    disambiguate = prefDisambiguate prefs
-                && optVisibility opt > Internal
-stepParser prefs arg (MultP p1 p2) = foldr1 (<!>)
-  [ do p1' <- stepParser prefs arg p1
-       return (p1' <*> p2)
-  , do p2' <- stepParser prefs arg p2
-       return (p1 <*> p2') ]
-stepParser prefs arg (AltP p1 p2) = msum
-  [ stepParser prefs arg p1
-  , stepParser prefs arg p2 ]
-stepParser prefs arg (BindP p k) = do
-  p' <- stepParser prefs arg p
-  x <- hoistMaybe $ evalParser p'
-  return (k x)
+stepParser pprefs arg p =
+  searchOpt pprefs arg p <|> searchArg arg p
 
 -- | Apply a 'Parser' to a command line, and return a result and leftover
 -- arguments.  This function returns an error if any parsing error occurs, or
