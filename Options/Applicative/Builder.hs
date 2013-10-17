@@ -19,7 +19,6 @@ module Options.Applicative.Builder (
   -- creates a parser for an option called \"output\".
   subparser,
   argument,
-  argument',
   arguments,
   arguments1,
   flag,
