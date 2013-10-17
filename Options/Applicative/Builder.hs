@@ -61,6 +61,8 @@ module Options.Applicative.Builder (
   auto,
   str,
   disabled,
+  readerAbort,
+  readerError,
 
   -- * Builder for 'ParserInfo'
   InfoMod,
@@ -83,6 +85,7 @@ module Options.Applicative.Builder (
 
   -- * Types
   Mod,
+  ReadM,
   OptionFields,
   FlagFields,
   ArgumentFields,

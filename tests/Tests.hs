@@ -9,7 +9,6 @@ import qualified Examples.Alternatives as Alternatives
 import Control.Monad
 import Data.List
 import Options.Applicative
-import Options.Applicative.Types
 import System.Exit
 import Test.HUnit
 import Test.Framework.Providers.HUnit

@@ -109,6 +109,7 @@ data CReader m a = CReader
 instance Functor m => Functor (CReader m) where
   fmap f (CReader c r) = CReader c (fmap f . r)
 
+-- | A newtype over the 'Either' monad used by option readers.
 newtype ReadM a = ReadM
   { runReadM :: Either ParseError a }
 
@@ -130,9 +131,11 @@ instance MonadPlus ReadM where
     Left _ -> m2
     Right r -> return r
 
+-- | Abort option reader by exiting with a 'ParseError'.
 readerAbort :: ParseError -> ReadM a
 readerAbort = ReadM . Left
 
+-- | Abort option reader by exiting with an error message.
 readerError :: String -> ReadM a
 readerError = readerAbort . ErrorMsg
 
