@@ -235,6 +235,14 @@ case_arguments1_some = do
     Left _ -> assertFailure "unexpected parse error"
     Right r -> ["foo", "bar", "baz"] @=? r
 
+case_arguments_switch :: Assertion
+case_arguments_switch = do
+  let p =  switch (short 'x')
+        *> arguments str idm
+      i = info p idm
+      result = run i ["--", "-x"]
+  assertRight result $ \args -> ["-x"] @=? args
+
 case_issue_35 :: Assertion
 case_issue_35 = do
   let p =  flag' True (short 't' <> hidden)
