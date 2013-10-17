@@ -64,9 +64,14 @@ instance Functor ParserInfo where
 -- | Global preferences for a top-level 'Parser'.
 data ParserPrefs = ParserPrefs
   { prefMultiSuffix :: String    -- ^ metavar suffix for multiple options
-  , prefDisambiguate :: Bool     -- ^ automatically disambiguate abbreviations (default: False)
-  , prefShowHelpOnError :: Bool  -- ^ always show help text on parse errors (default: False)
-  , prefBacktrack :: Bool        -- ^ backtrack to parent parser when a subcommand fails (default: True)
+  , prefDisambiguate :: Bool     -- ^ automatically disambiguate abbreviations
+                                 -- (default: False)
+  , prefShowHelpOnError :: Bool  -- ^ always show help text on parse errors
+                                 -- (default: False)
+  , prefBacktrack :: Bool        -- ^ backtrack to parent parser when a
+                                 -- subcommand fails (default: True)
+  , prefIntersperse :: Bool      -- ^ allow regular options and flags to occur
+                                 -- after arguments (default: True)
   }
 
 data OptName = OptShort !Char

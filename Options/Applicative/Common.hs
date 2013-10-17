@@ -96,7 +96,9 @@ argMatches opt arg = case opt of
       setContext (Just arg) subp
       prefs <- getPrefs
       let runSubparser
-            | prefBacktrack prefs = runParser SkipOpts
+            | prefBacktrack prefs = \p a -> do
+                policy <- getPolicy
+                runParser policy p a
             | otherwise = \p a
             -> (,) <$> runParserFully p a <*> pure []
       runSubparser (infoParser subp) args
@@ -224,9 +226,17 @@ parseError arg = errorP . ErrorMsg $ msg
       ('-':_) -> "Invalid option `" ++ arg ++ "'"
       _       -> "Invalid argument `" ++ arg ++ "'"
 
+getPolicy :: MonadP m => m ArgPolicy
+getPolicy = do
+  prefs <- getPrefs
+  return $ if prefIntersperse prefs
+             then SkipOpts
+             else AllowOpts
+
 runParserFully :: MonadP m => Parser a -> Args -> m a
 runParserFully p args = do
-  (r, args') <- runParser SkipOpts p args
+  policy <- getPolicy
+  (r, args') <- runParser policy p args
   guard $ null args'
   return r
 

@@ -78,6 +78,7 @@ module Options.Applicative.Builder (
   disambiguate,
   showHelpOnError,
   noBacktrack,
+  noIntersperse,
   prefs,
 
   -- * Types
@@ -345,6 +346,9 @@ showHelpOnError = PrefsMod $ \p -> p { prefShowHelpOnError = True }
 noBacktrack :: PrefsMod
 noBacktrack = PrefsMod $ \p -> p { prefBacktrack = False }
 
+noIntersperse :: PrefsMod
+noIntersperse = PrefsMod $ \p -> p { prefIntersperse = False }
+
 prefs :: PrefsMod -> ParserPrefs
 prefs m = applyPrefsMod m base
   where
@@ -352,7 +356,8 @@ prefs m = applyPrefsMod m base
       { prefMultiSuffix = ""
       , prefDisambiguate = False
       , prefShowHelpOnError = False
-      , prefBacktrack = True }
+      , prefBacktrack = True
+      , prefIntersperse = True }
 
 -- convenience shortcuts
 

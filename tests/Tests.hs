@@ -343,5 +343,14 @@ case_issue_50 = do
       result = run (info p idm) ["--version", "test"]
   assertRight result $ \r -> "test" @=? r
 
+case_intersperse_1 :: Assertion
+case_intersperse_1 = do
+  let p = arguments str (metavar "ARGS")
+          <* switch (short 'x')
+      result = execParserPure (prefs noIntersperse)
+                              (info p idm)
+                              ["a", "-x", "b"]
+  assertRight result $ \args -> ["a", "-x", "b"] @=? args
+
 main :: IO ()
 main = $(defaultMainGenerator)
