@@ -96,7 +96,7 @@ argMatches opt arg = case opt of
       setContext (Just arg) subp
       prefs <- getPrefs
       let runSubparser
-            | prefBacktrack prefs = runParser
+            | prefBacktrack prefs = runParser SkipOpts
             | otherwise = \p a
             -> (,) <$> runParserFully p a <*> pure []
       runSubparser (infoParser subp) args
@@ -183,30 +183,39 @@ searchArg arg = searchParser $ \opt -> do
     Just matcher -> lift matcher
     Nothing -> mzero
 
-stepParser :: MonadP m => ParserPrefs -> String -> Parser a
-           -> NondetT (StateT Args m) (Parser a)
-stepParser pprefs arg p = msum
-  [ do w <- hoistMaybe $ parseWord arg
-       searchOpt pprefs w p
-  , searchArg arg p ]
+data ArgPolicy
+  = SkipOpts
+  | AllowOpts
+  deriving Eq
+
+stepParser :: MonadP m => ParserPrefs -> ArgPolicy -> String
+           -> Parser a -> NondetT (StateT Args m) (Parser a)
+stepParser pprefs SkipOpts arg p = case parseWord arg of
+  Just w -> searchOpt pprefs w p
+  Nothing -> searchArg arg p
+stepParser pprefs AllowOpts arg p = msum
+  [ searchArg arg p
+  , do w <- hoistMaybe (parseWord arg)
+       searchOpt pprefs w p ]
 
 -- | Apply a 'Parser' to a command line, and return a result and leftover
 -- arguments.  This function returns an error if any parsing error occurs, or
 -- if any options are missing and don't have a default value.
-runParser :: MonadP m => Parser a -> Args -> m (a, Args)
-runParser p args = case args of
+runParser :: MonadP m => ArgPolicy -> Parser a -> Args -> m (a, Args)
+runParser policy p args = case args of
   [] -> exitP p result
+  ("--" : argt) -> runParser AllowOpts p argt
   (arg : argt) -> do
     prefs <- getPrefs
     (mp', args') <- do_step prefs arg argt
     case mp' of
       Nothing -> hoistMaybe result <|> parseError arg
-      Just p' -> runParser p' args'
+      Just p' -> runParser policy p' args'
   where
     result = (,) <$> evalParser p <*> pure args
     do_step prefs arg argt = (`runStateT` argt)
                            . disamb (not (prefDisambiguate prefs))
-                           $ stepParser prefs arg p
+                           $ stepParser prefs policy arg p
 
 parseError :: MonadP m => String -> m a
 parseError arg = errorP . ErrorMsg $ msg
@@ -217,7 +226,7 @@ parseError arg = errorP . ErrorMsg $ msg
 
 runParserFully :: MonadP m => Parser a -> Args -> m a
 runParserFully p args = do
-  (r, args') <- runParser p args
+  (r, args') <- runParser SkipOpts p args
   guard $ null args'
   return r
 
