@@ -91,7 +91,6 @@ library
                        Options.Applicative.Arrows,
                        Options.Applicative.BashCompletion,
                        Options.Applicative.Builder,
-                       Options.Applicative.Builder.Arguments,
                        Options.Applicative.Builder.Completer,
                        Options.Applicative.Builder.Internal,
                        Options.Applicative.Common,
