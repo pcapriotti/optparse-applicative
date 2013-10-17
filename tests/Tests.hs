@@ -29,6 +29,13 @@ assertLeft x f = either f err x
   where
     err b = assertFailure $ "expected Left, got " ++ show b
 
+assertRight :: Either ParserFailure b -> (b -> Assertion) -> Assertion
+assertRight x f = either err f x
+  where
+    err (ParserFailure e _) = do
+      msg <- e "test"
+      assertFailure $ "unexpected parse error\n" ++ msg
+
 assertHasLine :: String -> String -> Assertion
 assertHasLine l s
   | l `elem` lines s = return ()
@@ -320,6 +327,13 @@ case_issue_47 = do
     text <- head . lines <$> err "test"
     assertBool "no error message"
                ("error message" `isInfixOf` text)
+
+case_issue_50 :: Assertion
+case_issue_50 = do
+  let p = argument str (metavar "INPUT")
+          <* switch (long "version")
+      result = run (info p idm) ["--version", "test"]
+  assertRight result $ \r -> "test" @=? r
 
 main :: IO ()
 main = $(defaultMainGenerator)
