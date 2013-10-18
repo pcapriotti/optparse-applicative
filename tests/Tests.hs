@@ -350,5 +350,20 @@ case_intersperse_1 = do
                  ["a", "-x", "b"]
   assertRight result $ \args -> ["a", "-x", "b"] @=? args
 
+case_intersperse_2 :: Assertion
+case_intersperse_2 = do
+  let p = subparser
+          (  command "run"
+             ( info (arguments str (metavar "OPTIONS"))
+                    noIntersperse )
+          <> command "test"
+             ( info (arguments str (metavar "ARGS"))
+                    idm ) )
+      i = info p idm
+      result1 = run i ["run", "-x", "foo"]
+      result2 = run i ["test", "-x", "bar"]
+  assertRight result1 $ \args -> ["-x", "foo"] @=? args
+  assertLeft result2 $ \_ -> return ()
+
 main :: IO ()
 main = $(defaultMainGenerator)
