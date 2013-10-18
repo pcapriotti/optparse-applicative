@@ -10,8 +10,7 @@ module Options.Applicative.Help.Chunk
   , isEmpty
   , stringChunk
   , paragraph
-  , extract
-  , duplicate
+  , extractChunk
   , tabulate
   ) where
 
@@ -64,10 +63,11 @@ instance Monoid a => Monoid (Chunk a) where
   mappend = chunked mappend
 
 -- a constrained comonad instance
-extract :: Monoid a => Chunk a -> a
-extract = fromMaybe mempty . unChunk
-duplicate :: Monoid a => Chunk a -> Chunk (Chunk a)
-duplicate = fmap pure
+extractChunk :: Monoid a => Chunk a -> a
+extractChunk = fromMaybe mempty . unChunk
+-- we could also define:
+-- duplicate :: Monoid a => Chunk a -> Chunk (Chunk a)
+-- duplicate = fmap pure
 
 -- | Concatenates two 'Chunk's with a space in between.  If one is empty, this
 -- just returns the other one.
