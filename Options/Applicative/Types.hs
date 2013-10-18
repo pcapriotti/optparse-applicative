@@ -50,12 +50,15 @@ instance Error ParseError where
 
 -- | A full description for a runnable 'Parser' for a program.
 data ParserInfo a = ParserInfo
-  { infoParser :: Parser a            -- ^ the option parser for the program
-  , infoFullDesc :: Bool              -- ^ whether the help text should contain full documentation
-  , infoProgDesc :: String            -- ^ brief parser description
-  , infoHeader :: String              -- ^ header of the full parser description
-  , infoFooter :: String              -- ^ footer of the full parser description
-  , infoFailureCode :: Int            -- ^ exit code for a parser failure
+  { infoParser :: Parser a  -- ^ the option parser for the program
+  , infoFullDesc :: Bool    -- ^ whether the help text should contain full
+                            -- documentation
+  , infoProgDesc :: String  -- ^ brief parser description
+  , infoHeader :: String    -- ^ header of the full parser description
+  , infoFooter :: String    -- ^ footer of the full parser description
+  , infoFailureCode :: Int  -- ^ exit code for a parser failure
+  , infoIntersperse :: Bool -- ^ allow regular options and flags to occur after
+                            -- arguments (default: True)
   }
 
 instance Functor ParserInfo where
@@ -70,8 +73,6 @@ data ParserPrefs = ParserPrefs
                                  -- (default: False)
   , prefBacktrack :: Bool        -- ^ backtrack to parent parser when a
                                  -- subcommand fails (default: True)
-  , prefIntersperse :: Bool      -- ^ allow regular options and flags to occur
-                                 -- after arguments (default: True)
   }
 
 data OptName = OptShort !Char

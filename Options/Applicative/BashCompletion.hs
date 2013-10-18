@@ -13,8 +13,8 @@ import Options.Applicative.Common
 import Options.Applicative.Internal
 import Options.Applicative.Types
 
-bashCompletionParser :: Parser a -> ParserPrefs -> Parser ParserFailure
-bashCompletionParser parser pprefs = complParser
+bashCompletionParser :: ParserInfo a -> ParserPrefs -> Parser ParserFailure
+bashCompletionParser pinfo pprefs = complParser
   where
     failure opts = ParserFailure
       { errMessage = \progn -> unlines <$> opts progn
@@ -22,7 +22,7 @@ bashCompletionParser parser pprefs = complParser
 
     complParser = asum
       [ failure <$>
-        (   bashCompletionQuery parser pprefs
+        (   bashCompletionQuery pinfo pprefs
         <$> (many . strOption) (long "bash-completion-word"
                                   `mappend` internal)
         <*> option (long "bash-completion-index" `mappend` internal) )
@@ -30,8 +30,8 @@ bashCompletionParser parser pprefs = complParser
           (bashCompletionScript <$>
             strOption (long "bash-completion-script" `mappend` internal)) ]
 
-bashCompletionQuery :: Parser a -> ParserPrefs -> [String] -> Int -> String -> IO [String]
-bashCompletionQuery parser pprefs ws i _ = case runCompletion compl pprefs of
+bashCompletionQuery :: ParserInfo a -> ParserPrefs -> [String] -> Int -> String -> IO [String]
+bashCompletionQuery pinfo pprefs ws i _ = case runCompletion compl pprefs of
   Just (Left (SomeParser p)) -> list_options p
   Just (Right c)             -> run_completer c
   _                          -> return []
@@ -64,8 +64,8 @@ bashCompletionQuery parser pprefs ws i _ = case runCompletion compl pprefs of
         _ -> const True
 
     compl = do
-      setParser Nothing parser
-      runParserFully parser (drop 1 ws')
+      setParser Nothing (infoParser pinfo)
+      runParserInfo pinfo (drop 1 ws')
 
 bashCompletionScript :: String -> String -> IO [String]
 bashCompletionScript prog progn = return

@@ -101,10 +101,10 @@ execParserPure pprefs pinfo args =
     (Left msg, ctx) -> Left $
       parserFailure pprefs pinfo msg ctx
   where
-    parser = infoParser pinfo
-    parser' = (Extra <$> bashCompletionParser parser pprefs)
-          <|> (Result <$> parser)
-    p = runParserFully parser' args
+    pinfo' = pinfo
+      { infoParser = (Extra <$> bashCompletionParser pinfo pprefs)
+                 <|> (Result <$> infoParser pinfo) }
+    p = runParserInfo pinfo' args
 
 parserFailure :: ParserPrefs -> ParserInfo a
               -> ParseError -> Context

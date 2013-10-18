@@ -346,9 +346,8 @@ case_intersperse_1 :: Assertion
 case_intersperse_1 = do
   let p = arguments str (metavar "ARGS")
           <* switch (short 'x')
-      result = execParserPure (prefs noIntersperse)
-                              (info p idm)
-                              ["a", "-x", "b"]
+      result = run (info p noIntersperse)
+                 ["a", "-x", "b"]
   assertRight result $ \args -> ["a", "-x", "b"] @=? args
 
 main :: IO ()

@@ -72,6 +72,7 @@ module Options.Applicative.Builder (
   progDesc,
   footer,
   failureCode,
+  noIntersperse,
   info,
 
   -- * Builder for 'ParserPrefs'
@@ -80,7 +81,6 @@ module Options.Applicative.Builder (
   disambiguate,
   showHelpOnError,
   noBacktrack,
-  noIntersperse,
   prefs,
 
   -- * Types
@@ -318,6 +318,10 @@ progDesc s = InfoMod $ \i -> i { infoProgDesc = s }
 failureCode :: Int -> InfoMod a
 failureCode n = InfoMod $ \i -> i { infoFailureCode = n }
 
+-- | Disable parsing of regular options after arguments
+noIntersperse :: InfoMod a
+noIntersperse = InfoMod $ \p -> p { infoIntersperse = False }
+
 -- | Create a 'ParserInfo' given a 'Parser' and a modifier.
 info :: Parser a -> InfoMod a -> ParserInfo a
 info parser m = applyInfoMod m base
@@ -328,7 +332,8 @@ info parser m = applyInfoMod m base
       , infoProgDesc = ""
       , infoHeader = ""
       , infoFooter = ""
-      , infoFailureCode = 1 }
+      , infoFailureCode = 1
+      , infoIntersperse = True }
 
 newtype PrefsMod = PrefsMod
   { applyPrefsMod :: ParserPrefs -> ParserPrefs }
@@ -349,9 +354,6 @@ showHelpOnError = PrefsMod $ \p -> p { prefShowHelpOnError = True }
 noBacktrack :: PrefsMod
 noBacktrack = PrefsMod $ \p -> p { prefBacktrack = False }
 
-noIntersperse :: PrefsMod
-noIntersperse = PrefsMod $ \p -> p { prefIntersperse = False }
-
 prefs :: PrefsMod -> ParserPrefs
 prefs m = applyPrefsMod m base
   where
@@ -359,8 +361,7 @@ prefs m = applyPrefsMod m base
       { prefMultiSuffix = ""
       , prefDisambiguate = False
       , prefShowHelpOnError = False
-      , prefBacktrack = True
-      , prefIntersperse = True }
+      , prefBacktrack = True }
 
 -- convenience shortcuts
 

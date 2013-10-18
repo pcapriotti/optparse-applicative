@@ -35,8 +35,7 @@ module Options.Applicative.Common (
   ParserInfo(..),
 
   -- * Running parsers
-  runParser,
-  runParserFully,
+  runParserInfo,
   evalParser,
 
   -- * Low-level utilities
@@ -96,12 +95,11 @@ argMatches opt arg = case opt of
       setContext (Just arg) subp
       prefs <- getPrefs
       let runSubparser
-            | prefBacktrack prefs = \p a -> do
-                policy <- getPolicy
-                runParser policy p a
-            | otherwise = \p a
-            -> (,) <$> runParserFully p a <*> pure []
-      runSubparser (infoParser subp) args
+            | prefBacktrack prefs = \i a -> do
+                runParser (getPolicy i) (infoParser i) a
+            | otherwise = \i a
+            -> (,) <$> runParserInfo i a <*> pure []
+      runSubparser subp args
   _ -> Nothing
 
 optMatches :: MonadP m => Bool -> OptReader a -> OptWord -> Maybe (StateT Args m a)
@@ -226,16 +224,17 @@ parseError arg = errorP . ErrorMsg $ msg
       ('-':_) -> "Invalid option `" ++ arg ++ "'"
       _       -> "Invalid argument `" ++ arg ++ "'"
 
-getPolicy :: MonadP m => m ArgPolicy
-getPolicy = do
-  prefs <- getPrefs
-  return $ if prefIntersperse prefs
-             then SkipOpts
-             else AllowOpts
+getPolicy :: ParserInfo a -> ArgPolicy
+getPolicy i = if infoIntersperse i
+  then SkipOpts
+  else AllowOpts
 
-runParserFully :: MonadP m => Parser a -> Args -> m a
-runParserFully p args = do
-  policy <- getPolicy
+runParserInfo :: MonadP m => ParserInfo a -> Args -> m a
+runParserInfo i args
+  = runParserFully (getPolicy i) (infoParser i) args
+
+runParserFully :: MonadP m => ArgPolicy -> Parser a -> Args -> m a
+runParserFully policy p args = do
   (r, args') <- runParser policy p args
   guard $ null args'
   return r
