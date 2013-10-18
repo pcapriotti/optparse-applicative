@@ -24,7 +24,7 @@ import Options.Applicative.Help.Pretty
 mappendWith :: Monoid a => a -> a -> a -> a
 mappendWith s x y = mconcat [x, s, y]
 
--- the free monoid on a semigroup a
+-- | The free monoid on a semigroup 'a'.
 newtype Chunk a = Chunk
   { unChunk :: Maybe a }
 
@@ -43,8 +43,9 @@ instance MonadPlus Chunk where
   mzero = Chunk mzero
   mplus m1 m2 = Chunk $ mplus (unChunk m1) (unChunk m2)
 
--- Given a semigroup structure on a, return a monoid structure on Chunk.  Note
--- that this is *not* the same as liftA2
+-- | Given a semigroup structure on 'a', return a monoid structure on 'Chunk a'.
+--
+-- Note that this is /not/ the same as liftA2.
 chunked :: (a -> a -> a)
         -> Chunk a -> Chunk a -> Chunk a
 chunked _ (Chunk Nothing) y = y
@@ -53,6 +54,7 @@ chunked f (Chunk (Just x)) (Chunk (Just y)) = Chunk (Just (f x y))
 
 -- | Concatenate a list into a Chunk.  'listToChunk' satisfies:
 --
+-- isEmpty . listToChunk = null
 -- listToChunk = mconcat . fmap pure
 listToChunk :: Monoid a => [a] -> Chunk a
 listToChunk [] = mempty
@@ -62,39 +64,61 @@ instance Monoid a => Monoid (Chunk a) where
   mempty = Chunk Nothing
   mappend = chunked mappend
 
--- a constrained comonad instance
+-- | Part of a constrained comonad instance.
+--
+-- This is the counit of the adjunction between 'Chunk' and the forgetful
+-- functor from monoids to semigroups.  This satisfies:
+--
+-- extractChunk . pure = id
+-- extractChunk . fmap pure = id
 extractChunk :: Monoid a => Chunk a -> a
 extractChunk = fromMaybe mempty . unChunk
 -- we could also define:
 -- duplicate :: Monoid a => Chunk a -> Chunk (Chunk a)
 -- duplicate = fmap pure
 
--- | Concatenates two 'Chunk's with a space in between.  If one is empty, this
+-- | Concatenate two 'Chunk's with a space in between.  If one is empty, this
 -- just returns the other one.
 --
 -- Unlike '(<+>)' for 'Doc', this operation has a unit element, namely the empty
--- 'Chunk.
+-- 'Chunk'.
 (<<+>>) :: Chunk Doc -> Chunk Doc -> Chunk Doc
 (<<+>>) = chunked (<+>)
 
--- | Concatenates two 'Chunk's with a softline in between.  This is exactly like
+-- | Concatenate two 'Chunk's with a softline in between.  This is exactly like
 -- '(<<+>>)', but uses a softline instead of a space.
 (<</>>) :: Chunk Doc -> Chunk Doc -> Chunk Doc
 (<</>>) = chunked (</>)
 
+-- | Concatenate 'Chunk's vertically.
 vcatChunks :: [Chunk Doc] -> Chunk Doc
 vcatChunks = foldr (chunked (.$.)) mempty
 
+-- | Concatenate 'Chunk's vertically separated by empty lines.
 vsepChunks :: [Chunk Doc] -> Chunk Doc
 vsepChunks = foldr (chunked (\x y -> x .$. mempty .$. y)) mempty
 
+-- | Whether a 'Chunk' is empty.  Note that something like 'pure mempty' is not
+-- considered an empty chunk, even though the underlying 'Doc' is empty.
 isEmpty :: Chunk a -> Bool
 isEmpty = isNothing . unChunk
 
+-- | Convert a 'String' into a 'Chunk'.  This satisfies:
+--
+-- extractChunk (stringChunk s) = s
+-- isEmpty (stringChunk s) = null s
 stringChunk :: String -> Chunk Doc
 stringChunk "" = mempty
 stringChunk s = pure (string s)
 
+-- | Convert a paragraph into a 'Chunk'.  The resulting chunk is composed by the
+-- words of the original paragraph separated by softlines, so it will be
+-- automatically word-wrapped when rendering the underlying document.
+--
+-- This satisfies:
+--
+-- extractChunk (paragraph s) = unwords . filter (not . null) . words
+-- isEmpty (paragraph s) = null (words s)
 paragraph :: String -> Chunk Doc
 paragraph = foldr (chunked (</>)) mempty
           . map stringChunk
