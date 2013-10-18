@@ -267,7 +267,7 @@ nullOption m = mkParser d g rdr
 -- the given parse error.  If you simply want to output a message, use
 -- 'infoOption' instead.
 abortOption :: ParseError -> Mod OptionFields (a -> a) -> Parser (a -> a)
-abortOption err m = nullOption . (<> m) $ mconcat
+abortOption err m = nullOption . (`mappend` m) $ mconcat
   [ reader (const (ReadM (Left err)))
   , noArgError err
   , value id
