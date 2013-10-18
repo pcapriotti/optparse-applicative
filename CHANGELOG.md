@@ -1,3 +1,7 @@
+## Version 0.7.0.1 (18 Oct 2013)
+
+- Minor docs fixes
+
 ## Version 0.7.0 (17 Oct 2013)
 
 - Add builders for options that always fail. This makes it easier
