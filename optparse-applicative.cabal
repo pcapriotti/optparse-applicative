@@ -110,10 +110,12 @@ test-suite tests
   type:                exitcode-stdio-1.0
   hs-source-dirs:      tests
   main-is:             Tests.hs
-  ghc-options:         -Wall
+  ghc-options:         -Wall -fno-warn-orphans
   build-depends:       base == 4.*,
                        HUnit == 1.2.*,
                        optparse-applicative,
+                       QuickCheck == 2.6.*,
                        test-framework >= 0.6 && < 0.9,
                        test-framework-hunit >= 0.2 && < 0.4,
+                       test-framework-quickcheck2 == 0.3.*,
                        test-framework-th-prime == 0.0.*

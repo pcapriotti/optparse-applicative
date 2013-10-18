@@ -27,6 +27,7 @@ mappendWith s x y = mconcat [x, s, y]
 -- | The free monoid on a semigroup 'a'.
 newtype Chunk a = Chunk
   { unChunk :: Maybe a }
+  deriving (Eq, Show)
 
 instance Functor Chunk where
   fmap f = Chunk . fmap f . unChunk
@@ -105,8 +106,8 @@ isEmpty = isNothing . unChunk
 
 -- | Convert a 'String' into a 'Chunk'.  This satisfies:
 --
--- extractChunk (stringChunk s) = s
--- isEmpty (stringChunk s) = null s
+-- isEmpty . stringChunk = null
+-- extractChunk . stringChunk = string
 stringChunk :: String -> Chunk Doc
 stringChunk "" = mempty
 stringChunk s = pure (string s)
@@ -117,8 +118,7 @@ stringChunk s = pure (string s)
 --
 -- This satisfies:
 --
--- extractChunk (paragraph s) = unwords . filter (not . null) . words
--- isEmpty (paragraph s) = null (words s)
+-- isEmpty . paragraph = null . words
 paragraph :: String -> Chunk Doc
 paragraph = foldr (chunked (</>)) mempty
           . map stringChunk

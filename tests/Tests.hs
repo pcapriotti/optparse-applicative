@@ -1,4 +1,5 @@
-{-# LANGUAGE TemplateHaskell, CPP #-}
+{-# LANGUAGE StandaloneDeriving, GeneralizedNewtypeDeriving,
+             TemplateHaskell, CPP #-}
 module Main where
 
 import qualified Examples.Hello as Hello
@@ -8,12 +9,20 @@ import qualified Examples.Alternatives as Alternatives
 import qualified Examples.Formatting as Formatting
 
 import Control.Monad
-import Data.List
-import Options.Applicative
+import Data.List hiding (group)
+import Data.Monoid
 import System.Exit
 import Test.HUnit
 import Test.Framework.Providers.HUnit
+import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.Framework.TH.Prime
+import Test.QuickCheck (Positive (..))
+import Test.QuickCheck.Arbitrary
+
+import Options.Applicative
+import Options.Applicative.Help.Pretty (Doc, SimpleDoc(..))
+import qualified Options.Applicative.Help.Pretty as Doc
+import Options.Applicative.Help.Chunk
 
 #if __GLASGOW_HASKELL__ <= 702
 import Data.Monoid
@@ -374,6 +383,40 @@ case_intersperse_2 = do
       result2 = run i ["test", "-x", "bar"]
   assertResult result1 $ \args -> ["-x", "foo"] @=? args
   assertError result2 $ \_ -> return ()
+
+---
+
+deriving instance Arbitrary a => Arbitrary (Chunk a)
+deriving instance Eq SimpleDoc
+
+equalDocs :: Float -> Int -> Doc -> Doc -> Bool
+equalDocs f w d1 d2 = Doc.renderPretty f w d1
+                   == Doc.renderPretty f w d2
+
+prop_listToChunk_1 :: [String] -> Bool
+prop_listToChunk_1 xs = isEmpty (listToChunk xs) == null xs
+
+prop_listToChunk_2 :: [String] -> Bool
+prop_listToChunk_2 xs = listToChunk xs == mconcat (fmap pure xs)
+
+prop_extractChunk_1 :: String -> Bool
+prop_extractChunk_1 x = extractChunk (pure x) == x
+
+prop_extractChunk_2 :: Chunk String -> Bool
+prop_extractChunk_2 x = extractChunk (fmap pure x) == x
+
+prop_stringChunk_1 :: Positive Float -> Positive Int -> String -> Bool
+prop_stringChunk_1 (Positive f) (Positive w) s =
+  equalDocs f w (extractChunk (stringChunk s))
+                (Doc.string s)
+
+prop_stringChunk_2 :: String -> Bool
+prop_stringChunk_2 s = isEmpty (stringChunk s) == null s
+
+prop_paragraph :: String -> Bool
+prop_paragraph s = isEmpty (paragraph s) == null (words s)
+
+---
 
 main :: IO ()
 main = $(defaultMainGenerator)
