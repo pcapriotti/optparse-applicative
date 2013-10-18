@@ -1,14 +1,19 @@
+## Version 0.7.0.2 (18 Oct 2013)
+
+- Fixed bugs
+    * \#51 - Build fails with ghc 6.12.3 and ghc 7.0.4
+
 ## Version 0.7.0.1 (18 Oct 2013)
 
 - Minor docs fixes
 
 ## Version 0.7.0 (17 Oct 2013)
 
-- Add builders for options that always fail. This makes it easier
-  to create options that just print an error message or display some
-  brief information and then exit (like `--version`).
+- Added builders for options that always fail. This makes it
+  easier to create options that just print an error message or
+  display some brief information and then exit (like `--version`).
 
-- Add `execParserMaybe` and `customExecParserMaybe` functions
+- Added `execParserMaybe` and `customExecParserMaybe` functions
   (pull request #49).
 
 - Fixed bugs
@@ -30,7 +35,7 @@
 
 ## Version 0.5.2.1 (24 Dic 2012)
 
-- Minor docs fixes
+- Minor docs fixes.
 
 ## Version 0.5.2 (23 Dic 2012)
 
@@ -54,7 +59,7 @@
 
 ## Version 0.5.0 (22 Dic 2012)
 
-- Fewer GHC extensions required
+- Fewer GHC extensions required.
 
 - Improved error handling: unrecognized options now result in an error message.
 
