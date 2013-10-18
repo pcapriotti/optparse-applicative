@@ -11,6 +11,9 @@ module Options.Applicative.Extra (
   customExecParserMaybe,
   execParserPure,
   ParserFailure(..),
+  ParserResult(..),
+  ParserPrefs(..),
+  CompletionResult(..),
   ) where
 
 import Control.Applicative (pure, (<$>), (<|>), (<**>))
@@ -98,10 +101,10 @@ execParserPure pprefs pinfo args =
     (Right (Left c), _) -> CompletionInvoked c
     (Left err, ctx) -> Failure $ parserFailure pprefs pinfo err ctx
   where
-    parser = infoParser pinfo
-    parser' = (Left <$> bashCompletionParser parser pprefs)
-          <|> (Right <$> parser)
-    p = runParserFully parser' args
+    pinfo' = pinfo
+      { infoParser = (Left <$> bashCompletionParser pinfo pprefs)
+                 <|> (Right <$> infoParser pinfo) }
+    p = runParserInfo pinfo' args
 
 parserFailure :: ParserPrefs -> ParserInfo a
               -> ParseError -> Context

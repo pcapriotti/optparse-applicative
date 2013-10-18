@@ -35,8 +35,7 @@ module Options.Applicative.Common (
   ParserInfo(..),
 
   -- * Running parsers
-  runParser,
-  runParserFully,
+  runParserInfo,
   evalParser,
 
   -- * Low-level utilities
@@ -45,12 +44,12 @@ module Options.Applicative.Common (
   optionNames
   ) where
 
-import Control.Applicative (pure, (<*>), (<$>), (<|>))
-import Control.Monad (guard, mzero, msum, when)
+import Control.Applicative (pure, (<*>), (<$>), (<|>), (<$))
+import Control.Monad (guard, mzero, msum, when, liftM, MonadPlus)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), get, put, runStateT)
 import Data.List (isPrefixOf)
-import Data.Maybe (maybeToList, isJust)
+import Data.Maybe (maybeToList, isJust, isNothing)
 import Data.Monoid (Monoid(..))
 
 import Options.Applicative.Internal
@@ -85,10 +84,27 @@ instance Monoid MatchResult where
 
 type Args = [String]
 
-optMatches :: MonadP m => Bool -> OptReader a -> String -> Maybe (StateT Args m a)
-optMatches disambiguate opt arg = case opt of
+argMatches :: MonadP m => OptReader a -> String
+           -> Maybe (StateT Args m a)
+argMatches opt arg = case opt of
+  ArgReader rdr -> do
+    result <- crReader rdr arg
+    Just $ return result
+  CmdReader _ f ->
+    flip fmap (f arg) $ \subp -> StateT $ \args -> do
+      setContext (Just arg) subp
+      prefs <- getPrefs
+      let runSubparser
+            | prefBacktrack prefs = \i a -> do
+                runParser (getPolicy i) (infoParser i) a
+            | otherwise = \i a
+            -> (,) <$> runParserInfo i a <*> pure []
+      runSubparser subp args
+  _ -> Nothing
+
+optMatches :: MonadP m => Bool -> OptReader a -> OptWord -> Maybe (StateT Args m a)
+optMatches disambiguate opt (OptWord arg1 val) = case opt of
   OptReader names rdr no_arg_err -> do
-    (arg1, val) <- parsed
     guard $ has_name arg1 names
     Just $ do
       args <- get
@@ -100,38 +116,15 @@ optMatches disambiguate opt arg = case opt of
         Left e -> lift $ errorFor arg1 e
         Right r -> return r
   FlagReader names x -> do
-    (arg1, Nothing) <- parsed
     guard $ has_name arg1 names
+    guard $ isNothing val
     Just $ return x
-  ArgReader rdr -> do
-    result <- crReader rdr arg
-    Just $ return result
-  CmdReader _ f ->
-    flip fmap (f arg) $ \subp -> StateT $ \args -> do
-      setContext (Just arg) subp
-      prefs <- getPrefs
-      let runSubparser
-            | prefBacktrack prefs = runParser
-            | otherwise = \p a
-            -> (,) <$> runParserFully p a <*> pure []
-      runSubparser (infoParser subp) args
+  _ -> Nothing
   where
     errorFor name (ErrorMsg msg) =
       errorP (ErrorMsg ("option " ++ showOption name ++ ": " ++ msg))
     errorFor _ e = errorP e
 
-    parsed =
-      case arg of
-        '-' : '-' : arg1 ->
-          Just $
-          case span (/= '=') arg1 of
-            (_, "") -> (OptLong arg1, Nothing)
-            (arg1', _ : rest) -> (OptLong arg1', Just rest)
-        '-' : arg1 ->
-          case arg1 of
-            [] -> Nothing
-            (a : rest) -> Just (OptShort a, if null rest then Nothing else Just rest)
-        _ -> Nothing
     has_name a
       | disambiguate = any (isOptionPrefix a)
       | otherwise = elem a
@@ -140,47 +133,89 @@ isArg :: OptReader a -> Bool
 isArg (ArgReader _) = True
 isArg _ = False
 
-stepParser :: MonadP m => ParserPrefs -> String -> Parser a
-           -> NondetT (StateT Args m) (Parser a)
-stepParser _ _ (NilP _) = mzero
-stepParser prefs arg (OptP opt) = do
-  when (isArg (optMain opt)) cut
-  case optMatches disambiguate (optMain opt) arg of
-    Just matcher -> pure <$> lift matcher
-    Nothing -> mzero
-  where
-    disambiguate = prefDisambiguate prefs
-                && optVisibility opt > Internal
-stepParser prefs arg (MultP p1 p2) = foldr1 (<!>)
-  [ do p1' <- stepParser prefs arg p1
+data OptWord = OptWord OptName (Maybe String)
+
+parseWord :: String -> Maybe OptWord
+parseWord ('-' : '-' : w) = Just $ let
+  (opt, arg) = case span (/= '=') w of
+    (_, "") -> (w, Nothing)
+    (w', _ : rest) -> (w', Just rest)
+  in OptWord (OptLong opt) arg
+parseWord ('-' : w) = case w of
+  [] -> Nothing
+  (a : rest) -> Just $ let
+    arg = rest <$ guard (not (null rest))
+    in OptWord (OptShort a) arg
+parseWord _ = Nothing
+
+searchParser :: Monad m
+             => (forall r . Option r -> NondetT m r)
+             -> Parser a -> NondetT m (Parser a)
+searchParser _ (NilP _) = mzero
+searchParser f (OptP opt) = liftM pure (f opt)
+searchParser f (MultP p1 p2) = foldr1 (<!>)
+  [ do p1' <- searchParser f p1
        return (p1' <*> p2)
-  , do p2' <- stepParser prefs arg p2
+  , do p2' <- searchParser f p2
        return (p1 <*> p2') ]
-stepParser prefs arg (AltP p1 p2) = msum
-  [ stepParser prefs arg p1
-  , stepParser prefs arg p2 ]
-stepParser prefs arg (BindP p k) = do
-  p' <- stepParser prefs arg p
-  x <- hoistMaybe $ evalParser p'
+searchParser f (AltP p1 p2) = msum
+  [ searchParser f p1
+  , searchParser f p2 ]
+searchParser f (BindP p k) = do
+  p' <- searchParser f p
+  x <- hoistMaybe (evalParser p')
   return (k x)
+
+searchOpt :: MonadP m => ParserPrefs -> OptWord -> Parser a
+          -> NondetT (StateT Args m) (Parser a)
+searchOpt pprefs w = searchParser $ \opt -> do
+  let disambiguate = prefDisambiguate pprefs
+                  && optVisibility opt > Internal
+  case optMatches disambiguate (optMain opt) w of
+    Just matcher -> lift matcher
+    Nothing -> mzero
+
+searchArg :: MonadP m => String -> Parser a
+          -> NondetT (StateT Args m) (Parser a)
+searchArg arg = searchParser $ \opt -> do
+  when (isArg (optMain opt)) cut
+  case argMatches (optMain opt) arg of
+    Just matcher -> lift matcher
+    Nothing -> mzero
+
+data ArgPolicy
+  = SkipOpts
+  | AllowOpts
+  deriving Eq
+
+stepParser :: MonadP m => ParserPrefs -> ArgPolicy -> String
+           -> Parser a -> NondetT (StateT Args m) (Parser a)
+stepParser pprefs SkipOpts arg p = case parseWord arg of
+  Just w -> searchOpt pprefs w p
+  Nothing -> searchArg arg p
+stepParser pprefs AllowOpts arg p = msum
+  [ searchArg arg p
+  , do w <- hoistMaybe (parseWord arg)
+       searchOpt pprefs w p ]
 
 -- | Apply a 'Parser' to a command line, and return a result and leftover
 -- arguments.  This function returns an error if any parsing error occurs, or
 -- if any options are missing and don't have a default value.
-runParser :: MonadP m => Parser a -> Args -> m (a, Args)
-runParser p args = case args of
+runParser :: MonadP m => ArgPolicy -> Parser a -> Args -> m (a, Args)
+runParser policy p args = case args of
   [] -> exitP p result
+  ("--" : argt) -> runParser AllowOpts p argt
   (arg : argt) -> do
     prefs <- getPrefs
     (mp', args') <- do_step prefs arg argt
     case mp' of
       Nothing -> hoistMaybe result <|> parseError arg
-      Just p' -> runParser p' args'
+      Just p' -> runParser policy p' args'
   where
     result = (,) <$> evalParser p <*> pure args
     do_step prefs arg argt = (`runStateT` argt)
                            . disamb (not (prefDisambiguate prefs))
-                           $ stepParser prefs arg p
+                           $ stepParser prefs policy arg p
 
 parseError :: MonadP m => String -> m a
 parseError arg = errorP . ErrorMsg $ msg
@@ -189,9 +224,18 @@ parseError arg = errorP . ErrorMsg $ msg
       ('-':_) -> "Invalid option `" ++ arg ++ "'"
       _       -> "Invalid argument `" ++ arg ++ "'"
 
-runParserFully :: MonadP m => Parser a -> Args -> m a
-runParserFully p args = do
-  (r, args') <- runParser p args
+getPolicy :: ParserInfo a -> ArgPolicy
+getPolicy i = if infoIntersperse i
+  then SkipOpts
+  else AllowOpts
+
+runParserInfo :: MonadP m => ParserInfo a -> Args -> m a
+runParserInfo i args
+  = runParserFully (getPolicy i) (infoParser i) args
+
+runParserFully :: MonadP m => ArgPolicy -> Parser a -> Args -> m a
+runParserFully policy p args = do
+  (r, args') <- runParser policy p args
   guard $ null args'
   return r
 

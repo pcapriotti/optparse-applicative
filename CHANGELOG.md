@@ -1,4 +1,8 @@
-## Version 0.6.1 (unreleased)
+## Version 0.7.0.1 (18 Oct 2013)
+
+- Minor docs fixes
+
+## Version 0.7.0 (17 Oct 2013)
 
 - Add builders for options that always fail. This makes it easier
   to create options that just print an error message or display some
@@ -10,6 +14,8 @@
 - Fixed bugs
     * \#47 - Current master prints help text instead of error
     * \#48 - Can we have an eitherReader convenience function?
+    * \#50 - In order parsing problems.
+    * \#22 - Strict (no-intersperse) arguments
 
 ## Version 0.6.0 (11 Oct 2013)
 

@@ -10,7 +10,6 @@ import qualified Examples.Formatting as Formatting
 import Control.Monad
 import Data.List
 import Options.Applicative
-import Options.Applicative.Types
 import System.Exit
 import Test.HUnit
 import Test.Framework.Providers.HUnit
@@ -30,6 +29,14 @@ assertError x f = case x of
   Success r -> assertFailure $ "expected failure, got success: " ++ show r
   Failure e -> f e
   CompletionInvoked _ -> assertFailure $ "expected failure, got completion"
+
+assertResult :: ParserResult a -> (a -> Assertion) -> Assertion
+assertResult x f = case x of
+  Success r -> f r
+  Failure e -> do
+    let (msg, _) = execFailure e "test"
+    assertFailure $ "unexpected parse error\n" ++ msg
+  CompletionInvoked _ -> assertFailure $ "expected result, got completion"
 
 assertHasLine :: String -> String -> Assertion
 assertHasLine l s
@@ -234,6 +241,14 @@ case_arguments1_some = do
     Success r -> ["foo", "bar", "baz"] @=? r
     _ -> assertFailure "unexpected parse error"
 
+case_arguments_switch :: Assertion
+case_arguments_switch = do
+  let p =  switch (short 'x')
+        *> arguments str idm
+      i = info p idm
+      result = run i ["--", "-x"]
+  assertResult result $ \args -> ["-x"] @=? args
+
 case_issue_35 :: Assertion
 case_issue_35 = do
   let p =  flag' True (short 't' <> hidden)
@@ -329,6 +344,36 @@ case_long_help = do
             , "This text should be automatically wrapped "
             , "to fit the size of the terminal" ]) )
   checkHelpTextWith (prefs (columns 50)) "formatting" i ["--help"]
+
+case_issue_50 :: Assertion
+case_issue_50 = do
+  let p = argument str (metavar "INPUT")
+          <* switch (long "version")
+      result = run (info p idm) ["--version", "test"]
+  assertResult result $ \r -> "test" @=? r
+
+case_intersperse_1 :: Assertion
+case_intersperse_1 = do
+  let p = arguments str (metavar "ARGS")
+          <* switch (short 'x')
+      result = run (info p noIntersperse)
+                 ["a", "-x", "b"]
+  assertResult result $ \args -> ["a", "-x", "b"] @=? args
+
+case_intersperse_2 :: Assertion
+case_intersperse_2 = do
+  let p = subparser
+          (  command "run"
+             ( info (arguments str (metavar "OPTIONS"))
+                    noIntersperse )
+          <> command "test"
+             ( info (arguments str (metavar "ARGS"))
+                    idm ) )
+      i = info p idm
+      result1 = run i ["run", "-x", "foo"]
+      result2 = run i ["test", "-x", "bar"]
+  assertResult result1 $ \args -> ["-x", "foo"] @=? args
+  assertError result2 $ \_ -> return ()
 
 main :: IO ()
 main = $(defaultMainGenerator)

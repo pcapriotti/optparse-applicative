@@ -55,13 +55,15 @@ instance Error ParseError where
 
 -- | A full description for a runnable 'Parser' for a program.
 data ParserInfo a = ParserInfo
-  { infoParser :: Parser a            -- ^ the option parser for the program
-  , infoFullDesc :: Bool              -- ^ whether the help text should contain
-                                      -- full documentation
-  , infoProgDesc :: Chunk Doc         -- ^ brief parser description
-  , infoHeader :: Chunk Doc           -- ^ header of the full parser description
-  , infoFooter :: Chunk Doc           -- ^ footer of the full parser description
-  , infoFailureCode :: Int            -- ^ exit code for a parser failure
+  { infoParser :: Parser a    -- ^ the option parser for the program
+  , infoFullDesc :: Bool      -- ^ whether the help text should contain full
+                              -- documentation
+  , infoProgDesc :: Chunk Doc -- ^ brief parser description
+  , infoHeader :: Chunk Doc   -- ^ header of the full parser description
+  , infoFooter :: Chunk Doc   -- ^ footer of the full parser description
+  , infoFailureCode :: Int    -- ^ exit code for a parser failure
+  , infoIntersperse :: Bool   -- ^ allow regular options and flags to occur
+                              -- after arguments (default: True)
   }
 
 instance Functor ParserInfo where
@@ -115,6 +117,7 @@ data CReader m a = CReader
 instance Functor m => Functor (CReader m) where
   fmap f (CReader c r) = CReader c (fmap f . r)
 
+-- | A newtype over the 'Either' monad used by option readers.
 newtype ReadM a = ReadM
   { runReadM :: Either ParseError a }
 
@@ -136,9 +139,11 @@ instance MonadPlus ReadM where
     Left _ -> m2
     Right r -> return r
 
+-- | Abort option reader by exiting with a 'ParseError'.
 readerAbort :: ParseError -> ReadM a
 readerAbort = ReadM . Left
 
+-- | Abort option reader by exiting with an error message.
 readerError :: String -> ReadM a
 readerError = readerAbort . ErrorMsg
 
