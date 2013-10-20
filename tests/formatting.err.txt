@@ -1,10 +1,11 @@
-Usage: formatting [-t|--test ARG]
+Usage: formatting [-t|--test FOO_BAR_BAZ_LONG_METAVARIABLE]
   This is a very long program description. This
   text should be automatically wrapped to fit the
   size of the terminal
 
 Available options:
-  -t,--test ARG            This is an options with
+  -t,--test FOO_BAR_BAZ_LONG_METAVARIABLE
+                           This is an options with
                            a very very long
                            description. Hopefully,
                            this will be nicely
