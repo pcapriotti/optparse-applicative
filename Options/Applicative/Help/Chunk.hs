@@ -46,7 +46,7 @@ instance MonadPlus Chunk where
 
 -- | Given a semigroup structure on 'a', return a monoid structure on 'Chunk a'.
 --
--- Note that this is /not/ the same as liftA2.
+-- Note that this is /not/ the same as 'liftA2'.
 chunked :: (a -> a -> a)
         -> Chunk a -> Chunk a -> Chunk a
 chunked _ (Chunk Nothing) y = y
@@ -55,8 +55,8 @@ chunked f (Chunk (Just x)) (Chunk (Just y)) = Chunk (Just (f x y))
 
 -- | Concatenate a list into a Chunk.  'listToChunk' satisfies:
 --
--- isEmpty . listToChunk = null
--- listToChunk = mconcat . fmap pure
+-- > isEmpty . listToChunk = null
+-- > listToChunk = mconcat . fmap pure
 listToChunk :: Monoid a => [a] -> Chunk a
 listToChunk [] = mempty
 listToChunk xs = pure (mconcat xs)
@@ -68,10 +68,10 @@ instance Monoid a => Monoid (Chunk a) where
 -- | Part of a constrained comonad instance.
 --
 -- This is the counit of the adjunction between 'Chunk' and the forgetful
--- functor from monoids to semigroups.  This satisfies:
+-- functor from monoids to semigroups.  It satisfies:
 --
--- extractChunk . pure = id
--- extractChunk . fmap pure = id
+-- > extractChunk . pure = id
+-- > extractChunk . fmap pure = id
 extractChunk :: Monoid a => Chunk a -> a
 extractChunk = fromMaybe mempty . unChunk
 -- we could also define:
@@ -81,13 +81,13 @@ extractChunk = fromMaybe mempty . unChunk
 -- | Concatenate two 'Chunk's with a space in between.  If one is empty, this
 -- just returns the other one.
 --
--- Unlike '(<+>)' for 'Doc', this operation has a unit element, namely the empty
+-- Unlike '<+>' for 'Doc', this operation has a unit element, namely the empty
 -- 'Chunk'.
 (<<+>>) :: Chunk Doc -> Chunk Doc -> Chunk Doc
 (<<+>>) = chunked (<+>)
 
 -- | Concatenate two 'Chunk's with a softline in between.  This is exactly like
--- '(<<+>>)', but uses a softline instead of a space.
+-- '<<+>>', but uses a softline instead of a space.
 (<</>>) :: Chunk Doc -> Chunk Doc -> Chunk Doc
 (<</>>) = chunked (</>)
 
@@ -106,8 +106,8 @@ isEmpty = isNothing . unChunk
 
 -- | Convert a 'String' into a 'Chunk'.  This satisfies:
 --
--- isEmpty . stringChunk = null
--- extractChunk . stringChunk = string
+-- > isEmpty . stringChunk = null
+-- > extractChunk . stringChunk = string
 stringChunk :: String -> Chunk Doc
 stringChunk "" = mempty
 stringChunk s = pure (string s)
@@ -118,7 +118,7 @@ stringChunk s = pure (string s)
 --
 -- This satisfies:
 --
--- isEmpty . paragraph = null . words
+-- > isEmpty . paragraph = null . words
 paragraph :: String -> Chunk Doc
 paragraph = foldr (chunked (</>)) mempty
           . map stringChunk
