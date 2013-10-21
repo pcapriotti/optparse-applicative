@@ -197,7 +197,7 @@ completer f = fieldMod $ modCompleter (`mappend` f)
 subparser :: Mod CommandFields a -> Parser a
 subparser m = mkParser d g rdr
   where
-    Mod _ d g = m `mappend` metavar "COMMAND"
+    Mod _ d g = metavar "COMMAND" `mappend` m
     rdr = uncurry CmdReader (mkCommand m)
 
 -- | Builder for an argument parser.
