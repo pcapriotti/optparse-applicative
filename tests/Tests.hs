@@ -365,5 +365,15 @@ case_intersperse_2 = do
   assertRight result1 $ \args -> ["-x", "foo"] @=? args
   assertLeft result2 $ \_ -> return ()
 
+case_issue_52 :: Assertion
+case_issue_52 = do
+  let p = subparser
+        ( metavar "FOO"
+        <> command "run" (info (pure "foo") idm) )
+      i = info p idm
+  assertLeft (run i []) $ \(ParserFailure err _) -> do
+    text <- head . lines <$> err "test"
+    "Usage: test FOO" @=? text
+
 main :: IO ()
 main = $(defaultMainGenerator)
