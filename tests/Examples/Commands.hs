@@ -16,7 +16,7 @@ data Sample
   deriving Show
 
 hello :: Parser Sample
-hello = Hello <$> arguments str (metavar "TARGET...")
+hello = Hello <$> many (argument str (metavar "TARGET..."))
 
 sample :: Parser Sample
 sample = subparser

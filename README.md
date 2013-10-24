@@ -212,10 +212,16 @@ will return the parsed value every time it is passed a command line argument
 for which the reader succeeds. For example
 
 ```haskell
-argument str ( metavar "FILE" )
+argument str (metavar "FILE")
 ```
 
-creates an argument accepting any string.
+creates an argument accepting any string.  To accept an arbitrary number of
+arguments, combine the `argument` builder with either the `many` or `some`
+combinator:
+
+```haskell
+some (argument str (metavar "FILES..."))
+```
 
 Arguments are only displayed in the brief help text, so there's no need to
 attach a description to them. They should be manually documented in the program
@@ -323,7 +329,7 @@ opts :: Parser Options
 opts = runA $ proc () -> do
   verbosity <- asA (option (short 'v' <> value 0)) -< ()
   let verbose = verbosity > 0
-  args <- asA (arguments str idm) -< ()
+  args <- asA (many (argument str idm)) -< ()
   returnA -< Options args verbose
 ```
 

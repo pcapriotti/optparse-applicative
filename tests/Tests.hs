@@ -149,7 +149,7 @@ case_nested_commands = do
 
 case_many_args :: Assertion
 case_many_args = do
-  let p = arguments str idm
+  let p = many (argument str idm)
       i = info p idm
       nargs = 20000
       result = run i (replicate nargs "foo")
@@ -196,7 +196,7 @@ case_completion = do
 
 case_bind_usage :: Assertion
 case_bind_usage = do
-  let p = arguments str (metavar "ARGS...")
+  let p = many (argument str (metavar "ARGS..."))
       i = info (p <**> helper) briefDesc
       result = run i ["--help"]
   case result of
@@ -220,14 +220,14 @@ case_issue_19 = do
 
 case_arguments1_none :: Assertion
 case_arguments1_none = do
-  let p = arguments1 str idm
+  let p = some (argument str idm)
       i = info (p <**> helper) idm
       result = run i []
   assertLeft result $ \(ParserFailure _ _) -> return ()
 
 case_arguments1_some :: Assertion
 case_arguments1_some = do
-  let p = arguments1 str idm
+  let p = some (argument str idm)
       i = info (p <**> helper) idm
       result = run i ["foo", "--", "bar", "baz"]
   case result of
@@ -237,7 +237,7 @@ case_arguments1_some = do
 case_arguments_switch :: Assertion
 case_arguments_switch = do
   let p =  switch (short 'x')
-        *> arguments str idm
+        *> many (argument str idm)
       i = info p idm
       result = run i ["--", "-x"]
   assertRight result $ \args -> ["-x"] @=? args
@@ -344,7 +344,7 @@ case_issue_50 = do
 
 case_intersperse_1 :: Assertion
 case_intersperse_1 = do
-  let p = arguments str (metavar "ARGS")
+  let p = many (argument str (metavar "ARGS"))
           <* switch (short 'x')
       result = run (info p noIntersperse)
                  ["a", "-x", "b"]
@@ -354,10 +354,10 @@ case_intersperse_2 :: Assertion
 case_intersperse_2 = do
   let p = subparser
           (  command "run"
-             ( info (arguments str (metavar "OPTIONS"))
+             ( info (many (argument str (metavar "OPTIONS")))
                     noIntersperse )
           <> command "test"
-             ( info (arguments str (metavar "ARGS"))
+             ( info (many (argument str (metavar "ARGS")))
                     idm ) )
       i = info p idm
       result1 = run i ["run", "-x", "foo"]

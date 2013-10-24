@@ -1,3 +1,9 @@
+## Version 0.8.0 (unreleased)
+
+- Deprecated `arguments` and `arguments1` builders. Using `many` and `some` on a
+  parser built using `argument` now returns a multiple argument parsers that
+  behaves correctly with respect to `--`.
+
 ## Version 0.7.0.2 (18 Oct 2013)
 
 - Fixed bugs
