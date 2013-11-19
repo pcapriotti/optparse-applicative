@@ -32,7 +32,11 @@ module Options.Applicative.Common (
   --
   -- A basic 'ParserInfo' with default values for fields can be created using
   -- the 'info' function.
+  --
+  -- A 'ParserPrefs' contains general preferences for all command-line
+  -- options, and can be built with the 'prefs' function.
   ParserInfo(..),
+  ParserPrefs(..),
 
   -- * Running parsers
   runParserInfo,
