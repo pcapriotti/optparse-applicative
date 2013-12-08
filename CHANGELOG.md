@@ -1,5 +1,9 @@
 ## Version 0.8.0 (unreleased)
 
+- Help page formatting.  Added `columns` preference modifier,
+  which can be used to specify the number of columns in the output
+  terminal.
+
 - Deprecated `arguments` and `arguments1` builders. Using `many` and `some` on a
   parser built using `argument` now returns a multiple argument parsers that
   behaves correctly with respect to `--`.
