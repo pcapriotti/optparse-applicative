@@ -17,7 +17,9 @@ module Options.Applicative.Types (
   ParserM(..),
   Completer(..),
   mkCompleter,
+  CompletionResult(..),
   ParserFailure(..),
+  ParserResult(..),
   OptHelpInfo(..),
   OptTree(..),
 
@@ -39,6 +41,9 @@ import Control.Monad.Trans.Error (Error(..))
 import Data.Monoid (Monoid(..))
 import System.Exit (ExitCode(..))
 
+import Options.Applicative.Help.Pretty
+import Options.Applicative.Help.Chunk
+
 data ParseError
   = ErrorMsg String
   | InfoMsg String
@@ -50,15 +55,15 @@ instance Error ParseError where
 
 -- | A full description for a runnable 'Parser' for a program.
 data ParserInfo a = ParserInfo
-  { infoParser :: Parser a  -- ^ the option parser for the program
-  , infoFullDesc :: Bool    -- ^ whether the help text should contain full
-                            -- documentation
-  , infoProgDesc :: String  -- ^ brief parser description
-  , infoHeader :: String    -- ^ header of the full parser description
-  , infoFooter :: String    -- ^ footer of the full parser description
-  , infoFailureCode :: Int  -- ^ exit code for a parser failure
-  , infoIntersperse :: Bool -- ^ allow regular options and flags to occur after
-                            -- arguments (default: True)
+  { infoParser :: Parser a    -- ^ the option parser for the program
+  , infoFullDesc :: Bool      -- ^ whether the help text should contain full
+                              -- documentation
+  , infoProgDesc :: Chunk Doc -- ^ brief parser description
+  , infoHeader :: Chunk Doc   -- ^ header of the full parser description
+  , infoFooter :: Chunk Doc   -- ^ footer of the full parser description
+  , infoFailureCode :: Int    -- ^ exit code for a parser failure
+  , infoIntersperse :: Bool   -- ^ allow regular options and flags to occur
+                              -- after arguments (default: True)
   }
 
 instance Functor ParserInfo where
@@ -73,6 +78,8 @@ data ParserPrefs = ParserPrefs
                                  -- (default: False)
   , prefBacktrack :: Bool        -- ^ backtrack to parent parser when a
                                  -- subcommand fails (default: True)
+  , prefColumns :: Int           -- ^ number of columns in the terminal, used to
+                                 -- format the help page (default: 80)
   }
 
 data OptName = OptShort !Char
@@ -89,7 +96,7 @@ data OptVisibility
 -- | Specification for an individual parser option.
 data OptProperties = OptProperties
   { propVisibility :: OptVisibility       -- ^ whether this flag is shown is the brief description
-  , propHelp :: String                    -- ^ help text for this option
+  , propHelp :: Chunk Doc                 -- ^ help text for this option
   , propMetaVar :: String                 -- ^ metavariable for this option
   , propShowDefault :: Maybe String       -- ^ what to show in the help text as the default
   }
@@ -222,17 +229,17 @@ instance Monoid Completer where
   mappend (Completer c1) (Completer c2) =
     Completer $ \s -> (++) <$> c1 s <*> c2 s
 
--- | Result after a parse error.
-data ParserFailure = ParserFailure
-  { errMessage :: String -> IO String -- ^ Function which takes the program name
-                                      -- as input and returns an error message
-  , errExitCode :: ExitCode           -- ^ Exit code to use for this error
-  }
+newtype CompletionResult = CompletionResult
+  { execCompletion :: String -> IO String }
 
-instance Error ParserFailure where
-  strMsg msg = ParserFailure
-    { errMessage = \_ -> return msg
-    , errExitCode = ExitFailure 1 }
+newtype ParserFailure = ParserFailure
+  { execFailure :: String -> (String, ExitCode) }
+
+-- | Result of 'execParserPure'.
+data ParserResult a
+  = Success a
+  | Failure ParserFailure
+  | CompletionInvoked CompletionResult
 
 data OptHelpInfo = OptHelpInfo
   { hinfoMulti :: Bool
@@ -247,7 +254,7 @@ data OptTree a
 optVisibility :: Option a -> OptVisibility
 optVisibility = propVisibility . optProps
 
-optHelp :: Option a -> String
+optHelp :: Option a -> Chunk Doc
 optHelp  = propHelp . optProps
 
 optMetaVar :: Option a -> String

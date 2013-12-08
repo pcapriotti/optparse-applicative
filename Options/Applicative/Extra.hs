@@ -10,15 +10,17 @@ module Options.Applicative.Extra (
   customExecParser,
   customExecParserMaybe,
   execParserPure,
-  usage,
   ParserFailure(..),
+  ParserResult(..),
+  ParserPrefs(..),
+  CompletionResult(..),
   ) where
 
-import Control.Applicative ((<$>), (<|>), (<**>))
-import Data.Monoid (mconcat)
+import Control.Applicative (pure, (<$>), (<|>), (<**>))
+import Data.Monoid (mempty, mconcat)
 import System.Environment (getArgs, getProgName)
 import System.Exit (exitWith, ExitCode(..))
-import System.IO (hPutStr, stderr)
+import System.IO (hPutStrLn, stderr)
 
 import Options.Applicative.BashCompletion
 import Options.Applicative.Builder hiding (briefDesc)
@@ -27,7 +29,6 @@ import Options.Applicative.Common
 import Options.Applicative.Help
 import Options.Applicative.Internal
 import Options.Applicative.Types
-import Options.Applicative.Utils
 
 -- | A hidden \"helper\" option which always fails.
 helper :: Parser (a -> a)
@@ -57,15 +58,19 @@ customExecParser :: ParserPrefs -> ParserInfo a -> IO a
 customExecParser pprefs pinfo = do
   args <- getArgs
   case execParserPure pprefs pinfo args of
-    Right a -> return a
-    Left failure -> do
+    Success a -> return a
+    Failure failure -> do
       progn <- getProgName
-      let c = errExitCode failure
-      msg <- errMessage failure progn
-      case c of
-        ExitSuccess -> putStr msg
-        _           -> hPutStr stderr msg
-      exitWith c
+      let (msg, exit) = execFailure failure progn
+      case exit of
+        ExitSuccess -> putStrLn msg
+        _           -> hPutStrLn stderr msg
+      exitWith exit
+    CompletionInvoked compl -> do
+      progn <- getProgName
+      msg <- execCompletion compl progn
+      putStr msg
+      exitWith ExitSuccess
 
 -- | Run a program description in pure code.
 --
@@ -81,73 +86,39 @@ execParserMaybe = customExecParserMaybe (prefs idm)
 --
 -- See 'execParserMaybe' for details.
 customExecParserMaybe :: ParserPrefs -> ParserInfo a -> [String] -> Maybe a
-customExecParserMaybe pprefs pinfo
-  = either (const Nothing) Just
-  . execParserPure pprefs pinfo
-
-data Result a = Result a
-              | Extra ParserFailure
+customExecParserMaybe pprefs pinfo args = case execParserPure pprefs pinfo args of
+  Success r -> Just r
+  _         -> Nothing
 
 -- | The most general way to run a program description in pure code.
 execParserPure :: ParserPrefs       -- ^ Global preferences for this parser
                -> ParserInfo a      -- ^ Description of the program to run
                -> [String]          -- ^ Program arguments
-               -> Either ParserFailure a
+               -> ParserResult a
 execParserPure pprefs pinfo args =
   case runP p pprefs of
-    (Right r, _) -> case r of
-      Result a -> Right a
-      Extra failure -> Left failure
-    (Left msg, ctx) -> Left $
-      parserFailure pprefs pinfo msg ctx
+    (Right (Right r), _) -> Success r
+    (Right (Left c), _) -> CompletionInvoked c
+    (Left err, ctx) -> Failure $ parserFailure pprefs pinfo err ctx
   where
     pinfo' = pinfo
-      { infoParser = (Extra <$> bashCompletionParser pinfo pprefs)
-                 <|> (Result <$> infoParser pinfo) }
+      { infoParser = (Left <$> bashCompletionParser pinfo pprefs)
+                 <|> (Right <$> infoParser pinfo) }
     p = runParserInfo pinfo' args
 
 parserFailure :: ParserPrefs -> ParserInfo a
               -> ParseError -> Context
               -> ParserFailure
-parserFailure pprefs pinfo msg ctx = ParserFailure
-  { errMessage = \progn
-      -> with_context ctx pinfo $ \names ->
-             return
-           . show_help
-           . add_error
-           . add_usage names progn
-  , errExitCode = exit_code }
+parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
+  let h = with_context ctx pinfo $ \names pinfo' -> mconcat
+            [ base_help pinfo'
+            , usage_help progn names pinfo'
+            , error_help ]
+  in (render_help h, exit_code)
   where
-    add_usage names progn i = case msg of
-      InfoMsg _ -> i
-      _         -> i
-        { infoHeader = vcat
-            ( header_line i ++
-              [ usage pprefs (infoParser i) ename ] ) }
-      where
-        ename = unwords (progn : names)
-    add_error i = i
-      { infoHeader = vcat (error_msg ++ [infoHeader i]) }
-    error_msg = case msg of
-      ShowHelpText -> []
-      ErrorMsg m   -> [m]
-      InfoMsg  m   -> [m]
     exit_code = case msg of
       InfoMsg _ -> ExitSuccess
       _         -> ExitFailure (infoFailureCode pinfo)
-    show_full_help = case msg of
-      ShowHelpText -> True
-      _            -> prefShowHelpOnError pprefs
-    show_help i
-      | show_full_help
-      = parserHelpText pprefs i
-      | otherwise
-      = unlines $ filter (not . null) [ infoHeader i ]
-    header_line i
-      | show_full_help
-      = [ infoHeader i ]
-      | otherwise
-      = []
 
     with_context :: Context
                  -> ParserInfo a
@@ -156,9 +127,32 @@ parserFailure pprefs pinfo msg ctx = ParserFailure
     with_context NullContext i f = f [] i
     with_context (Context n i) _ f = f n i
 
--- | Generate option summary.
-usage :: ParserPrefs -> Parser a -> String -> String
-usage pprefs p progn = foldr (<+>) ""
-  [ "Usage:"
-  , progn
-  , briefDesc pprefs p ]
+    render_help :: ParserHelp -> String
+    render_help = (`displayS` "")
+                . renderPretty 1.0 (prefColumns pprefs)
+                . helpText
+
+    show_full_help = case msg of
+      ShowHelpText -> True
+      _            -> prefShowHelpOnError pprefs
+
+    usage_help progn names i = case msg of
+      InfoMsg _ -> mempty
+      _         -> usageHelp $ vcatChunks
+        [ pure . parserUsage pprefs (infoParser i) . unwords $ progn : names
+        , fmap (indent 2) . infoProgDesc $ i ]
+
+    error_help = headerHelp $ case msg of
+      ShowHelpText -> mempty
+      ErrorMsg m   -> stringChunk m
+      InfoMsg  m   -> stringChunk m
+
+    base_help :: ParserInfo a -> ParserHelp
+    base_help i
+      | show_full_help
+      = mconcat [h, f, parserHelp pprefs (infoParser i)]
+      | otherwise
+      = h
+      where
+        h = headerHelp (infoHeader i)
+        f = footerHelp (infoFooter i)

@@ -118,7 +118,8 @@ buildOpts = runA $ proc () -> do
   returnA -< BuildOpts bdir
 
 pinfo :: ParserInfo Args
-pinfo = info parser idm
+pinfo = info parser
+  ( progDesc "An example modelled on cabal" )
 
 main :: IO ()
 main = do
