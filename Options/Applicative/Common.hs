@@ -86,8 +86,6 @@ instance Monoid MatchResult where
   mappend m@(Match _) _ = m
   mappend _ m = m
 
-type Args = [String]
-
 argMatches :: MonadP m => OptReader a -> String
            -> Maybe (StateT Args m a)
 argMatches opt arg = case opt of
@@ -186,11 +184,6 @@ searchArg arg = searchParser $ \opt -> do
   case argMatches (optMain opt) arg of
     Just matcher -> lift matcher
     Nothing -> mzero
-
-data ArgPolicy
-  = SkipOpts
-  | AllowOpts
-  deriving Eq
 
 stepParser :: MonadP m => ParserPrefs -> ArgPolicy -> String
            -> Parser a -> NondetT (StateT Args m) (Parser a)

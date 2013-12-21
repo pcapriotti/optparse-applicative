@@ -20,6 +20,8 @@ module Options.Applicative.Types (
   CompletionResult(..),
   ParserFailure(..),
   ParserResult(..),
+  Args,
+  ArgPolicy(..),
   OptHelpInfo(..),
   OptTree(..),
 
@@ -240,6 +242,13 @@ data ParserResult a
   = Success a
   | Failure ParserFailure
   | CompletionInvoked CompletionResult
+
+type Args = [String]
+
+data ArgPolicy
+  = SkipOpts
+  | AllowOpts
+  deriving Eq
 
 data OptHelpInfo = OptHelpInfo
   { hinfoMulti :: Bool
