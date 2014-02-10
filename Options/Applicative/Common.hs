@@ -40,6 +40,8 @@ module Options.Applicative.Common (
 
   -- * Running parsers
   runParserInfo,
+  runParserFully,
+  runParser,
   evalParser,
 
   -- * Low-level utilities
