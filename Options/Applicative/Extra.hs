@@ -8,6 +8,7 @@ module Options.Applicative.Extra (
   execParser,
   execParserMaybe,
   customExecParser,
+  customExecParserWithArgs,
   customExecParserMaybe,
   execParserPure,
   ParserFailure(..),
@@ -55,8 +56,11 @@ execParser = customExecParser (prefs idm)
 
 -- | Run a program description with custom preferences.
 customExecParser :: ParserPrefs -> ParserInfo a -> IO a
-customExecParser pprefs pinfo = do
-  args <- getArgs
+customExecParser pprefs pinfo = getArgs >>= customExecParserWithArgs pprefs pinfo
+
+-- | Run a program description with custom preferences on a custom argument list.
+customExecParserWithArgs :: ParserPrefs -> ParserInfo a -> [String] -> IO a
+customExecParserWithArgs pprefs pinfo args =
   case execParserPure pprefs pinfo args of
     Success a -> return a
     Failure failure -> do
