@@ -117,8 +117,8 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
   in (render_help h, exit_code)
   where
     exit_code = case msg of
-      InfoMsg _ -> ExitSuccess
-      _         -> ExitFailure (infoFailureCode pinfo)
+      ErrorMsg _ -> ExitFailure (infoFailureCode pinfo)
+      _          -> ExitSuccess
 
     with_context :: Context
                  -> ParserInfo a

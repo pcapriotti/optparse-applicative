@@ -53,18 +53,18 @@ assertHasLine l s
   | l `elem` lines s = return ()
   | otherwise = assertFailure $ "expected line:\n\t" ++ l ++ "\nnot found"
 
-checkHelpTextWith :: Show a => ParserPrefs -> String
+checkHelpTextWith :: Show a => ExitCode -> ParserPrefs -> String
                   -> ParserInfo a -> [String] -> Assertion
-checkHelpTextWith pprefs name p args = do
+checkHelpTextWith ecode pprefs name p args = do
   let result = execParserPure pprefs p args
   assertError result $ \(ParserFailure err) -> do
     expected <- readFile $ "tests/" ++ name ++ ".err.txt"
     let (msg, code) = err name
     expected @=? msg ++ "\n"
-    ExitFailure 1 @=? code
+    ecode @=? code
 
 checkHelpText :: Show a => String -> ParserInfo a -> [String] -> Assertion
-checkHelpText = checkHelpTextWith (prefs idm)
+checkHelpText = checkHelpTextWith ExitSuccess (prefs idm)
 
 case_hello :: Assertion
 case_hello = checkHelpText "hello" Hello.opts ["--help"]
@@ -162,7 +162,7 @@ case_nested_commands = do
       p2 = subparser (command "b" (info p3 idm))
       p1 = subparser (command "c" (info p2 idm))
       i = info (p1 <**> helper) idm
-  checkHelpText "nested" i ["c", "b"]
+  checkHelpTextWith (ExitFailure 1) (prefs idm) "nested" i ["c", "b"]
 
 case_many_args :: Assertion
 case_many_args = do
@@ -353,7 +353,7 @@ case_long_help = do
             [ "This is a very long program description. "
             , "This text should be automatically wrapped "
             , "to fit the size of the terminal" ]) )
-  checkHelpTextWith (prefs (columns 50)) "formatting" i ["--help"]
+  checkHelpTextWith ExitSuccess (prefs (columns 50)) "formatting" i ["--help"]
 
 case_issue_50 :: Assertion
 case_issue_50 = do
