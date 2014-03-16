@@ -99,8 +99,8 @@ library
                        Options.Applicative.Help.Pretty,
                        Options.Applicative.Help.Chunk,
                        Options.Applicative.Help.Core,
-                       Options.Applicative.Types
-  other-modules:       Options.Applicative.Internal
+                       Options.Applicative.Types,
+                       Options.Applicative.Internal
   ghc-options:         -Wall
   build-depends:       base == 4.*,
                        transformers >= 0.2 && < 0.4,
