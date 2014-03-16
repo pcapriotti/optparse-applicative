@@ -1,4 +1,4 @@
-## Version 0.8.0 (unreleased)
+## Version 0.8.0 (16 Mar 2014)
 
 - Help page formatting.  Added `columns` preference modifier,
   which can be used to specify the number of columns in the output
@@ -7,6 +7,10 @@
 - Deprecated `arguments` and `arguments1` builders. Using `many` and `some` on a
   parser built using `argument` now returns a multiple argument parsers that
   behaves correctly with respect to `--`.
+
+- Fixed bugs
+    * \#60 - runParser can't be called
+    * \#64 - --help behaviour
 
 ## Version 0.7.0.2 (18 Oct 2013)
 
