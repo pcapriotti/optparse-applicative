@@ -75,10 +75,12 @@ extra-source-files:  CHANGELOG.md
                      tests/Examples/Cabal.hs
                      tests/Examples/Commands.hs
                      tests/Examples/Hello.hs
+                     tests/Examples/Formatting.hs
                      tests/alt.err.txt
                      tests/cabal.err.txt
                      tests/commands.err.txt
                      tests/hello.err.txt
+                     tests/formatting.err.txt
                      tests/nested.err.txt
 homepage:            https://github.com/pcapriotti/optparse-applicative
 bug-reports:         https://github.com/pcapriotti/optparse-applicative/issues
