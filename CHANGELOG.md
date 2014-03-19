@@ -1,3 +1,8 @@
+## Version 0.8.0.1 (19 Mar 2014)
+
+- Fixed bugs
+    * \#73 - Release 0.8.0 is broken
+
 ## Version 0.8.0 (16 Mar 2014)
 
 - Help page formatting.  Added `columns` preference modifier,
