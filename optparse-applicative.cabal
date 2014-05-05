@@ -79,6 +79,8 @@ extra-source-files:  CHANGELOG.md
                      tests/alt.err.txt
                      tests/cabal.err.txt
                      tests/commands.err.txt
+                     tests/commands_header.err.txt
+                     tests/commands_header_full.err.txt
                      tests/hello.err.txt
                      tests/formatting.err.txt
                      tests/nested.err.txt
