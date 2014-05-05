@@ -72,6 +72,14 @@ case_hello = checkHelpText "hello" Hello.opts ["--help"]
 case_modes :: Assertion
 case_modes = checkHelpText "commands" Commands.opts ["--help"]
 
+case_cmd_header :: Assertion
+case_cmd_header = do
+  let i = info (helper <*> Commands.sample) (header "foo")
+  checkHelpTextWith (ExitFailure 1) (prefs idm)
+                    "commands_header" i ["-zzz"]
+  checkHelpTextWith (ExitFailure 1) (prefs showHelpOnError)
+                    "commands_header_full" i ["-zzz"]
+
 case_cabal_conf :: Assertion
 case_cabal_conf = checkHelpText "cabal" Cabal.pinfo ["configure", "--help"]
 

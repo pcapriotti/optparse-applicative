@@ -1,0 +1,12 @@
+Invalid option `-zzz'
+
+foo
+
+Usage: commands_header_full COMMAND
+
+Available options:
+  -h,--help                Show this help text
+
+Available commands:
+  hello                    Print greeting
+  goodbye                  Say goodbye

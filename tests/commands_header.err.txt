@@ -1,0 +1,3 @@
+Invalid option `-zzz'
+
+Usage: commands_header COMMAND
