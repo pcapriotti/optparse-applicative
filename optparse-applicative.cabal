@@ -117,7 +117,7 @@ test-suite tests
   build-depends:       base == 4.*,
                        HUnit == 1.2.*,
                        optparse-applicative,
-                       QuickCheck == 2.6.*,
+                       QuickCheck >= 2.6 && < 2.8,
                        test-framework >= 0.6 && < 0.9,
                        test-framework-hunit >= 0.2 && < 0.4,
                        test-framework-quickcheck2 == 0.3.*,
