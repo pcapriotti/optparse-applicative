@@ -1,4 +1,4 @@
-## Version 0.8.1 (unreleased)
+## Version 0.8.1 (5 May 2014)
 
 - Fixed bugs
     * \#74 - Missing newline
