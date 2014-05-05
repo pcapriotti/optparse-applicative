@@ -132,17 +132,13 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
                 . renderPretty 1.0 (prefColumns pprefs)
                 . helpText
 
-    show_full_help = case msg of
-      ShowHelpText -> True
-      _            -> prefShowHelpOnError pprefs
-
     usage_help progn names i = case msg of
       InfoMsg _ -> mempty
       _         -> usageHelp $ vcatChunks
         [ pure . parserUsage pprefs (infoParser i) . unwords $ progn : names
         , fmap (indent 2) . infoProgDesc $ i ]
 
-    error_help = headerHelp $ case msg of
+    error_help = errorHelp $ case msg of
       ShowHelpText -> mempty
       ErrorMsg m   -> stringChunk m
       InfoMsg  m   -> stringChunk m
@@ -152,7 +148,11 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
       | show_full_help
       = mconcat [h, f, parserHelp pprefs (infoParser i)]
       | otherwise
-      = h
+      = mempty
       where
         h = headerHelp (infoHeader i)
         f = footerHelp (infoFooter i)
+
+    show_full_help = case msg of
+      ShowHelpText -> True
+      _            -> prefShowHelpOnError pprefs

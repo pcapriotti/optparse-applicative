@@ -2,6 +2,7 @@
 
 - Fixed bugs
     * \#73 - Release 0.8.0 is broken
+    * \#74 - Missing newline
 
 ## Version 0.8.0 (16 Mar 2014)
 

@@ -4,6 +4,7 @@ module Options.Applicative.Help.Core (
   fullDesc,
   ParserHelp(..),
   helpText,
+  errorHelp,
   headerHelp,
   usageHelp,
   bodyHelp,
@@ -110,31 +111,36 @@ fullDesc pprefs = tabulate . catMaybes . mapParser doc
       , descSurround = False }
 
 data ParserHelp = ParserHelp
-  { helpHeader :: Chunk Doc
+  { helpError :: Chunk Doc
+  , helpHeader :: Chunk Doc
   , helpUsage :: Chunk Doc
   , helpBody :: Chunk Doc
   , helpFooter :: Chunk Doc }
 
 instance Monoid ParserHelp where
-  mempty = ParserHelp mempty mempty mempty mempty
-  mappend (ParserHelp h1 u1 b1 f1) (ParserHelp h2 u2 b2 f2)
-    = ParserHelp (mappend h1 h2) (mappend u1 u2)
-                 (mappend b1 b2) (mappend f1 f2)
+  mempty = ParserHelp mempty mempty mempty mempty mempty
+  mappend (ParserHelp e1 h1 u1 b1 f1) (ParserHelp e2 h2 u2 b2 f2)
+    = ParserHelp (mappend e1 e2) (mappend h1 h2)
+                 (mappend u1 u2) (mappend b1 b2)
+                 (mappend f1 f2)
+
+errorHelp :: Chunk Doc -> ParserHelp
+errorHelp chunk = ParserHelp chunk mempty mempty mempty mempty
 
 headerHelp :: Chunk Doc -> ParserHelp
-headerHelp chunk = ParserHelp chunk mempty mempty mempty
+headerHelp chunk = ParserHelp mempty chunk mempty mempty mempty
 
 usageHelp :: Chunk Doc -> ParserHelp
-usageHelp chunk = ParserHelp mempty chunk mempty mempty
+usageHelp chunk = ParserHelp mempty mempty chunk mempty mempty
 
 bodyHelp :: Chunk Doc -> ParserHelp
-bodyHelp chunk = ParserHelp mempty mempty chunk mempty
+bodyHelp chunk = ParserHelp mempty mempty mempty chunk mempty
 
 footerHelp :: Chunk Doc -> ParserHelp
-footerHelp chunk = ParserHelp mempty mempty mempty chunk
+footerHelp chunk = ParserHelp mempty mempty mempty mempty chunk
 
 helpText :: ParserHelp -> Doc
-helpText (ParserHelp h u b f) = extractChunk . vsepChunks $ [h, u, b, f]
+helpText (ParserHelp e h u b f) = extractChunk . vsepChunks $ [e, h, u, b, f]
 
 -- | Generate the help text for a program.
 parserHelp :: ParserPrefs -> Parser a -> ParserHelp
