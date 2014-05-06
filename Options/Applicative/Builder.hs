@@ -285,8 +285,7 @@ abortOption err m = nullOption . (`mappend` m) $ mconcat
   [ reader (const (ReadM (Left err)))
   , noArgError err
   , value id
-  , metavar ""
-  , hidden ]
+  , metavar "" ]
 
 -- | An option that always fails and displays a message.
 infoOption :: String -> Mod OptionFields (a -> a) -> Parser (a -> a)
