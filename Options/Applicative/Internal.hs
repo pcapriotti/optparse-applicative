@@ -29,8 +29,8 @@ module Options.Applicative.Internal
 import Control.Applicative (Applicative(..), Alternative(..), (<$>))
 import Control.Monad (MonadPlus(..), liftM, ap, guard)
 import Control.Monad.Trans.Class (MonadTrans, lift)
-import Control.Monad.Trans.Error
-  (runErrorT, ErrorT(..), Error(..), throwError, catchError)
+import Control.Monad.Trans.Except
+  (runExceptT, ExceptT(..), throwE, catchE)
 import Control.Monad.Trans.Reader
   (runReader, runReaderT, Reader, ReaderT, ask)
 import Control.Monad.Trans.Writer (runWriterT, WriterT, tell)
@@ -50,7 +50,7 @@ class (Alternative m, MonadPlus m) => MonadP m where
   errorP :: ParseError -> m a
   exitP :: Parser b -> Maybe a -> m a
 
-newtype P a = P (ErrorT ParseError (WriterT Context (Reader ParserPrefs)) a)
+newtype P a = P (ExceptT ParseError (WriterT Context (Reader ParserPrefs)) a)
 
 instance Functor P where
   fmap f (P m) = P $ fmap f m
@@ -91,9 +91,9 @@ instance MonadP P where
   getPrefs = P . lift . lift $ ask
 
   missingArgP e _ = errorP e
-  tryP (P p) = P $ lift $ runErrorT p
+  tryP (P p) = P $ lift $ runExceptT p
   exitP _ = P . hoistMaybe
-  errorP = P . throwError
+  errorP = P . throwE
 
 hoistMaybe :: MonadPlus m => Maybe a -> m a
 hoistMaybe = maybe mzero return
@@ -102,7 +102,7 @@ hoistEither :: MonadP m => Either ParseError a -> m a
 hoistEither = either errorP return
 
 runP :: P a -> ParserPrefs -> (Either ParseError a, Context)
-runP (P p) = runReader . runWriterT . runErrorT $ p
+runP (P p) = runReader . runWriterT . runExceptT $ p
 
 uncons :: [a] -> Maybe (a, [a])
 uncons [] = Nothing
@@ -114,9 +114,6 @@ data SomeParser where
 data ComplError
   = ComplParseError String
   | ComplExit
-
-instance Error ComplError where
-  strMsg = ComplParseError
 
 data ComplResult a
   = ComplParser SomeParser
@@ -138,7 +135,7 @@ instance Monad ComplResult where
     ComplOption c -> ComplOption c
 
 newtype Completion a =
-  Completion (ErrorT ParseError (ReaderT ParserPrefs ComplResult) a)
+  Completion (ExceptT ParseError (ReaderT ParserPrefs ComplResult) a)
 
 instance Functor Completion where
   fmap f (Completion m) = Completion $ fmap f m
@@ -165,12 +162,12 @@ instance MonadP Completion where
   getPrefs = Completion $ lift ask
 
   missingArgP _ = Completion . lift . lift . ComplOption
-  tryP (Completion p) = Completion $ catchError (Right <$> p) (return . Left)
+  tryP (Completion p) = Completion $ catchE (Right <$> p) (return . Left)
   exitP p _ = Completion . lift . lift . ComplParser $ SomeParser p
-  errorP = Completion . throwError
+  errorP = Completion . throwE
 
 runCompletion :: Completion r -> ParserPrefs -> Maybe (Either SomeParser Completer)
-runCompletion (Completion c) prefs = case runReaderT (runErrorT c) prefs of
+runCompletion (Completion c) prefs = case runReaderT (runExceptT c) prefs of
   ComplResult _ -> Nothing
   ComplParser p' -> Just $ Left p'
   ComplOption compl -> Just $ Right compl

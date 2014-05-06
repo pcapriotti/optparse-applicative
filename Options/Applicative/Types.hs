@@ -39,7 +39,6 @@ module Options.Applicative.Types (
 import Control.Applicative
   (Applicative(..), Alternative(..), (<$>), optional)
 import Control.Monad (ap, liftM, MonadPlus, mzero, mplus)
-import Control.Monad.Trans.Error (Error(..))
 import Data.Monoid (Monoid(..))
 import System.Exit (ExitCode(..))
 
@@ -50,10 +49,13 @@ data ParseError
   = ErrorMsg String
   | InfoMsg String
   | ShowHelpText
+  | UnknownError
   deriving Show
 
-instance Error ParseError where
-  strMsg = ErrorMsg
+instance Monoid ParseError where
+  mempty = UnknownError
+  mappend UnknownError m = m
+  mappend m _ = m
 
 -- | A full description for a runnable 'Parser' for a program.
 data ParserInfo a = ParserInfo
@@ -136,7 +138,7 @@ instance Monad ReadM where
   fail = ReadM . Left . ErrorMsg
 
 instance MonadPlus ReadM where
-  mzero = ReadM $ Left (strMsg "")
+  mzero = ReadM $ Left UnknownError
   mplus m1 m2 = case runReadM m1 of
     Left _ -> m2
     Right r -> return r

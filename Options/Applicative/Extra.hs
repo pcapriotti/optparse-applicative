@@ -27,6 +27,7 @@ import Options.Applicative.Builder hiding (briefDesc)
 import Options.Applicative.Builder.Internal
 import Options.Applicative.Common
 import Options.Applicative.Help
+
 import Options.Applicative.Internal
 import Options.Applicative.Types
 
@@ -117,8 +118,9 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
   in (render_help h, exit_code)
   where
     exit_code = case msg of
-      ErrorMsg _ -> ExitFailure (infoFailureCode pinfo)
-      _          -> ExitSuccess
+      ErrorMsg _   -> ExitFailure (infoFailureCode pinfo)
+      UnknownError -> ExitFailure (infoFailureCode pinfo)
+      _            -> ExitSuccess
 
     with_context :: Context
                  -> ParserInfo a
@@ -142,6 +144,7 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
       ShowHelpText -> mempty
       ErrorMsg m   -> stringChunk m
       InfoMsg  m   -> stringChunk m
+      UnknownError -> mempty
 
     base_help :: ParserInfo a -> ParserHelp
     base_help i
