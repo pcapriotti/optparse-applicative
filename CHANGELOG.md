@@ -1,4 +1,4 @@
-## Version 0.9.0 (unreleased)
+## Version 0.9.0 (23 May 2014)
 
 - The option returned by `abortOption` is now visible by default.
 
