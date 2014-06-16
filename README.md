@@ -5,6 +5,8 @@ parsers.
 
 [![Continuous Integration status][status-png]][status]
 
+[Hackage page (downloads and documentation)][hackage]
+
 ## Getting started
 
 Here is a simple example of an applicative option parser:
@@ -306,8 +308,8 @@ combined with other parsers using normal `Applicative` combinators.
 Modifiers are instances of the `Monoid` typeclass, so they can be combined
 using the composition function `mappend` (or simply `(<>)`).
 
-See the haddock documentation for `Options.Applicative.Builder` for a full list
-of builders and modifiers.
+See the [haddock documentation][builder-documentation] for `Options.Applicative.Builder`
+for a full list of builders and modifiers.
 
 ## Advanced features
 
@@ -333,3 +335,5 @@ simplified implementation.
  [status]: http://travis-ci.org/pcapriotti/optparse-applicative?branch=master
  [blog]: http://paolocapriotti.com/blog/2012/04/27/applicative-option-parser/
  [arrows]: http://www.haskell.org/arrows/syntax.html
+ [builder-documentation]: http://hackage.haskell.org/package/optparse-applicative/docs/Options-Applicative-Builder.html
+ [hackage]: http://hackage.haskell.org/package/optparse-applicative-0.9.0
