@@ -1,3 +1,10 @@
+{- |
+You most certainly don't need to import this module.
+
+To see what it is about, look into the 
+<https://github.com/pcapriotti/optparse-applicative/wiki/Bash-Completion wiki>.
+
+-}
 module Options.Applicative.BashCompletion
   ( bashCompletionParser
   ) where
