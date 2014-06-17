@@ -1,3 +1,8 @@
+-- | You don't need to import this module to enable bash completion.
+--
+-- See
+-- <http://github.com/pcapriotti/optparse-applicative/wiki/Bash-Completion the wiki>
+-- for more information on bash completion.
 module Options.Applicative.BashCompletion
   ( bashCompletionParser
   ) where
