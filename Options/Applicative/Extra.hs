@@ -10,6 +10,7 @@ module Options.Applicative.Extra (
   customExecParser,
   customExecParserMaybe,
   execParserPure,
+  handleParseResult,
   ParserFailure(..),
   ParserResult(..),
   ParserPrefs(..),
@@ -59,16 +60,19 @@ execParser = customExecParser (prefs idm)
 customExecParser :: ParserPrefs -> ParserInfo a -> IO a
 customExecParser pprefs pinfo = do
   args <- getArgs
-  case execParserPure pprefs pinfo args of
-    Success a -> return a
-    Failure failure -> do
+  handleParseResult $ execParserPure pprefs pinfo args
+
+-- | Handle `ParserResult`.
+handleParseResult :: ParserResult a -> IO a
+handleParseResult (Success a) = return a
+handleParseResult (Failure failure) = do
       progn <- getProgName
       let (msg, exit) = execFailure failure progn
       case exit of
         ExitSuccess -> putStrLn msg
         _           -> hPutStrLn stderr msg
       exitWith exit
-    CompletionInvoked compl -> do
+handleParseResult (CompletionInvoked compl) = do
       progn <- getProgName
       msg <- execCompletion compl progn
       putStr msg
