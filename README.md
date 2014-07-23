@@ -71,6 +71,11 @@ Running the program with the `--help` option will display the full help text:
 
 containing a detailed list of options with descriptions.
 
+The specified metavars are used as placeholders for the option arguments, and
+can be referred to in the program description.  This makes it possible to
+explicitly describe the connection between the options and the behaviour of the
+program.
+
 Parsers are instances of both `Applicative` and `Alternative`, and work with
 any generic combinator, like `many` and `some`. For example, to make a option
 return `Nothing` instead of failing when it's not supplied, you can use the

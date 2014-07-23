@@ -170,7 +170,10 @@ eitherReader f = reader (either readerError return . f)
 noArgError :: ParseError -> Mod OptionFields a
 noArgError e = fieldMod $ \p -> p { optNoArgError = e }
 
--- | Specify the metavariable.
+-- | Specify a metavariable for the argument.
+--
+-- Metavariables have no effect on the actual parser, and only serve to specify
+-- the symbolic name for an argument to be displayed in the help text.
 metavar :: HasMetavar f => String -> Mod f a
 metavar var = optionMod $ \p -> p { propMetaVar = var }
 
