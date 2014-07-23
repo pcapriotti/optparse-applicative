@@ -1,3 +1,9 @@
+## Version 0.9.1 (23 Jul 2014)
+
+- Documentation tweaks.
+
+- Added low-level function to handle parse results (pull request \#94).
+
 ## Version 0.9.0 (23 May 2014)
 
 - The option returned by `abortOption` is now visible by default.
