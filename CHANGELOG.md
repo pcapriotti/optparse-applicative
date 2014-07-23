@@ -4,6 +4,9 @@
 
 - Added low-level function to handle parse results (pull request \#94).
 
+- Fixed bugs
+    * \#93 - Formatting problem for several sub-parsers
+
 ## Version 0.9.0 (23 May 2014)
 
 - The option returned by `abortOption` is now visible by default.

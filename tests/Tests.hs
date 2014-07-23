@@ -403,6 +403,17 @@ case_issue_52 = do
     let text = head . lines . fst . err $ "test"
     "Usage: test FOO" @=? text
 
+case_multiple_subparsers :: Assertion
+case_multiple_subparsers = do
+  let p1 = subparser
+        (command "add" (info (pure ())
+             ( progDesc "Add a file to the repository" )))
+      p2 = subparser
+        (command "commit" (info (pure ())
+             ( progDesc "Record changes to the repository" )))
+      i = info (p1 *> p2 <**> helper) idm
+  checkHelpText "subparsers" i ["--help"]
+
 ---
 
 deriving instance Arbitrary a => Arbitrary (Chunk a)

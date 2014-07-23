@@ -61,7 +61,7 @@ optDesc pprefs style info opt =
 
 -- | Generate descriptions for commands.
 cmdDesc :: Parser a -> Chunk Doc
-cmdDesc = mconcat . mapParser desc
+cmdDesc = vcatChunks . mapParser desc
   where
     desc _ opt =
       case optMain opt of
