@@ -341,6 +341,5 @@ simplified implementation.
  [status-png]: https://secure.travis-ci.org/pcapriotti/optparse-applicative.png?branch=master
  [status]: http://travis-ci.org/pcapriotti/optparse-applicative?branch=master
  [blog]: http://paolocapriotti.com/blog/2012/04/27/applicative-option-parser/
- [arrows]: http://www.haskell.org/arrows/syntax.html
  [builder-documentation]: http://hackage.haskell.org/package/optparse-applicative/docs/Options-Applicative-Builder.html
  [hackage]: http://hackage.haskell.org/package/optparse-applicative-0.9.0
