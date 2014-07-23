@@ -58,9 +58,9 @@ execParser = customExecParser (prefs idm)
 
 -- | Run a program description with custom preferences.
 customExecParser :: ParserPrefs -> ParserInfo a -> IO a
-customExecParser pprefs pinfo = do
-  args <- getArgs
-  handleParseResult $ execParserPure pprefs pinfo args
+customExecParser pprefs pinfo
+  = execParserPure pprefs pinfo <$> getArgs
+  >>= handleParseResult
 
 -- | Handle `ParserResult`.
 handleParseResult :: ParserResult a -> IO a
