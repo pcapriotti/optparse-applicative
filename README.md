@@ -318,11 +318,13 @@ for a full list of builders and modifiers.
 
 ## Advanced features
 
-* [Bash completion][bash]
-* [Arrow interface][arrows]
+* [Bash completion]
+* [Arrow interface]
+* [Disambiguation]
 
- [bash]: https://github.com/pcapriotti/optparse-applicative/wiki/Bash-Completion
- [arrows]: https://github.com/pcapriotti/optparse-applicative/wiki/Arrows
+ [Bash completion]: https://github.com/pcapriotti/optparse-applicative/wiki/Bash-Completion
+ [Arrow interface]: https://github.com/pcapriotti/optparse-applicative/wiki/Arrows
+ [Disambiguation]: https://github.com/pcapriotti/optparse-applicative/wiki/Disambiguation
 
 ## How it works
 
