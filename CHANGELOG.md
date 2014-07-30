@@ -4,6 +4,8 @@
 
 - Added low-level function to handle parse results (pull request \#94).
 
+- `ParserResult` now has a `Show` instance (see issue \#95).
+
 - Fixed bugs
     * \#93 - Formatting problem for several sub-parsers
 

@@ -236,14 +236,25 @@ instance Monoid Completer where
 newtype CompletionResult = CompletionResult
   { execCompletion :: String -> IO String }
 
+instance Show CompletionResult where
+  showsPrec p _ = showParen (p > 10) $
+    showString "CompletionResult _"
+
 newtype ParserFailure = ParserFailure
   { execFailure :: String -> (String, ExitCode) }
+
+instance Show ParserFailure where
+  showsPrec p (ParserFailure f)
+    = showParen (p > 10)
+    $ showString "ParserFailure "
+    . showsPrec 11 (f "<program>")
 
 -- | Result of 'execParserPure'.
 data ParserResult a
   = Success a
   | Failure ParserFailure
   | CompletionInvoked CompletionResult
+  deriving Show
 
 type Args = [String]
 
