@@ -1,4 +1,9 @@
-## Version 0.9.1 (23 Jul 2014)
+## Version 0.9.1.1 (31 Jul 2014)
+
+- Fixed bugs
+    * \#97 - Version 0.9.1 fails test suite
+
+## Version 0.9.1 (30 Jul 2014)
 
 - Documentation tweaks.
 

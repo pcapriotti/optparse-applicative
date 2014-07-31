@@ -1,5 +1,5 @@
 name:                optparse-applicative
-version:             0.9.1
+version:             0.9.1.1
 synopsis:            Utilities and combinators for parsing command line options
 description:
     Here is a simple example of an applicative option parser:
@@ -84,6 +84,7 @@ extra-source-files:  CHANGELOG.md
                      tests/hello.err.txt
                      tests/formatting.err.txt
                      tests/nested.err.txt
+                     tests/subparsers.err.txt
 homepage:            https://github.com/pcapriotti/optparse-applicative
 bug-reports:         https://github.com/pcapriotti/optparse-applicative/issues
 
