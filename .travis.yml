@@ -39,7 +39,6 @@ install:
 script:
  - cabal configure $CONFIGURE_OPTS -v2
  - cabal build
- - hlint .
  - $DO_TEST
  - cabal check
  - cabal sdist
