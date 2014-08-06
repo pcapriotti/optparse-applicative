@@ -14,6 +14,7 @@ import Data.List hiding (group)
 import Data.Monoid
   ( mconcat
 #if __GLASGOW_HASKELL__ <= 702
+  , Monoid
   , mappend
 #endif
   )
