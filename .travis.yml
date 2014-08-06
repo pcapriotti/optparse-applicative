@@ -26,16 +26,21 @@ before_install:
    else
      travis_retry sudo apt-get install happy alex
    fi
+ - |
+   if [ ${GHCVER%.*} != "7.0" ]; then
+     export CONFIGURE_OPTS="--enable-tests"
+     export DO_TEST="cabal test"
+   fi
 
 install:
  - cabal update
  - cabal install --only-dependencies --enable-tests
 
 script:
- - cabal configure --enable-tests -v2
+ - cabal configure $CONFIGURE_OPTS -v2
  - cabal build
  - hlint .
- - cabal test
+ - $DO_TEST
  - cabal check
  - cabal sdist
 
