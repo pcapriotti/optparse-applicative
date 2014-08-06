@@ -42,7 +42,7 @@ bashCompletionQuery pinfo pprefs ws i _ = case runCompletion compl pprefs of
     list_options =
         fmap concat
       . sequence
-      . mapParser (\_ -> opt_completions)
+      . mapParser (const opt_completions)
 
     opt_completions opt = case optMain opt of
       OptReader ns _ _ -> return $ show_names ns

@@ -12,6 +12,12 @@ import qualified Examples.Formatting as Formatting
 import Control.Monad
 import Data.List hiding (group)
 import Data.Monoid
+  ( mconcat
+#if __GLASGOW_HASKELL__ <= 702
+  , mappend
+#endif
+  )
+
 import System.Exit
 import Test.HUnit
 import Test.Framework.Providers.HUnit
@@ -26,7 +32,6 @@ import qualified Options.Applicative.Help.Pretty as Doc
 import Options.Applicative.Help.Chunk
 
 #if __GLASGOW_HASKELL__ <= 702
-import Data.Monoid
 (<>) :: Monoid a => a -> a -> a
 (<>) = mappend
 #endif
@@ -38,7 +43,7 @@ assertError :: Show a => ParserResult a -> (ParserFailure -> Assertion) -> Asser
 assertError x f = case x of
   Success r -> assertFailure $ "expected failure, got success: " ++ show r
   Failure e -> f e
-  CompletionInvoked _ -> assertFailure $ "expected failure, got completion"
+  CompletionInvoked _ -> assertFailure "expected failure, got completion"
 
 assertResult :: ParserResult a -> (a -> Assertion) -> Assertion
 assertResult x f = case x of
@@ -46,7 +51,7 @@ assertResult x f = case x of
   Failure e -> do
     let (msg, _) = execFailure e "test"
     assertFailure $ "unexpected parse error\n" ++ msg
-  CompletionInvoked _ -> assertFailure $ "expected result, got completion"
+  CompletionInvoked _ -> assertFailure "expected result, got completion"
 
 assertHasLine :: String -> String -> Assertion
 assertHasLine l s

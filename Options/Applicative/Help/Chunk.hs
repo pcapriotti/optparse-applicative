@@ -121,8 +121,7 @@ stringChunk s = pure (string s)
 --
 -- > isEmpty . paragraph = null . words
 paragraph :: String -> Chunk Doc
-paragraph = foldr (chunked (</>)) mempty
-          . map stringChunk
+paragraph = foldr (chunked (</>) . stringChunk) mempty
           . words
 
 tabulate' :: Int -> [(Doc, Doc)] -> Chunk Doc

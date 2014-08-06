@@ -81,7 +81,7 @@ briefDesc pprefs = fold_tree . treeMapParser (optDesc pprefs style)
       , descSurround = True }
 
     fold_tree (Leaf x) = x
-    fold_tree (MultNode xs) = foldr (<</>>) mempty . map fold_tree $ xs
+    fold_tree (MultNode xs) = foldr ((<</>>) . fold_tree) mempty xs
     fold_tree (AltNode xs) = alt_node
                            . filter (not . isEmpty)
                            . map fold_tree $ xs
@@ -102,7 +102,7 @@ fullDesc pprefs = tabulate . catMaybes . mapParser doc
       return (extractChunk n, align . extractChunk $ h <<+>> hdef)
       where
         n = optDesc pprefs style info opt
-        h = optHelp $ opt
+        h = optHelp opt
         hdef = Chunk . fmap show_def . optShowDefault $ opt
         show_def s = parens (string "default:" <+> string s)
     style = OptDescStyle
@@ -153,7 +153,9 @@ parserHelp pprefs p = bodyHelp . vsepChunks $
 
 -- | Generate option summary.
 parserUsage :: ParserPrefs -> Parser a -> String -> Doc
-parserUsage pprefs p progn = hsep $
+parserUsage pprefs p progn = hsep
   [ string "Usage:"
   , string progn
   , align (extractChunk (briefDesc pprefs p)) ]
+
+{-# ANN footerHelp "HLint: ignore Eta reduce" #-}

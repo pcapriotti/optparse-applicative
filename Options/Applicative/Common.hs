@@ -99,7 +99,7 @@ argMatches opt arg = case opt of
       setContext (Just arg) subp
       prefs <- getPrefs
       let runSubparser
-            | prefBacktrack prefs = \i a -> do
+            | prefBacktrack prefs = \i a ->
                 runParser (getPolicy i) (infoParser i) a
             | otherwise = \i a
             -> (,) <$> runParserInfo i a <*> pure []
@@ -229,8 +229,7 @@ getPolicy i = if infoIntersperse i
   else AllowOpts
 
 runParserInfo :: MonadP m => ParserInfo a -> Args -> m a
-runParserInfo i args
-  = runParserFully (getPolicy i) (infoParser i) args
+runParserInfo i = runParserFully (getPolicy i) (infoParser i)
 
 runParserFully :: MonadP m => ArgPolicy -> Parser a -> Args -> m a
 runParserFully policy p args = do

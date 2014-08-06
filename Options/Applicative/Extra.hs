@@ -20,7 +20,7 @@ module Options.Applicative.Extra (
 import Control.Applicative (pure, (<$>), (<|>), (<**>))
 import Data.Monoid (mempty, mconcat)
 import System.Environment (getArgs, getProgName)
-import System.Exit (exitWith, ExitCode(..))
+import System.Exit (exitSuccess, exitWith, ExitCode(..))
 import System.IO (hPutStrLn, stderr)
 
 import Options.Applicative.BashCompletion
@@ -76,7 +76,7 @@ handleParseResult (CompletionInvoked compl) = do
       progn <- getProgName
       msg <- execCompletion compl progn
       putStr msg
-      exitWith ExitSuccess
+      exitSuccess
 
 -- | Run a program description in pure code.
 --
