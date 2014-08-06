@@ -34,7 +34,7 @@ before_install:
 
 install:
  - cabal update
- - cabal install --only-dependencies --enable-tests
+ - cabal install --only-dependencies $CONFIGURE_OPTS
 
 script:
  - cabal configure $CONFIGURE_OPTS -v2
