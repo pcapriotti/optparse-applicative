@@ -224,12 +224,12 @@ argument p (Mod f d g) = mkParser d g (ArgReader rdr)
 
 -- | Builder for an argument list parser. All arguments are collected and
 -- returned as a list.
-{-# DEPRECATED arguments "Use many and argument instead" #-}
+{-# DEPRECATED arguments "Use 'many' and 'argument' instead" #-}
 arguments :: (String -> Maybe a) -> Mod ArgumentFields a -> Parser [a]
 arguments r m = many (argument r m)
 
 -- | Like `arguments`, but require at least one argument.
-{-# DEPRECATED arguments1 "Use some and argument instead" #-}
+{-# DEPRECATED arguments1 "Use 'some' and 'argument' instead" #-}
 arguments1 :: (String -> Maybe a) -> Mod ArgumentFields a -> Parser [a]
 arguments1 r m = some (argument r m)
 
@@ -405,6 +405,6 @@ idm :: Monoid m => m
 idm = mempty
 
 -- | Compose modifiers.
-{-# DEPRECATED (&) "Use (<>) instead" #-}
+{-# DEPRECATED (&) "Use ('<>') instead" #-}
 (&) :: Monoid m => m -> m -> m
 (&) = mappend

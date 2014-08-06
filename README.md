@@ -83,8 +83,8 @@ return `Nothing` instead of failing when it's not supplied, you can use the
 
 ```haskell
 optional $ strOption
-  ( long "output"
-  & metavar "DIRECTORY" )
+   ( long "output"
+  <> metavar "DIRECTORY" )
 ```
 
  [applicative]: http://www.soi.city.ac.uk/~ross/papers/Applicative.html
@@ -190,7 +190,7 @@ data Verbosity = Normal | Verbose
 flag Normal Verbose
   ( long "verbose"
  <> short 'v'
- <> help "Enable verbose mode"
+ <> help "Enable verbose mode" )
 ```
 
 is a flag parser returning a `Verbosity` value.
