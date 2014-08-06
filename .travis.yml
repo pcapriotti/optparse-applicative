@@ -1,5 +1,4 @@
 env:
- - GHCVER=6.12.3
  - GHCVER=7.0.1
  - GHCVER=7.0.2
  - GHCVER=7.0.3
