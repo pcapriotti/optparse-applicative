@@ -20,10 +20,9 @@ import Data.Monoid
   )
 
 import System.Exit
-import Test.HUnit
-import Test.Framework.Providers.HUnit
-import Test.Framework.Providers.QuickCheck2 (testProperty)
-import Test.Framework.TH.Prime
+import Test.Tasty.QuickCheck (testProperty)
+import Test.Tasty.HUnit
+import Test.Tasty.TH
 import Test.QuickCheck (Positive (..))
 import Test.QuickCheck.Arbitrary
 
@@ -64,7 +63,7 @@ checkHelpTextWith :: Show a => ExitCode -> ParserPrefs -> String
 checkHelpTextWith ecode pprefs name p args = do
   let result = execParserPure pprefs p args
   assertError result $ \(ParserFailure err) -> do
-    expected <- readFile $ "tests/" ++ name ++ ".err.txt"
+    expected <- readFile $ name ++ ".err.txt"
     let (msg, code) = err name
     expected @=? msg ++ "\n"
     ecode @=? code

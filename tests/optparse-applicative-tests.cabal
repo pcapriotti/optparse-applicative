@@ -1,0 +1,40 @@
+name:                optparse-applicative-tests
+version:             0.1
+license:             BSD3
+license-file:        LICENSE
+author:              Paolo Capriotti
+maintainer:          p.capriotti@gmail.com
+copyright:           (c) 2012  Paolo Capriotti <p.capriotti@gmail.com>
+category:            Testing
+build-type:          Simple
+extra-source-files:  tests/Examples/Alternatives.hs
+                     tests/Examples/Cabal.hs
+                     tests/Examples/Commands.hs
+                     tests/Examples/Hello.hs
+                     tests/Examples/Formatting.hs
+                     tests/alt.err.txt
+                     tests/cabal.err.txt
+                     tests/commands.err.txt
+                     tests/commands_header.err.txt
+                     tests/commands_header_full.err.txt
+                     tests/hello.err.txt
+                     tests/formatting.err.txt
+                     tests/nested.err.txt
+                     tests/subparsers.err.txt
+cabal-version:       >= 1.8
+
+executable optparse-applicative-tests
+  main-is:             Tests.hs
+  hs-source-dirs:      .. .
+  ghc-options:         -Wall -fno-warn-orphans
+  build-depends:       base == 4.*,
+                       HUnit == 1.2.*,
+                       QuickCheck >= 2.6 && < 2.8,
+                       transformers >= 0.2 && < 0.5,
+                       transformers-compat == 0.3.*,
+                       process >= 1.0 && < 1.3,
+                       ansi-wl-pprint >= 0.6 && < 0.7,
+                       tasty == 0.8.*,
+                       tasty-hunit == 0.8.*,
+                       tasty-quickcheck == 0.8.*,
+                       tasty-th == 0.1.*
