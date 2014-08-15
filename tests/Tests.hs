@@ -111,10 +111,10 @@ case_args_opts = do
 
 case_args_ddash :: Assertion
 case_args_ddash = do
-  let result = run Commands.opts ["hello", "foo", "--", "--bar", "baz"]
+  let result = run Commands.opts ["hello", "foo", "--", "--bar", "--", "baz"]
   case result of
     Success (Commands.Hello args) ->
-      ["foo", "--bar", "baz"] @=? args
+      ["foo", "--bar", "--", "baz"] @=? args
     Success Commands.Goodbye ->
       assertFailure "unexpected result: Goodbye"
     _ -> assertFailure "unexpected parse error"

@@ -201,9 +201,9 @@ stepParser pprefs AllowOpts arg p = msum
 -- arguments.  This function returns an error if any parsing error occurs, or
 -- if any options are missing and don't have a default value.
 runParser :: MonadP m => ArgPolicy -> Parser a -> Args -> m (a, Args)
+runParser SkipOpts p ("--" : argt) = runParser AllowOpts p argt
 runParser policy p args = case args of
   [] -> exitP p result
-  ("--" : argt) -> runParser AllowOpts p argt
   (arg : argt) -> do
     prefs <- getPrefs
     (mp', args') <- do_step prefs arg argt
