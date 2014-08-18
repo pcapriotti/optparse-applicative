@@ -3,8 +3,8 @@ version:             0.1
 license:             BSD3
 license-file:        LICENSE
 author:              Paolo Capriotti
-maintainer:          p.capriotti@gmail.com
-copyright:           (c) 2012  Paolo Capriotti <p.capriotti@gmail.com>
+maintainer:          paolo@capriotti.io
+copyright:           (c) 2014  Paolo Capriotti <paolo@capriotti.io>
 category:            Testing
 build-type:          Simple
 extra-source-files:  tests/Examples/Alternatives.hs
