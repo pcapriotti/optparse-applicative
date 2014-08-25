@@ -19,8 +19,6 @@ module Options.Applicative.Builder (
   -- creates a parser for an option called \"output\".
   subparser,
   argument,
-  arguments,
-  arguments1,
   flag,
   flag',
   switch,
@@ -50,7 +48,6 @@ module Options.Applicative.Builder (
   action,
   completer,
   idm,
-  (&),
 #if __GLASGOW_HASKELL__ > 702
   (<>),
 #endif
@@ -97,7 +94,7 @@ module Options.Applicative.Builder (
   CommandFields
   ) where
 
-import Control.Applicative (pure, (<|>), many, some)
+import Control.Applicative (pure, (<|>))
 import Data.Monoid (Monoid (..)
 #if __GLASGOW_HASKELL__ > 702
   , (<>)
@@ -221,17 +218,6 @@ argument p (Mod f d g) = mkParser d g (ArgReader rdr)
   where
     ArgumentFields compl = f (ArgumentFields mempty)
     rdr = CReader compl p
-
--- | Builder for an argument list parser. All arguments are collected and
--- returned as a list.
-{-# DEPRECATED arguments "Use 'many' and 'argument' instead" #-}
-arguments :: (String -> Maybe a) -> Mod ArgumentFields a -> Parser [a]
-arguments r m = many (argument r m)
-
--- | Like `arguments`, but require at least one argument.
-{-# DEPRECATED arguments1 "Use 'some' and 'argument' instead" #-}
-arguments1 :: (String -> Maybe a) -> Mod ArgumentFields a -> Parser [a]
-arguments1 r m = some (argument r m)
 
 -- | Builder for a flag parser.
 --
@@ -403,8 +389,3 @@ prefs m = applyPrefsMod m base
 -- | Trivial option modifier.
 idm :: Monoid m => m
 idm = mempty
-
--- | Compose modifiers.
-{-# DEPRECATED (&) "Use ('<>') instead" #-}
-(&) :: Monoid m => m -> m -> m
-(&) = mappend
