@@ -4,7 +4,7 @@ import Data.Monoid
 import Options.Applicative
 
 opts :: Parser Int
-opts = option $ mconcat
+opts = option auto $ mconcat
   [ long "test"
   , short 't'
   , value 0

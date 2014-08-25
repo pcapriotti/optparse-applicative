@@ -130,10 +130,11 @@ case_alts = do
 
 case_show_default :: Assertion
 case_show_default = do
-  let p = option ( short 'n'
-                <> help "set count"
-                <> value (0 :: Int)
-                <> showDefault)
+  let p = option auto
+          ( short 'n'
+          <> help "set count"
+          <> value (0 :: Int)
+          <> showDefault )
       i = info (p <**> helper) idm
       result = run i ["--help"]
   case result of
@@ -238,9 +239,8 @@ case_bind_usage = do
 
 case_issue_19 :: Assertion
 case_issue_19 = do
-  let p = option
+  let p = option (fmap Just . str)
         ( short 'x'
-       <> reader (fmap Just . str)
        <> value Nothing )
       i = info (p <**> helper) idm
       result = run i ["-x", "foo"]
@@ -294,8 +294,8 @@ case_backtracking = do
 
 case_error_context :: Assertion
 case_error_context = do
-  let p = pk <$> option (long "port")
-             <*> option (long "key")
+  let p = pk <$> option auto (long "port")
+             <*> option auto (long "key")
       i = info p idm
       result = run i ["--port", "foo", "--key", "291"]
   assertError result $ \(ParserFailure err) -> do
@@ -328,8 +328,8 @@ case_arg_order_2 :: Assertion
 case_arg_order_2 = do
   let p = (,,)
         <$> argument (condr even) idm
-        <*> option (reader (condr even) <> short 'a')
-        <*> option (reader (condr odd) <> short 'b')
+        <*> option (condr even) (short 'a')
+        <*> option (condr odd) (short 'b')
       i = info p idm
       result = run i ["2", "-b", "3", "-a", "6"]
   case result of
@@ -340,7 +340,7 @@ case_arg_order_3 :: Assertion
 case_arg_order_3 = do
   let p = (,)
           <$> (  argument (condr even) idm
-             <|> option (short 'n') )
+             <|> option auto (short 'n') )
           <*> argument (condr odd) idm
       i = info p idm
       result = run i ["-n", "3", "5"]
@@ -350,7 +350,7 @@ case_arg_order_3 = do
 
 case_issue_47 :: Assertion
 case_issue_47 = do
-  let p = nullOption (long "test" <> reader r <> value 9) :: Parser Int
+  let p = option r (long "test" <> value 9) :: Parser Int
       r _ = readerError "error message"
       result = run (info p idm) ["--test", "x"]
   assertError result $ \(ParserFailure err) -> do

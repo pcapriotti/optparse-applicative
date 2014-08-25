@@ -141,14 +141,14 @@ creates a regular option with a string argument (which can be referred to as
 `FILE` in the help text and documentation), a long name "output" and a short
 name "o". See below for more information on the builder syntax and modifiers.
 
-A regular option can return an object of any type, provided you specify a
-**reader** for it. A common reader is `auto`, used by the `option` builder,
-which assumes a `Read` instance for the return type and uses it to parse its
-argument. For example:
+A regular option can return an object of any type, and takes a *reader*
+parameter which specifies how the argument should be parsed.  A common reader is
+`auto`, which assumes a `Read` instance for the return type and uses it to parse
+its argument. For example:
 
 ```haskell
 lineCount :: Parser Int
-lineCount = option
+lineCount = option auto
             ( long "lines"
            <> short 'n'
            <> metavar "K"
@@ -161,18 +161,16 @@ output type. There's usually no need to add type annotations, however, because
 the type will be normally inferred from the context in which the parser is
 used.
 
-You can also create a custom reader without using the `Read` typeclass, and set
-it as the reader for an option using the `reader` modifier and the `nullOption`
-builder:
+You can also create a custom reader that doesn't use the `Read` typeclass, and
+use it to parse option arguments:
 
 ```haskell
 data FluxCapacitor = ...
 
 parseFluxCapacitor :: Monad m => String -> m FluxCapacitor
 
-nullOption
-  ( long "flux-capacitor"
- <> reader parseFluxCapacitor )
+option parseFluxCapacitor
+  ( long "flux-capacitor" )
 ```
 
 ### Flags

@@ -1,8 +1,21 @@
 ## Version 0.10.0 (unreleased)
 
-- Removed functions deprecated from at least version 0.8.0
+- More consistent API for `option` and `argument` builders: now `option` takes
+  a reader as argument, and `nullOption` is deprecated in favour of `option`.
+  The `reader` modifier is gone.  Quick migration guide:
 
-- Switched test infrastructure to `tasty`
+    * `option` (without a `reader` modifier) => `option auto`
+    * `nullOption` (without a `reader` modifier) => `option disabled`
+    * `option`/`nullOption` (with a `reader r` modifier) => `option r`.
+
+- Added convenience builder `strArgument`, equivalent to `argument str`.
+
+- Removed functions deprecated from at least version 0.8.0.
+
+- Switched test infrastructure to `tasty`.
+
+- Fixed bugs
+    * \#63 - Inconsistency between 'argument' and 'strOption' types
 
 ## Version 0.9.1.1 (31 Jul 2014)
 

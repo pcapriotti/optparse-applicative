@@ -28,7 +28,7 @@ bashCompletionParser pinfo pprefs = complParser
         (   bashCompletionQuery pinfo pprefs
         <$> (many . strOption) (long "bash-completion-word"
                                   `mappend` internal)
-        <*> option (long "bash-completion-index" `mappend` internal) )
+        <*> option auto (long "bash-completion-index" `mappend` internal) )
       , failure <$>
           (bashCompletionScript <$>
             strOption (long "bash-completion-script" `mappend` internal)) ]

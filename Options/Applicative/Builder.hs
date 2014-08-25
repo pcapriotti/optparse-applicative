@@ -18,15 +18,16 @@ module Options.Applicative.Builder (
   --
   -- creates a parser for an option called \"output\".
   subparser,
+  strArgument,
   argument,
   flag,
   flag',
   switch,
-  nullOption,
   abortOption,
   infoOption,
   strOption,
   option,
+  nullOption,
 
   -- * Modifiers
   short,
@@ -37,7 +38,6 @@ module Options.Applicative.Builder (
   showDefaultWith,
   showDefault,
   metavar,
-  reader,
   eitherReader,
   noArgError,
   ParseError(..),
@@ -155,13 +155,9 @@ help s = optionMod $ \p -> p { propHelp = paragraph s }
 helpDoc :: Maybe Doc -> Mod f a
 helpDoc doc = optionMod $ \p -> p { propHelp = Chunk doc }
 
--- | Specify the 'Option' reader.
-reader :: (String -> ReadM a) -> Mod OptionFields a
-reader f = fieldMod $ \p -> p { optReader = f }
-
--- | Specify the 'Option' reader as a function in the 'Either' monad.
-eitherReader :: (String -> Either String a) -> Mod OptionFields a
-eitherReader f = reader (either readerError return . f)
+-- | Convert a function in the 'Either' monad to a reader.
+eitherReader :: (String -> Either String a) -> String -> ReadM a
+eitherReader f = either readerError return . f
 
 -- | Specify the error to display when no argument is provided to this option.
 noArgError :: ParseError -> Mod OptionFields a
@@ -219,6 +215,10 @@ argument p (Mod f d g) = mkParser d g (ArgReader rdr)
     ArgumentFields compl = f (ArgumentFields mempty)
     rdr = CReader compl p
 
+-- | Builder for a 'String' argument.
+strArgument :: Mod ArgumentFields String -> Parser String
+strArgument = argument str
+
 -- | Builder for a flag parser.
 --
 -- A flag that switches from a \"default value\" to an \"active value\" when
@@ -254,25 +254,14 @@ flag' actv (Mod f d g) = mkParser d g rdr
 switch :: Mod FlagFields Bool -> Parser Bool
 switch = flag False True
 
--- | Builder for an option with a null reader. A non-trivial reader can be
--- added using the 'reader' modifier.
-nullOption :: Mod OptionFields a -> Parser a
-nullOption m = mkParser d g rdr
-  where
-    Mod f d g = metavar "ARG" `mappend` m
-    fields = f (OptionFields [] mempty disabled (ErrorMsg ""))
-    crdr = CReader (optCompleter fields) (optReader fields)
-    rdr = OptReader (optNames fields) crdr (optNoArgError fields)
-
 -- | An option that always fails.
 --
 -- When this option is encountered, the option parser immediately aborts with
 -- the given parse error.  If you simply want to output a message, use
 -- 'infoOption' instead.
 abortOption :: ParseError -> Mod OptionFields (a -> a) -> Parser (a -> a)
-abortOption err m = nullOption . (`mappend` m) $ mconcat
-  [ reader (const (ReadM (Left err)))
-  , noArgError err
+abortOption err m = option (const (ReadM (Left err))) . (`mappend` m) $ mconcat
+  [ noArgError err
   , value id
   , metavar "" ]
 
@@ -282,11 +271,21 @@ infoOption = abortOption . InfoMsg
 
 -- | Builder for an option taking a 'String' argument.
 strOption :: Mod OptionFields String -> Parser String
-strOption m = nullOption $ reader str `mappend` m
+strOption = option str
+
+-- | Same as 'option'.
+{-# DEPRECATED nullOption "Use 'option' instead" #-}
+nullOption :: (String -> ReadM a) -> Mod OptionFields a -> Parser a
+nullOption = option
 
 -- | Builder for an option using the 'auto' reader.
-option :: Read a => Mod OptionFields a -> Parser a
-option m = nullOption $ reader auto `mappend` m
+option :: (String -> ReadM a) -> Mod OptionFields a -> Parser a
+option r m = mkParser d g rdr
+  where
+    Mod f d g = metavar "ARG" `mappend` m
+    fields = f (OptionFields [] mempty (ErrorMsg ""))
+    crdr = CReader (optCompleter fields) r
+    rdr = OptReader (optNames fields) crdr (optNoArgError fields)
 
 -- | Modifier for 'ParserInfo'.
 newtype InfoMod a = InfoMod

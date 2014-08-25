@@ -63,7 +63,7 @@ parser = runA $ proc () -> do
 
 commonOpts :: Parser CommonOpts
 commonOpts = CommonOpts
-  <$> option
+  <$> option auto
       ( short 'v'
      <> long "verbose"
      <> metavar "LEVEL"

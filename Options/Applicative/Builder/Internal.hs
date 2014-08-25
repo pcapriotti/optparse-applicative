@@ -33,7 +33,6 @@ import Options.Applicative.Types
 data OptionFields a = OptionFields
   { optNames :: [OptName]
   , optCompleter :: Completer
-  , optReader :: String -> ReadM a
   , optNoArgError :: ParseError }
 
 data FlagFields a = FlagFields
