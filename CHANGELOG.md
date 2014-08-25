@@ -1,3 +1,9 @@
+## Version 0.10.0 (unreleased)
+
+- Removed functions deprecated from at least version 0.8.0
+
+- Switched test infrastructure to `tasty`
+
 ## Version 0.9.1.1 (31 Jul 2014)
 
 - Fixed bugs
