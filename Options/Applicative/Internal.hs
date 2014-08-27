@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, RankNTypes #-}
+{-# LANGUAGE ExistentialQuantification #-}
 module Options.Applicative.Internal
   ( P
   , Context(..)
@@ -72,9 +72,9 @@ instance MonadPlus P where
   mplus (P x) (P y) = P $ mplus x y
 
 
-data Context where
-  Context :: [String] -> ParserInfo a -> Context
-  NullContext :: Context
+data Context
+  = forall a . Context [String] (ParserInfo a)
+  | NullContext
 
 contextNames :: Context -> [String]
 contextNames (Context ns _) = ns
@@ -108,8 +108,7 @@ uncons :: [a] -> Maybe (a, [a])
 uncons [] = Nothing
 uncons (x : xs) = Just (x, xs)
 
-data SomeParser where
-  SomeParser :: Parser a -> SomeParser
+data SomeParser = forall a . SomeParser (Parser a)
 
 data ComplError
   = ComplParseError String

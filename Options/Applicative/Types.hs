@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, Rank2Types #-}
+{-# LANGUAGE Rank2Types, ExistentialQuantification #-}
 module Options.Applicative.Types (
   ParseError(..),
   ParserInfo(..),
@@ -168,12 +168,12 @@ instance Functor OptReader where
   fmap f (CmdReader cs g) = CmdReader cs ((fmap . fmap) f . g)
 
 -- | A @Parser a@ is an option parser returning a value of type 'a'.
-data Parser a where
-  NilP :: Maybe a -> Parser a
-  OptP :: Option a -> Parser a
-  MultP :: Parser (a -> b) -> Parser a -> Parser b
-  AltP :: Parser a -> Parser a -> Parser a
-  BindP :: Parser a -> (a -> Parser b) -> Parser b
+data Parser a
+  = NilP (Maybe a)
+  | OptP (Option a)
+  | forall x . MultP (Parser (x -> a)) (Parser x)
+  | AltP (Parser a) (Parser a)
+  | forall x . BindP (Parser x) (x -> Parser a)
 
 instance Functor Parser where
   fmap f (NilP x) = NilP (fmap f x)
