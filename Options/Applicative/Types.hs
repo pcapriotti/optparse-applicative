@@ -256,6 +256,23 @@ data ParserResult a
   | CompletionInvoked CompletionResult
   deriving Show
 
+instance Functor ParserResult where
+  fmap f (Success a) = Success (f a)
+  fmap _ (Failure f) = Failure f
+  fmap _ (CompletionInvoked c) = CompletionInvoked c
+
+instance Applicative ParserResult where
+  pure = Success
+  Success f <*> r = fmap f r
+  Failure f <*> _ = Failure f
+  CompletionInvoked c <*> _ = CompletionInvoked c
+
+instance Monad ParserResult where
+  return = pure
+  Success x >>= f = f x
+  Failure f >>= _ = Failure f
+  CompletionInvoked c >>= _ = CompletionInvoked c
+
 type Args = [String]
 
 data ArgPolicy
