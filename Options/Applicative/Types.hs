@@ -20,6 +20,7 @@ module Options.Applicative.Types (
   CompletionResult(..),
   ParserFailure(..),
   ParserResult(..),
+  overFailure,
   Args,
   ArgPolicy(..),
   OptHelpInfo(..),
@@ -242,19 +243,23 @@ instance Show CompletionResult where
   showsPrec p _ = showParen (p > 10) $
     showString "CompletionResult _"
 
-newtype ParserFailure = ParserFailure
-  { execFailure :: String -> (ParserHelp, ExitCode, Int) }
+newtype ParserFailure h = ParserFailure
+  { execFailure :: String -> (h, ExitCode, Int) }
 
-instance Show ParserFailure where
+instance Show h => Show (ParserFailure h) where
   showsPrec p (ParserFailure f)
     = showParen (p > 10)
     $ showString "ParserFailure "
     . showsPrec 11 (f "<program>")
 
+instance Functor ParserFailure where
+  fmap f (ParserFailure err) = ParserFailure $ \progn ->
+    let (h, exit, cols) = err progn in (f h, exit, cols)
+
 -- | Result of 'execParserPure'.
 data ParserResult a
   = Success a
-  | Failure ParserFailure
+  | Failure (ParserFailure ParserHelp)
   | CompletionInvoked CompletionResult
   deriving Show
 
@@ -262,6 +267,11 @@ instance Functor ParserResult where
   fmap f (Success a) = Success (f a)
   fmap _ (Failure f) = Failure f
   fmap _ (CompletionInvoked c) = CompletionInvoked c
+
+overFailure :: (ParserHelp -> ParserHelp)
+            -> ParserResult a -> ParserResult a
+overFailure f (Failure failure) = Failure $ fmap f failure
+overFailure _ r = r
 
 instance Applicative ParserResult where
   pure = Success

@@ -15,6 +15,7 @@ module Options.Applicative.Extra (
   parserFailure,
   renderFailure,
   ParserFailure(..),
+  overFailure,
   ParserResult(..),
   ParserPrefs(..),
   CompletionResult(..),
@@ -133,7 +134,7 @@ execParserPure pprefs pinfo args =
 -- @handleParseResult . Failure $ parserFailure pprefs pinfo ShowHelpText mempty@
 parserFailure :: ParserPrefs -> ParserInfo a
               -> ParseError -> Context
-              -> ParserFailure
+              -> ParserFailure ParserHelp
 parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
   let h = with_context ctx pinfo $ \names pinfo' -> mconcat
             [ base_help pinfo'
@@ -179,7 +180,7 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
       ShowHelpText -> True
       _            -> prefShowHelpOnError pprefs
 
-renderFailure :: ParserFailure -> String -> (String, ExitCode)
+renderFailure :: ParserFailure ParserHelp -> String -> (String, ExitCode)
 renderFailure failure progn =
   let (h, exit, cols) = execFailure failure progn
   in (renderHelp cols h, exit)

@@ -30,6 +30,7 @@ import Options.Applicative
 import Options.Applicative.Help.Pretty (Doc, SimpleDoc(..))
 import qualified Options.Applicative.Help.Pretty as Doc
 import Options.Applicative.Help.Chunk
+import Options.Applicative.Help.Types
 
 #if __GLASGOW_HASKELL__ <= 702
 (<>) :: Monoid a => a -> a -> a
@@ -39,7 +40,8 @@ import Options.Applicative.Help.Chunk
 run :: ParserInfo a -> [String] -> ParserResult a
 run = execParserPure (prefs idm)
 
-assertError :: Show a => ParserResult a -> (ParserFailure -> Assertion) -> Assertion
+assertError :: Show a => ParserResult a
+            -> (ParserFailure ParserHelp -> Assertion) -> Assertion
 assertError x f = case x of
   Success r -> assertFailure $ "expected failure, got success: " ++ show r
   Failure e -> f e
