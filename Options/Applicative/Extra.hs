@@ -13,6 +13,7 @@ module Options.Applicative.Extra (
   getParseResult,
   handleParseResult,
   parserFailure,
+  renderFailure,
   ParserFailure(..),
   ParserResult(..),
   ParserPrefs(..),
@@ -69,7 +70,7 @@ handleParseResult :: ParserResult a -> IO a
 handleParseResult (Success a) = return a
 handleParseResult (Failure failure) = do
       progn <- getProgName
-      let (msg, exit) = execFailure failure progn
+      let (msg, exit) = renderFailure failure progn
       case exit of
         ExitSuccess -> putStrLn msg
         _           -> hPutStrLn stderr msg
@@ -138,7 +139,7 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
             [ base_help pinfo'
             , usage_help progn names pinfo'
             , error_help ]
-  in (render_help h, exit_code)
+  in (h, exit_code, prefColumns pprefs)
   where
     exit_code = case msg of
       ErrorMsg _   -> ExitFailure (infoFailureCode pinfo)
@@ -151,11 +152,6 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
                  -> c
     with_context NullContext i f = f [] i
     with_context (Context n i) _ f = f n i
-
-    render_help :: ParserHelp -> String
-    render_help = (`displayS` "")
-                . renderPretty 1.0 (prefColumns pprefs)
-                . helpText
 
     usage_help progn names i = case msg of
       InfoMsg _ -> mempty
@@ -182,3 +178,8 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
     show_full_help = case msg of
       ShowHelpText -> True
       _            -> prefShowHelpOnError pprefs
+
+renderFailure :: ParserFailure -> String -> (String, ExitCode)
+renderFailure failure progn =
+  let (h, exit, cols) = execFailure failure progn
+  in (renderHelp cols h, exit)

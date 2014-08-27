@@ -105,6 +105,7 @@ library
                        Options.Applicative.Help.Pretty,
                        Options.Applicative.Help.Chunk,
                        Options.Applicative.Help.Core,
+                       Options.Applicative.Help.Types,
                        Options.Applicative.Types,
                        Options.Applicative.Internal
   ghc-options:         -Wall

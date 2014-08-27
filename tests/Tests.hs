@@ -49,7 +49,7 @@ assertResult :: ParserResult a -> (a -> Assertion) -> Assertion
 assertResult x f = case x of
   Success r -> f r
   Failure e -> do
-    let (msg, _) = execFailure e "test"
+    let (msg, _) = renderFailure e "test"
     assertFailure $ "unexpected parse error\n" ++ msg
   CompletionInvoked _ -> assertFailure "expected result, got completion"
 
@@ -62,9 +62,9 @@ checkHelpTextWith :: Show a => ExitCode -> ParserPrefs -> String
                   -> ParserInfo a -> [String] -> Assertion
 checkHelpTextWith ecode pprefs name p args = do
   let result = execParserPure pprefs p args
-  assertError result $ \(ParserFailure err) -> do
+  assertError result $ \failure -> do
     expected <- readFile $ name ++ ".err.txt"
-    let (msg, code) = err name
+    let (msg, code) = renderFailure failure name
     expected @=? msg ++ "\n"
     ecode @=? code
 
@@ -138,8 +138,8 @@ case_show_default = do
       i = info (p <**> helper) idm
       result = run i ["--help"]
   case result of
-    Failure (ParserFailure err) -> do
-      let (msg, _) = err "test"
+    Failure failure -> do
+      let (msg, _) = renderFailure failure "test"
       assertHasLine
         "  -n ARG                   set count (default: 0)"
         msg
@@ -230,8 +230,8 @@ case_bind_usage = do
       i = info (p <**> helper) briefDesc
       result = run i ["--help"]
   case result of
-    Failure (ParserFailure err) -> do
-      let text = head . lines . fst $ err "test"
+    Failure failure -> do
+      let text = head . lines . fst $ renderFailure failure "test"
       "Usage: test [ARGS...]" @=? text
     Success val ->
       assertFailure $ "unexpected result " ++ show val
@@ -278,8 +278,8 @@ case_issue_35 = do
        <|> flag' False (short 'f')
       i = info p idm
       result = run i []
-  assertError result $ \(ParserFailure err) -> do
-    let text = head . lines . fst . err $ "test"
+  assertError result $ \failure -> do
+    let text = head . lines . fst $ renderFailure failure "test"
     "Usage: test -f" @=? text
 
 case_backtracking :: Assertion
@@ -298,8 +298,8 @@ case_error_context = do
              <*> option auto (long "key")
       i = info p idm
       result = run i ["--port", "foo", "--key", "291"]
-  assertError result $ \(ParserFailure err) -> do
-      let (msg, _) = err "test"
+  assertError result $ \failure -> do
+      let (msg, _) = renderFailure failure "test"
       let errMsg = head $ lines msg
       assertBool "no context in error message (option)"
                  ("port" `isInfixOf` errMsg)
@@ -353,8 +353,8 @@ case_issue_47 = do
   let p = option r (long "test" <> value 9) :: Parser Int
       r _ = readerError "error message"
       result = run (info p idm) ["--test", "x"]
-  assertError result $ \(ParserFailure err) -> do
-    let text = head . lines . fst . err $ "test"
+  assertError result $ \failure -> do
+    let text = head . lines . fst $ renderFailure failure "test"
     assertBool "no error message"
                ("error message" `isInfixOf` text)
 
@@ -404,8 +404,8 @@ case_issue_52 = do
         ( metavar "FOO"
         <> command "run" (info (pure "foo") idm) )
       i = info p idm
-  assertError (run i []) $ \(ParserFailure err) -> do
-    let text = head . lines . fst . err $ "test"
+  assertError (run i []) $ \failure -> do
+    let text = head . lines . fst $ renderFailure failure "test"
     "Usage: test FOO" @=? text
 
 case_multiple_subparsers :: Assertion

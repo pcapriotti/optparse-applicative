@@ -24,6 +24,7 @@ module Options.Applicative.Types (
   ArgPolicy(..),
   OptHelpInfo(..),
   OptTree(..),
+  ParserHelp(..),
 
   fromM,
   oneM,
@@ -42,6 +43,7 @@ import Control.Monad (ap, liftM, MonadPlus, mzero, mplus)
 import Data.Monoid (Monoid(..))
 import System.Exit (ExitCode(..))
 
+import Options.Applicative.Help.Types
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
 
@@ -241,7 +243,7 @@ instance Show CompletionResult where
     showString "CompletionResult _"
 
 newtype ParserFailure = ParserFailure
-  { execFailure :: String -> (String, ExitCode) }
+  { execFailure :: String -> (ParserHelp, ExitCode, Int) }
 
 instance Show ParserFailure where
   showsPrec p (ParserFailure f)

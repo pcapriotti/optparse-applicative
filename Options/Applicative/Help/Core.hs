@@ -3,14 +3,13 @@ module Options.Applicative.Help.Core (
   briefDesc,
   fullDesc,
   ParserHelp(..),
-  helpText,
   errorHelp,
   headerHelp,
   usageHelp,
   bodyHelp,
   footerHelp,
   parserHelp,
-  parserUsage,
+  parserUsage
   ) where
 
 import Control.Monad (guard)
@@ -110,20 +109,6 @@ fullDesc pprefs = tabulate . catMaybes . mapParser doc
       , descHidden = True
       , descSurround = False }
 
-data ParserHelp = ParserHelp
-  { helpError :: Chunk Doc
-  , helpHeader :: Chunk Doc
-  , helpUsage :: Chunk Doc
-  , helpBody :: Chunk Doc
-  , helpFooter :: Chunk Doc }
-
-instance Monoid ParserHelp where
-  mempty = ParserHelp mempty mempty mempty mempty mempty
-  mappend (ParserHelp e1 h1 u1 b1 f1) (ParserHelp e2 h2 u2 b2 f2)
-    = ParserHelp (mappend e1 e2) (mappend h1 h2)
-                 (mappend u1 u2) (mappend b1 b2)
-                 (mappend f1 f2)
-
 errorHelp :: Chunk Doc -> ParserHelp
 errorHelp chunk = ParserHelp chunk mempty mempty mempty mempty
 
@@ -138,9 +123,6 @@ bodyHelp chunk = ParserHelp mempty mempty mempty chunk mempty
 
 footerHelp :: Chunk Doc -> ParserHelp
 footerHelp chunk = ParserHelp mempty mempty mempty mempty chunk
-
-helpText :: ParserHelp -> Doc
-helpText (ParserHelp e h u b f) = extractChunk . vsepChunks $ [e, h, u, b, f]
 
 -- | Generate the help text for a program.
 parserHelp :: ParserPrefs -> Parser a -> ParserHelp
