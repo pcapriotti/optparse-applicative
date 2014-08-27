@@ -11,6 +11,7 @@ module Options.Applicative.Extra (
   customExecParserMaybe,
   execParserPure,
   handleParseResult,
+  parserFailure,
   ParserFailure(..),
   ParserResult(..),
   ParserPrefs(..),
@@ -112,6 +113,11 @@ execParserPure pprefs pinfo args =
                  <|> (Right <$> infoParser pinfo) }
     p = runParserInfo pinfo' args
 
+-- | Generate a `ParserFailure` from a `ParseError` in a given `Context`.
+--
+-- This function can be used, for example, to show the help text for a parser:
+--
+-- @handleParseResult . Failure $ parserFailure pprefs pinfo ShowHelpText mempty@
 parserFailure :: ParserPrefs -> ParserInfo a
               -> ParseError -> Context
               -> ParserFailure
