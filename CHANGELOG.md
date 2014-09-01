@@ -1,4 +1,7 @@
-## Version 0.10.0 (unreleased)
+## Version 0.10.0 (1 Sep 2014)
+
+- Parser execution and help text generation are now more modular, and allow for
+  greater customisation.
 
 - More consistent API for `option` and `argument` builders: now `option` takes
   a reader as argument, and `nullOption` is deprecated in favour of `option`.
