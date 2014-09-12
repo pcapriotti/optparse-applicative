@@ -168,8 +168,8 @@ like:
 
         foo --out
 
-  will match an option called `--output`, as long as its the only one starting
-  with the string `out`.
+    will match an option called `--output`, as long as its the only one starting
+    with the string `out`.
 
 - Added `briefDesc` modifier.
 
