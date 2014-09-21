@@ -4,8 +4,7 @@ This package contains utilities and combinators to define command line option
 parsers.
 
 [![Continuous Integration status][status-png]][status]
-
-[Hackage page (downloads and documentation)][hackage]
+[![Hackage page (downloads and API reference)][hackage-png]][hackage]
 
 ## Getting started
 
@@ -336,8 +335,9 @@ help text.
 See [this blog post][blog] for a more detailed explanation based on a
 simplified implementation.
 
- [status-png]: https://secure.travis-ci.org/pcapriotti/optparse-applicative.png?branch=master
+ [status-png]: https://api.travis-ci.org/pcapriotti/optparse-applicative.svg
  [status]: http://travis-ci.org/pcapriotti/optparse-applicative?branch=master
  [blog]: http://paolocapriotti.com/blog/2012/04/27/applicative-option-parser/
  [builder-documentation]: http://hackage.haskell.org/package/optparse-applicative/docs/Options-Applicative-Builder.html
+ [hackage-png]: http://img.shields.io/hackage/v/optparse-applicative.svg
  [hackage]: http://hackage.haskell.org/package/optparse-applicative
