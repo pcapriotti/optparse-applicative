@@ -135,6 +135,10 @@ instance Applicative ReadM where
   pure = ReadM . Right
   ReadM b <*> ReadM a = ReadM (b <*> a)
 
+instance Alternative ReadM where
+  empty = mzero
+  (<|>) = mplus
+
 instance Monad ReadM where
   return = ReadM . Right
   ReadM m >>= f = ReadM $ m >>= runReadM . f
