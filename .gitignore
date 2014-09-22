@@ -1,2 +1,5 @@
 /dist
 /tests/dist
+
+.cabal-sandbox/
+cabal.sandbox.config
