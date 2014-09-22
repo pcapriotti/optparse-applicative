@@ -37,6 +37,10 @@ instance Applicative Chunk where
   pure = Chunk . pure
   Chunk f <*> Chunk x = Chunk (f <*> x)
 
+instance Alternative Chunk where
+  empty = Chunk Control.Applicative.empty
+  a <|> b = Chunk $ unChunk a <|> unChunk b
+
 instance Monad Chunk where
   return = pure
   m >>= f = Chunk $ unChunk m >>= unChunk . f
