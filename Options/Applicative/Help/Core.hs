@@ -9,13 +9,13 @@ module Options.Applicative.Help.Core (
   bodyHelp,
   footerHelp,
   parserHelp,
-  parserUsage
+  parserUsage,
   ) where
 
 import Control.Monad (guard)
 import Data.List (intersperse, sort)
 import Data.Maybe (maybeToList, catMaybes)
-import Data.Monoid (Monoid, mempty, mappend)
+import Data.Monoid (mempty, mappend)
 
 import Options.Applicative.Common
 import Options.Applicative.Types

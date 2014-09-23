@@ -51,7 +51,7 @@ module Options.Applicative.Common (
   ) where
 
 import Control.Applicative (pure, (<*>), (<$>), (<|>), (<$))
-import Control.Monad (guard, mzero, msum, when, liftM, MonadPlus)
+import Control.Monad (guard, mzero, msum, when, liftM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), get, put, runStateT)
 import Data.List (isPrefixOf)
