@@ -6,6 +6,18 @@ parsers.
 [![Continuous Integration status][status-png]][status]
 [![Hackage page (downloads and API reference)][hackage-png]][hackage]
 
+**Table of Contents**
+
+- [Getting started](#getting-started)
+- [Supported options](#supported-options)
+    - [Regular options](#regular-options)
+    - [Flags](#flags)
+    - [Arguments](#arguments)
+    - [Commands](#commands)
+- [Option builders](#option-builders)
+- [Advanced features](#advanced-features)
+- [How it works](#how-it-works)
+
 ## Getting started
 
 Here is a simple example of an applicative option parser:
