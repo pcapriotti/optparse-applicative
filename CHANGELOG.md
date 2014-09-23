@@ -1,3 +1,7 @@
+## Version 0.10.1 (unreleased)
+
+- Added Alternative instances for `Chunk` and `ReadM`
+
 ## Version 0.10.0 (1 Sep 2014)
 
 - Parser execution and help text generation are now more modular, and allow for
