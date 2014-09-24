@@ -15,7 +15,6 @@ help screen, and enabling context-sensitive bash completions.
     - [Sequencing](#sequencing)
     - [Choice](#choice)
     - [Running parsers](#running-parsers)
-- [Options](#options)
 - [Builders](#builders)
     - [Regular options](#regular-options)
     - [Flags](#flags)
@@ -30,7 +29,7 @@ help screen, and enabling context-sensitive bash completions.
     - [Displaying custom error messages](#displaying-custom-error-messages)
     - [Customising the help screen](#customising-the-help-screen)
 - [Bash completion](#bash-completion)
-- [Customizing completions](#customizing-completions)
+    - [Actions and completers](#actions-and-completers)
     - [Internals](#internals)
 - [Arrow interface](#arrow-interface)
 - [FAQ](#faq)
@@ -169,7 +168,7 @@ define the two basic parsers involved:
 
 ```haskell
 fileInput :: Parser Input
-fileInput = FileInput <\$> strOption
+fileInput = FileInput <$> strOption
   (  long "file"
   <> short 'f'
   <> metavar "FILENAME"
@@ -255,15 +254,250 @@ control over the behavior of your parser, or if you want to use it in pure
 code. They will be covered in
 [Custom parsing and error handling](#custom-parsing-and-error-handling).
 
-## Options
-
 ## Builders
 
+Builders allow you to define parsers using a convenient combinator-based
+syntax. We have already seen examples of builders in action, like `strOption`
+and `switch`, which we used to define the `opts` parser for our "hello" example.
+
+Builders always take a [modifier](#modifier) argument, which is essentially a
+composition of functions acting on the option, setting values for properties or
+adding features.
+
+Builders work by building the option from scratch, and eventually lifting it to
+a single-option parser, ready to be combined with other parsers using normal
+`Applicative` and `Alternative` combinators.
+
+See the [haddock documentation][builder-documentation] for
+`Options.Applicative.Builder` for a full list of builders and modifiers.
+
+There are four different kinds of options in `optparse-applicative`: regular
+options, flags, arguments and commands. In the following, we will go over each
+one of these and describe the builders that can be used to create them.
+
 ### Regular options
+
+A **regular option** is an option which takes a single argument, parses it, and
+returns a value.
+
+A regular option can have a default value, which is used as the result if the
+option is not found in the command line. An option without a default value is
+considered mandatory, and produces an error when not found.
+
+Regular options can have **long** names, or **short** (one-character) names,
+which determine when the option matches and how the argument is extracted.
+
+An option with a long name (say "output") is specified on the command line as
+
+    --output filename.txt
+
+or
+
+    --output=filename.txt
+
+while a short name option (say "o") can be specified with
+
+    -o filename.txt
+
+or
+
+    -ofilename.txt
+
+Options can have more than one name, usually one long and one short, although
+you are free to create options with an arbitrary combination of long and short
+names.
+
+Regular options returning strings are the most common, and they can be created
+using the `strOption` builder. For example,
+
+```haskell
+strOption
+   ( long "output"
+  <> short 'o'
+  <> metavar "FILE"
+  <> help "Write output to FILE" )
+```
+
+creates a regular option with a string argument (which can be referred to as
+`FILE` in the help text and documentation), a long name "output" and a short
+name "o".
+
+A regular option can return an object of any type, and takes a *reader*
+parameter which specifies how the argument should be parsed.  A common reader is
+`auto`, which assumes a `Read` instance for the return type and uses it to parse
+its argument. For example:
+
+```haskell
+lineCount :: Parser Int
+lineCount = option auto
+            ( long "lines"
+           <> short 'n'
+           <> metavar "K"
+           <> help "Output the last K lines" )
+```
+
+specifies a regular option with an `Int` argument. We added an explicit type
+annotation here, since without it the parser would have been polymorphic in the
+output type. There's usually no need to add type annotations, however, because
+the type will be normally inferred from the context in which the parser is
+used.
+
+You can also create a custom reader that doesn't use the `Read` typeclass, and
+use it to parse option arguments:
+
+```haskell
+data FluxCapacitor = ...
+
+parseFluxCapacitor :: Monad m => String -> m FluxCapacitor
+
+option parseFluxCapacitor
+  ( long "flux-capacitor" )
+```
+
 ### Flags
+
+A **flag** is just like a regular option, but it doesn't take any arguments: it is
+either present in the command line or not.
+
+A flag has a default value and an **active value**. If the flag is found on the
+command line, the active value is returned, otherwise the default value is
+used. For example:
+
+```haskell
+data Verbosity = Normal | Verbose
+
+flag Normal Verbose
+  ( long "verbose"
+ <> short 'v'
+ <> help "Enable verbose mode" )
+```
+
+is a flag parser returning a `Verbosity` value.
+
+Simple boolean flags can be specified using the `switch` builder, like so:
+
+```haskell
+switch
+  ( long "keep-tmp-files"
+ <> help "Retain all intermediate temporary files" )
+```
+
+There is also a `flag'` builder, which has no default value. For example, to
+add a `--version` switch to a program, you could write:
+
+```haskell
+flag' Nothing (long "version" <> hidden) <|> (Just <$> normal_options)
+```
+
 ### Arguments
+
+An **argument** parser specifies a positional command line argument.
+
+The `argument` builder takes a reader parameter, and creates a parser which
+will return the parsed value every time it is passed a command line argument
+for which the reader succeeds. For example
+
+```haskell
+argument str (metavar "FILE")
+```
+
+creates an argument accepting any string.  To accept an arbitrary number of
+arguments, combine the `argument` builder with either the `many` or `some`
+combinator:
+
+```haskell
+some (argument str (metavar "FILES..."))
+```
+
+Arguments are only displayed in the brief help text, so there's no need to
+attach a description to them. They should be manually documented in the program
+description.
+
+Note that arguments starting with `-` are considered options by default, and
+will not be considered by an `argument` parser.
+
+However, parsers always accept a special argument: `--`. When a `--` is found on
+the command line, all the following words are considered by `argument` parsers,
+regardless of whether they start with `-` or not.
+
 ### Commands
+
+A **command** can be used to specify a sub-parser to be used when a certain
+string is encountered in the command line.
+
+Commands are useful to implement command line programs with multiple functions,
+each with its own set of options, and possibly some global options that apply
+to all of them. Typical examples are version control systems like `git`, or
+build tools like `cabal`.
+
+A command can be created using the `subparser` builder, and commands can be
+added with the `command` modifier. For example
+
+```haskell
+subparser
+  ( command "add" (info addOptions
+      ( progDesc "Add a file to the repository" ))
+ <> command "commit" (info commitOptions
+      ( progDesc "Record changes to the repository" ))
+)
+```
+
+Each command takes a full `ParserInfo` structure, which will be used to extract
+a description for this command when generating a help text.
+
+Note that all the parsers appearing in a command need to have the same type.
+For this reason, it is often best to use a sum type which has the same
+structure as the command itself. For example, for the parser above, you would
+define a type like:
+
+```haskell
+data Options = Options
+  { optGlobalOpt :: String
+  , optGlobalFlag :: Bool
+  ...
+  , optCommand :: Command }
+
+data Command
+  = Add AddOptions
+  | Commit CommitOptions
+  ...
+```
+
+Alternatively, you can directly return an `IO` action from a parser, and
+execute it using `join` from `Control.Monad`.
+
+```haskell
+start :: String -> IO ()
+stop :: IO ()
+
+opts :: Parser (IO ())
+opts = subparser
+  ( command "start" (info (start <$> argument str idm) idm)
+ <> command "stop"  (info (pure stop) idm) )
+
+main :: IO ()
+main = join $ execParser pinfo(info opts idm)
+```
+
 ### Modifiers
+
+**Modifiers** are instances of the `Monoid` typeclass, so they can be combined using
+the composition function `mappend` (or simply `(<>)`).  Since different builders
+accept different sets of modifiers, modifiers have a type parameter that
+specifies which builders support it.
+
+For example,
+
+```haskell
+command :: String  -> ParserInfo a -> Mod CommandFields a
+```
+
+can only be used with [commands](#commands), as the `CommandFields` type
+argument of `Mod` will prevent it from being passed to builders for other types
+of options.
+
+Many modifiers are polymorphic in this type argument, which means that they can
+be used with any builder.
 
 ## Custom parsing and error handling
 
@@ -336,7 +570,7 @@ completion:
    by the completion script to obtain a list of possible completions for a
    given command line.
 
-## Customizing completions
+### Actions and completers
 
 By default, options and commands are always completed. So, for example, if the
 program `foo` has an option with a long name `output`, typing
