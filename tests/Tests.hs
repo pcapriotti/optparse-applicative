@@ -241,7 +241,7 @@ case_bind_usage = do
 
 case_issue_19 :: Assertion
 case_issue_19 = do
-  let p = option (fmap Just . str)
+  let p = option (fmap Just str)
         ( short 'x'
        <> value Nothing )
       i = info (p <**> helper) idm
@@ -311,10 +311,10 @@ case_error_context = do
     pk :: Int -> Int -> (Int, Int)
     pk = (,)
 
-condr :: MonadPlus m => (Int -> Bool) -> String -> m Int
-condr f arg = do
-  x <- auto arg
-  guard (f (x :: Int))
+condr :: (Int -> Bool) -> ReadM Int
+condr f = do
+  x <- auto
+  guard (f x)
   return x
 
 case_arg_order_1 :: Assertion
@@ -353,7 +353,7 @@ case_arg_order_3 = do
 case_issue_47 :: Assertion
 case_issue_47 = do
   let p = option r (long "test" <> value 9) :: Parser Int
-      r _ = readerError "error message"
+      r = readerError "error message"
       result = run (info p idm) ["--test", "x"]
   assertError result $ \failure -> do
     let text = head . lines . fst $ renderFailure failure "test"

@@ -111,18 +111,18 @@ import Options.Applicative.Help.Chunk
 -- readers --
 
 -- | 'Option' reader based on the 'Read' type class.
-auto :: Monad m => Read a => String -> m a
-auto arg = case reads arg of
+auto :: Read a => ReadM a
+auto = eitherReader $ \arg -> case reads arg of
   [(r, "")] -> return r
-  _         -> fail $ "cannot parse value `" ++ arg ++ "'"
+  _         -> Left $ "cannot parse value `" ++ arg ++ "'"
 
 -- | String 'Option' reader.
-str :: Monad m => String -> m String
-str = return
+str :: ReadM String
+str = readerAsk
 
 -- | Null 'Option' reader. All arguments will fail validation.
-disabled :: Monad m => String -> m a
-disabled = const . fail $ "disabled option"
+disabled :: ReadM a
+disabled = readerError "disabled option"
 
 -- modifiers --
 
@@ -156,8 +156,8 @@ helpDoc :: Maybe Doc -> Mod f a
 helpDoc doc = optionMod $ \p -> p { propHelp = Chunk doc }
 
 -- | Convert a function in the 'Either' monad to a reader.
-eitherReader :: (String -> Either String a) -> String -> ReadM a
-eitherReader f = either readerError return . f
+eitherReader :: (String -> Either String a) -> ReadM a
+eitherReader f = readerAsk >>= either readerError return . f
 
 -- | Specify the error to display when no argument is provided to this option.
 noArgError :: ParseError -> Mod OptionFields a
@@ -209,7 +209,7 @@ subparser m = mkParser d g rdr
     rdr = uncurry CmdReader (mkCommand m)
 
 -- | Builder for an argument parser.
-argument :: (String -> Maybe a) -> Mod ArgumentFields a -> Parser a
+argument :: ReadM a -> Mod ArgumentFields a -> Parser a
 argument p (Mod f d g) = mkParser d g (ArgReader rdr)
   where
     ArgumentFields compl = f (ArgumentFields mempty)
@@ -260,7 +260,7 @@ switch = flag False True
 -- the given parse error.  If you simply want to output a message, use
 -- 'infoOption' instead.
 abortOption :: ParseError -> Mod OptionFields (a -> a) -> Parser (a -> a)
-abortOption err m = option (const (ReadM (Left err))) . (`mappend` m) $ mconcat
+abortOption err m = option (readerAbort err) . (`mappend` m) $ mconcat
   [ noArgError err
   , value id
   , metavar "" ]
@@ -275,11 +275,11 @@ strOption = option str
 
 -- | Same as 'option'.
 {-# DEPRECATED nullOption "Use 'option' instead" #-}
-nullOption :: (String -> ReadM a) -> Mod OptionFields a -> Parser a
+nullOption :: ReadM a -> Mod OptionFields a -> Parser a
 nullOption = option
 
 -- | Builder for an option using the 'auto' reader.
-option :: (String -> ReadM a) -> Mod OptionFields a -> Parser a
+option :: ReadM a -> Mod OptionFields a -> Parser a
 option r m = mkParser d g rdr
   where
     Mod f d g = metavar "ARG" `mappend` m
