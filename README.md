@@ -1,5 +1,8 @@
 # optparse-applicative
 
+[![Continuous Integration status][status-png]][status]
+[![Hackage page (downloads and API reference)][hackage-png]][hackage]
+
 optparse-applicative is a library for parsing command-line options.  It provides
 a collection of primitive parsers, which can be assembled using an [applicative]
 interface to build arbitrarily complex command-line option specifications.
@@ -727,5 +730,9 @@ in certain cases.
  [arrows]: http://www.haskell.org/arrows/syntax.html
  [attoparsec]: http://hackage.haskell.org/package/attoparsec
  [bash documentation]: http://www.gnu.org/software/bash/manual/html_node/Programmable-Completion-Builtins.html
+ [hackage]: http://hackage.haskell.org/package/optparse-applicative
+ [hackage-png]: http://img.shields.io/hackage/v/optparse-applicative.svg
  [monoid]: http://hackage.haskell.org/package/base/docs/Data-Monoid.html
  [parsec]: http://hackage.haskell.org/package/parsec
+ [status]: http://travis-ci.org/pcapriotti/optparse-applicative?branch=master
+ [status-png]: https://api.travis-ci.org/pcapriotti/optparse-applicative.svg
