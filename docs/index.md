@@ -10,12 +10,30 @@ help screen, and enabling context-sensitive bash completions.
 
 **Table of Contents**
 
-- [optparse-applicative](#optparse-applicative)
-    - [Introduction](#introduction)
-        - [Basic parsers](#basic-parsers)
-        - [Sequencing](#sequencing)
-        - [Choice](#choice)
-        - [Running parsers](#running-parsers)
+- [Introduction](#introduction)
+    - [Basic parsers](#basic-parsers)
+    - [Sequencing](#sequencing)
+    - [Choice](#choice)
+    - [Running parsers](#running-parsers)
+- [Options](#options)
+- [Builders](#builders)
+    - [Regular options](#regular-options)
+    - [Flags](#flags)
+    - [Arguments](#arguments)
+    - [Commands](#commands)
+    - [Modifiers](#modifiers)
+- [Custom parsing and error handling](#custom-parsing-and-error-handling)
+    - [Parser runners](#parser-runners)
+    - [Option readers](#option-readers)
+    - [Preferences](#preferences)
+    - [Disambiguation](#disambiguation)
+    - [Displaying custom error messages](#displaying-custom-error-messages)
+    - [Customising the help screen](#customising-the-help-screen)
+- [Bash completion](#bash-completion)
+- [Customizing completions](#customizing-completions)
+    - [Internals](#internals)
+- [Arrow interface](#arrow-interface)
+- [FAQ](#faq)
 
 ## Introduction
 
@@ -26,6 +44,7 @@ data Parser a
 
 instance Functor Parser
 instance Applicative Parser
+instance Alternative Parser
 ```
 
 A value of type `Parser a` represents a specification for a set of options,
@@ -236,7 +255,172 @@ control over the behavior of your parser, or if you want to use it in pure
 code. They will be covered in
 [Custom parsing and error handling](#custom-parsing-and-error-handling).
 
+## Options
+
+## Builders
+
+### Regular options
+### Flags
+### Arguments
+### Commands
+### Modifiers
+
+## Custom parsing and error handling
+
+### Parser runners
+### Option readers
+### Preferences
+### Disambiguation
+
+It is possible to configure optparse-applicative to perform automatic
+disambiguation of prefixes of long options. For example, given a program `foo`
+with options `--filename` and `--filler`, typing
+
+    $ foo --fil test.txt
+
+fails, whereas typing
+
+    $ foo --file test.txt
+
+succeeds, and correctly identifies `"file"` as an unambiguous prefix of the
+`filename` option.
+
+Option disambiguation is *off* by default. To enable it, provide the
+`disambiguate` modifier to the `prefs` builder, and pass the resulting
+preferences to one of the parser runners that take an `ParserPrefs` parameter,
+like `customExecParser`.
+
+Here is a minimal example:
+
+```haskell
+import Options.Applicative
+
+sample :: Parser ()
+sample = () <$
+  switch (long "filename") <*
+  switch (long "filler")
+
+main :: IO ()
+main = customExecParser p opts
+  where
+    opts = info (helper <*> sample) idm
+    p = prefs disambiguate
+
+```
+
+### Displaying custom error messages
+### Customising the help screen
+
+## Bash completion
+
+`optparse-applicative` has built-in support for bash completion of command line
+options and arguments. Any parser, when run using `execParser` (and similar
+functions), is automatically extended with a few (hidden) options for bash
+completion:
+
+ - `--bash-completion-script`: this takes the full path of the program as
+   argument, and prints a bash script, which, when sourced into a bash session,
+   will install the necessary machinery to make bash completion work. For a
+   quick test, you can run something like (for a program called `foo` on the
+   `PATH`):
+
+   ```console
+   $ source <(foo --bash-completion-script `which foo`)
+   ```
+
+   Normally, the output of `--bash-completion-script` should be shipped with
+   the program and copied to the appropriate directory (usually
+   `/etc/bash_completion.d/`) during installation.
+
+ - `--bash-completion-index`, `--bash-completion-word`: internal options used
+   by the completion script to obtain a list of possible completions for a
+   given command line.
+
+## Customizing completions
+
+By default, options and commands are always completed. So, for example, if the
+program `foo` has an option with a long name `output`, typing
+
+```console
+$ foo --ou<TAB>
+```
+
+will complete `--output` automatically.
+
+Arguments (either of regular options, or top-level) are not completed by
+default. To enable completion for arguments, use one of the following modifiers
+on a regular option or argument:
+
+ - `completeWith`: specifies a list of possible completions to choose from;
+ - `action`: specifies a completion "action". An action dynamically determines
+   a list of possible completions. A full list of actions can be found in the
+   [bash documentation];
+ - `completer`: a completer is a function `String -> IO [String]`, returning
+   all possible completions for a given string. You can use this modifier to
+   specify a custom completion for an argument.
+
+Completion modifiers can be used multiple times: the resulting completions will
+call all of them and join the results.
+
+### Internals
+
+When running a parser with `execParser`, the parser is extended with
+`bashCompletionParser`, which defines the above options.
+
+When completion is triggered, the completion script calls the executable with
+the special `--bash-completion-index` and `--bash-completion-word` options.
+
+The original parser is therefore run in *completion mode*, i.e. `runParser` is
+called on a different monad, which keeps track of the current state of the
+parser, and exits when all arguments have been processed.
+
+The completion monad returns, on failure, either the last state of the parser
+(if no option could be matched), or the completer associated to an option (if
+it failed while fetching the argument for that option).
+
+From that we generate a list of possible completions, and print them to
+standard output. They are then read by the completion script and put into the
+`COMPREPLY` variable.
+
+## Arrow interface
+
+It is also possible to use the [Arrow syntax][arrows] to combine basic parsers.
+
+This can be particularly useful when the structure holding parse results is
+deeply nested, or when the order of fields differs from the order in which the
+parsers should be applied.
+
+Using functions from the `Options.Applicative.Arrows` module, one can write,
+for example:
+
+```haskell
+data Options = Options
+  { optArgs :: [String]
+  , optVerbose :: Bool }
+
+opts :: Parser Options
+opts = runA $ proc () -> do
+  verbosity <- asA (option (short 'v' <> value 0)) -< ()
+  let verbose = verbosity > 0
+  args <- asA (many (argument str idm)) -< ()
+  returnA -< Options args verbose
+```
+
+where parsers are converted to arrows using `asA`, and the resulting composed
+arrow is converted back to a `Parser` with `runA`.
+
+See `tests/Examples/Cabal.hs` for a slightly more elaborate example using the
+arrow syntax for defining parsers.
+
+Note that the `Arrow` interface is provided only for convenience. The API based
+on `Applicative` is just as expressive, although it might be cumbersome to use
+in certain cases.
+
+## FAQ
+
  [applicative]: http://hackage.haskell.org/package/base/docs/Control-Applicative.html
+ [arrows]: http://www.haskell.org/arrows/syntax.html
+ [attoparsec]: http://hackage.haskell.org/package/attoparsec
+ [bash documentation]: http://www.gnu.org/software/bash/manual/html_node/Programmable-Completion-Builtins.html
  [monoid]: http://hackage.haskell.org/package/base/docs/Data-Monoid.html
  [parsec]: http://hackage.haskell.org/package/parsec
- [attoparsec]: http://hackage.haskell.org/package/attoparsec
