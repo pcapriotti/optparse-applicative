@@ -152,7 +152,7 @@ Here is a parser for a mandatory option with an argument:
 ```haskell
 target :: Parser String
 target = strOption
-  (  long "hello"
+  (  long "target"
   <> metavar "TARGET"
   <> help "Target for the greeting" )
 ```
