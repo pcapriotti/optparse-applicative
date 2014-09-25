@@ -432,6 +432,16 @@ case_argument_error = do
     let text = head . lines . fst $ renderFailure failure "test"
     "3 /= 42" @=? text
 
+case_reader_error_mplus :: Assertion
+case_reader_error_mplus = do
+  let r = (auto >>= \x -> x <$ guard (x == 42))
+        <|> (str >>= \x -> readerError (x ++ " /= 42"))
+      p1 = argument r idm :: Parser Int
+      i = info p1 idm
+  assertError (run i ["foo"]) $ \failure -> do
+    let text = head . lines . fst $ renderFailure failure "test"
+    "foo /= 42" @=? text
+
 ---
 
 deriving instance Arbitrary a => Arbitrary (Chunk a)

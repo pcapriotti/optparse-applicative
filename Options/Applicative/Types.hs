@@ -61,8 +61,8 @@ data ParseError
 
 instance Monoid ParseError where
   mempty = UnknownError
-  mappend UnknownError m = m
-  mappend m _ = m
+  mappend m UnknownError = m
+  mappend _ m = m
 
 -- | A full description for a runnable 'Parser' for a program.
 data ParserInfo a = ParserInfo
