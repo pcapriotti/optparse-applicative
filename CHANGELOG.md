@@ -1,6 +1,12 @@
-## Version 0.10.1 (unreleased)
+## Version 0.11.0 (unreleased)
 
-- Added Alternative instances for `Chunk` and `ReadM`
+- Added Alternative instances for `Chunk` and `ReadM`.
+
+- The `ReadM` monad is now a `ReaderT` for the argument being parsed.  User
+  defined readers do not need to handle their argument explicitly, but can
+  always access it using `readerAsk`.
+
+- Argument builders now take a `ReadM` parameter, just like options.
 
 ## Version 0.10.0 (1 Sep 2014)
 
