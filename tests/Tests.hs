@@ -9,6 +9,7 @@ import qualified Examples.Cabal as Cabal
 import qualified Examples.Alternatives as Alternatives
 import qualified Examples.Formatting as Formatting
 
+import Control.Applicative
 import Control.Monad
 import Data.List hiding (group)
 import Data.Monoid
@@ -420,6 +421,16 @@ case_multiple_subparsers = do
              ( progDesc "Record changes to the repository" )))
       i = info (p1 *> p2 <**> helper) idm
   checkHelpText "subparsers" i ["--help"]
+
+case_argument_error :: Assertion
+case_argument_error = do
+  let r = (auto >>= \x -> x <$ guard (x == 42))
+        <|> (str >>= \x -> readerError (x ++ " /= 42"))
+      p1 = argument r idm :: Parser Int
+      i = info (p1 *> p1) idm
+  assertError (run i ["3", "4"]) $ \failure -> do
+    let text = head . lines . fst $ renderFailure failure "test"
+    "3 /= 42" @=? text
 
 ---
 
