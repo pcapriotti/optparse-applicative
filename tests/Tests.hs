@@ -9,6 +9,7 @@ import qualified Examples.Cabal as Cabal
 import qualified Examples.Alternatives as Alternatives
 import qualified Examples.Formatting as Formatting
 
+import Control.Applicative
 import Control.Monad
 import Data.List hiding (group)
 import Data.Monoid
@@ -241,7 +242,7 @@ case_bind_usage = do
 
 case_issue_19 :: Assertion
 case_issue_19 = do
-  let p = option (fmap Just . str)
+  let p = option (fmap Just str)
         ( short 'x'
        <> value Nothing )
       i = info (p <**> helper) idm
@@ -311,10 +312,10 @@ case_error_context = do
     pk :: Int -> Int -> (Int, Int)
     pk = (,)
 
-condr :: MonadPlus m => (Int -> Bool) -> String -> m Int
-condr f arg = do
-  x <- auto arg
-  guard (f (x :: Int))
+condr :: (Int -> Bool) -> ReadM Int
+condr f = do
+  x <- auto
+  guard (f x)
   return x
 
 case_arg_order_1 :: Assertion
@@ -353,7 +354,7 @@ case_arg_order_3 = do
 case_issue_47 :: Assertion
 case_issue_47 = do
   let p = option r (long "test" <> value 9) :: Parser Int
-      r _ = readerError "error message"
+      r = readerError "error message"
       result = run (info p idm) ["--test", "x"]
   assertError result $ \failure -> do
     let text = head . lines . fst $ renderFailure failure "test"
@@ -420,6 +421,26 @@ case_multiple_subparsers = do
              ( progDesc "Record changes to the repository" )))
       i = info (p1 *> p2 <**> helper) idm
   checkHelpText "subparsers" i ["--help"]
+
+case_argument_error :: Assertion
+case_argument_error = do
+  let r = (auto >>= \x -> x <$ guard (x == 42))
+        <|> (str >>= \x -> readerError (x ++ " /= 42"))
+      p1 = argument r idm :: Parser Int
+      i = info (p1 *> p1) idm
+  assertError (run i ["3", "4"]) $ \failure -> do
+    let text = head . lines . fst $ renderFailure failure "test"
+    "3 /= 42" @=? text
+
+case_reader_error_mplus :: Assertion
+case_reader_error_mplus = do
+  let r = (auto >>= \x -> x <$ guard (x == 42))
+        <|> (str >>= \x -> readerError (x ++ " /= 42"))
+      p1 = argument r idm :: Parser Int
+      i = info p1 idm
+  assertError (run i ["foo"]) $ \failure -> do
+    let text = head . lines . fst $ renderFailure failure "test"
+    "foo /= 42" @=? text
 
 ---
 

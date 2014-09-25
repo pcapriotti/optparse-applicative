@@ -91,9 +91,9 @@ instance Monoid MatchResult where
 argMatches :: MonadP m => OptReader a -> String
            -> Maybe (StateT Args m a)
 argMatches opt arg = case opt of
-  ArgReader rdr -> do
-    result <- crReader rdr arg
-    Just $ return result
+  ArgReader rdr -> Just $ do
+    result <- lift $ runReadM (crReader rdr) arg
+    return result
   CmdReader _ f ->
     flip fmap (f arg) $ \subp -> StateT $ \args -> do
       setContext (Just arg) subp
@@ -116,18 +116,14 @@ optMatches disambiguate opt (OptWord arg1 val) = case opt of
       let missing_arg = lift $ missingArgP no_arg_err (crCompleter rdr)
       (arg', args') <- maybe missing_arg return mb_args
       put args'
-      case runReadM (crReader rdr arg') of
-        Left e -> lift $ errorFor arg1 e
-        Right r -> return r
+      lift $ runReadM (withReadM (errorFor arg1) (crReader rdr)) arg'
   FlagReader names x -> do
     guard $ has_name arg1 names
     guard $ isNothing val
     Just $ return x
   _ -> Nothing
   where
-    errorFor name (ErrorMsg msg) =
-      errorP (ErrorMsg ("option " ++ showOption name ++ ": " ++ msg))
-    errorFor _ e = errorP e
+    errorFor name msg = "option " ++ showOption name ++ ": " ++ msg
 
     has_name a
       | disambiguate = any (isOptionPrefix a)

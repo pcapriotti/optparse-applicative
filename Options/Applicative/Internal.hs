@@ -8,6 +8,8 @@ module Options.Applicative.Internal
   , uncons
   , hoistMaybe
   , hoistEither
+  , runReadM
+  , withReadM
 
   , runP
 
@@ -30,9 +32,9 @@ import Control.Applicative (Applicative(..), Alternative(..), (<$>))
 import Control.Monad (MonadPlus(..), liftM, ap, guard)
 import Control.Monad.Trans.Class (MonadTrans, lift)
 import Control.Monad.Trans.Except
-  (runExceptT, ExceptT(..), throwE, catchE)
+  (runExcept, runExceptT, withExcept, ExceptT(..), throwE, catchE)
 import Control.Monad.Trans.Reader
-  (runReader, runReaderT, Reader, ReaderT, ask)
+  (mapReaderT, runReader, runReaderT, Reader, ReaderT, ask)
 import Control.Monad.Trans.Writer (runWriterT, WriterT, tell)
 import Control.Monad.Trans.State (StateT, get, put, evalStateT)
 import Data.Maybe (maybeToList)
@@ -105,6 +107,15 @@ runP (P p) = runReader . runWriterT . runExceptT $ p
 uncons :: [a] -> Maybe (a, [a])
 uncons [] = Nothing
 uncons (x : xs) = Just (x, xs)
+
+runReadM :: MonadP m => ReadM a -> String -> m a
+runReadM (ReadM r) s = hoistEither . runExcept $ runReaderT r s
+
+withReadM :: (String -> String) -> ReadM a -> ReadM a
+withReadM f = ReadM . mapReaderT (withExcept f') . unReadM
+  where
+    f' (ErrorMsg err) = ErrorMsg (f err)
+    f' e = e
 
 data SomeParser = forall a . SomeParser (Parser a)
 

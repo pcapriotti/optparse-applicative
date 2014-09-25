@@ -10,6 +10,7 @@ module Options.Applicative.Types (
   OptProperties(..),
   OptVisibility(..),
   ReadM(..),
+  readerAsk,
   readerAbort,
   readerError,
   CReader(..),
@@ -41,6 +42,9 @@ module Options.Applicative.Types (
 import Control.Applicative
   (Applicative(..), Alternative(..), (<$>), optional)
 import Control.Monad (ap, liftM, MonadPlus, mzero, mplus)
+import Control.Monad.Trans.Except (Except, throwE)
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Reader (ReaderT, ask)
 import Data.Monoid (Monoid(..))
 import System.Exit (ExitCode(..))
 
@@ -57,8 +61,8 @@ data ParseError
 
 instance Monoid ParseError where
   mempty = UnknownError
-  mappend UnknownError m = m
-  mappend m _ = m
+  mappend m UnknownError = m
+  mappend _ m = m
 
 -- | A full description for a runnable 'Parser' for a program.
 data ParserInfo a = ParserInfo
@@ -117,55 +121,54 @@ data Option a = Option
 instance Functor Option where
   fmap f (Option m p) = Option (fmap f m) p
 
-data CReader m a = CReader
-  { crCompleter :: Completer
-  , crReader :: String -> m a }
-
-instance Functor m => Functor (CReader m) where
-  fmap f (CReader c r) = CReader c (fmap f . r)
-
--- | A newtype over the 'Either' monad used by option readers.
+-- | A newtype over 'ReaderT String Except', used by option readers.
 newtype ReadM a = ReadM
-  { runReadM :: Either ParseError a }
+  { unReadM :: ReaderT String (Except ParseError) a }
 
 instance Functor ReadM where
-  fmap f (ReadM m) = ReadM (fmap f m)
+  fmap f (ReadM r) = ReadM (fmap f r)
 
 instance Applicative ReadM where
-  pure = ReadM . Right
-  ReadM b <*> ReadM a = ReadM (b <*> a)
+  pure = ReadM . pure
+  ReadM x <*> ReadM y = ReadM $ x <*> y
 
 instance Alternative ReadM where
   empty = mzero
   (<|>) = mplus
 
 instance Monad ReadM where
-  return = ReadM . Right
-  ReadM m >>= f = ReadM $ m >>= runReadM . f
-  fail = ReadM . Left . ErrorMsg
+  return = pure
+  ReadM r >>= f = ReadM $ r >>= unReadM . f
+  fail = readerError
 
 instance MonadPlus ReadM where
-  mzero = ReadM $ Left UnknownError
-  mplus m1 m2 = case runReadM m1 of
-    Left _ -> m2
-    Right r -> return r
+  mzero = ReadM mzero
+  mplus (ReadM x) (ReadM y) = ReadM $ mplus x y
+
+-- | Return the value being read.
+readerAsk :: ReadM String
+readerAsk = ReadM ask
 
 -- | Abort option reader by exiting with a 'ParseError'.
 readerAbort :: ParseError -> ReadM a
-readerAbort = ReadM . Left
+readerAbort = ReadM . lift . throwE
 
 -- | Abort option reader by exiting with an error message.
 readerError :: String -> ReadM a
 readerError = readerAbort . ErrorMsg
 
-type OptCReader = CReader ReadM
-type ArgCReader = CReader Maybe
+data CReader a = CReader
+  { crCompleter :: Completer
+  , crReader :: ReadM a }
+
+instance Functor CReader where
+  fmap f (CReader c r) = CReader c (fmap f r)
 
 -- | An 'OptReader' defines whether an option matches an command line argument.
 data OptReader a
-  = OptReader [OptName] (OptCReader a) ParseError       -- ^ option reader
+  = OptReader [OptName] (CReader a) ParseError          -- ^ option reader
   | FlagReader [OptName] !a                             -- ^ flag reader
-  | ArgReader (ArgCReader a)                            -- ^ argument reader
+  | ArgReader (CReader a)                               -- ^ argument reader
   | CmdReader [String] (String -> Maybe (ParserInfo a)) -- ^ command reader
 
 instance Functor OptReader where
