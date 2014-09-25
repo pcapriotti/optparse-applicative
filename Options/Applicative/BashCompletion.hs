@@ -71,9 +71,7 @@ bashCompletionQuery pinfo pprefs ws i _ = case runCompletion compl pprefs of
         w:_ -> isPrefixOf w
         _ -> const True
 
-    compl = do
-      setParser Nothing (infoParser pinfo)
-      runParserInfo pinfo (drop 1 ws')
+    compl = runParserInfo pinfo (drop 1 ws')
 
 bashCompletionScript :: String -> String -> IO [String]
 bashCompletionScript prog progn = return

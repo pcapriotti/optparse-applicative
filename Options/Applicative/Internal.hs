@@ -42,7 +42,6 @@ import Options.Applicative.Types
 
 class (Alternative m, MonadPlus m) => MonadP m where
   setContext :: Maybe String -> ParserInfo a -> m ()
-  setParser :: Maybe String -> Parser a -> m ()
   getPrefs :: m ParserPrefs
 
   missingArgP :: ParseError -> Completer -> m a
@@ -87,7 +86,6 @@ instance Monoid Context where
 
 instance MonadP P where
   setContext name = P . lift . tell . Context (maybeToList name)
-  setParser _ _ = return ()
   getPrefs = P . lift . lift $ ask
 
   missingArgP e _ = errorP e
@@ -157,7 +155,6 @@ instance MonadPlus Completion where
 
 instance MonadP Completion where
   setContext _ _ = return ()
-  setParser _ _ = return ()
   getPrefs = Completion $ lift ask
 
   missingArgP _ = Completion . lift . lift . ComplOption
