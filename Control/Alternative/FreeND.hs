@@ -1,6 +1,7 @@
 -- | Free non-distributive 'Alternative' functor.
 module Control.Alternative.FreeND
   ( Alt(..)
+  , liftAlt
   ) where
 
 import Control.Applicative
@@ -36,6 +37,9 @@ data Alt f a
   = LiftAlt (f a)
   | Branch1 (Alt1 f a)
   | Branch2 (Alt2 f a)
+
+liftAlt :: f a -> Alt f a
+liftAlt = LiftAlt
 
 altToAp :: Alt f a -> Ap (Coproduct f (Alt2 f)) a
 altToAp (LiftAlt x) = liftAp (left x)
