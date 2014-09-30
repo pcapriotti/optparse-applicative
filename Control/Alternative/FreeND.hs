@@ -31,8 +31,8 @@ instance Functor f => Monoid1 (Alt2 f) where
 
 -- | Coproduct of consistent monads.
 --
--- See <http://arxiv-web3.library.cornell.edu/abs/14'9.38'4 Coproducts of Monads
--- on Set> for more details on this construction.
+-- See <http://arxiv.org/abs/1409.3804 Coproducts of Monads on Set>
+-- for more details on this construction.
 data Alt f a
   = LiftAlt (f a)
   | Branch1 (Alt1 f a)

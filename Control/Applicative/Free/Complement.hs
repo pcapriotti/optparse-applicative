@@ -13,8 +13,8 @@ import Control.Applicative.Free
 --
 -- 'Ap'' is /almost/ an ideal monad.
 --
--- See <http://arxiv-web3.library.cornell.edu/abs/14'9.38'4 Coproducts of Monads
--- on Set> for more details on the unit complement of a monad.
+-- See <http://arxiv.org/abs/1409.3804 Coproducts of Monads on Set>
+-- for more details on the unit complement of a monad.
 data Ap' f a where
   Pure' :: a -> Ap' f a
   Ap' :: f a -> f b -> Ap f (a -> b -> c) -> Ap' f c
