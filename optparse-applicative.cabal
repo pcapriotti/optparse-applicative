@@ -113,6 +113,7 @@ library
                        Options.Applicative.Types,
                        Options.Applicative.Internal
   ghc-options:         -Wall
+  hs-source-dirs:      src
   build-depends:       base == 4.*,
                        transformers >= 0.2 && < 0.5,
                        transformers-compat == 0.3.*,

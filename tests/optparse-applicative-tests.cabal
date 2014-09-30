@@ -25,7 +25,7 @@ cabal-version:       >= 1.8
 
 executable optparse-applicative-tests
   main-is:             Tests.hs
-  hs-source-dirs:      .. .
+  hs-source-dirs:      ../src .
   ghc-options:         -Wall -fno-warn-orphans
   build-depends:       base == 4.*,
                        HUnit == 1.2.*,
