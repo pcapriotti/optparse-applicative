@@ -93,7 +93,11 @@ source-repository head
   location: https://github.com/pcapriotti/optparse-applicative.git
 
 library
-  exposed-modules:     Options.Applicative,
+  exposed-modules:     Control.Applicative.Free.Complement,
+                       Control.Alternative.FreeND,
+                       Control.Alternative.FreeStar,
+                       Data.Monoid1,
+                       Options.Applicative,
                        Options.Applicative.Arrows,
                        Options.Applicative.BashCompletion,
                        Options.Applicative.Builder,
