@@ -1,7 +1,10 @@
 module Data.Monoid1
   ( Monoid1(..)
   , List1(..)
+  , liftList1
   , List1'(..)
+  , list1'ToList1
+  , list1ToList1'
   ) where
 
 import Control.Applicative
@@ -13,6 +16,9 @@ class Functor f => Monoid1 f where
 newtype List1 f a = List1
   { unList1 :: [f a] }
   deriving (Eq, Ord, Read, Show)
+
+liftList1 :: f a -> List1 f a
+liftList1 = List1 . pure
 
 instance Functor f => Functor (List1 f) where
   fmap f = List1 . map (fmap f) . unList1
@@ -33,6 +39,20 @@ data List1' f a
   = Nil'
   | Cons' (f a) (f a) (List1 f a)
 
+list1'ToList1 :: List1' f a -> List1 f a
+list1'ToList1 Nil' = List1 []
+list1'ToList1 (Cons' x1 x2 (List1 xs)) = List1 (x1 : x2 : xs)
+
+list1ToList1' :: List1 f a -> Either (f a) (List1' f a)
+list1ToList1' (List1 []) = Right Nil'
+list1ToList1' (List1 [x]) = Left x
+list1ToList1' (List1 (x : y : xs)) = Right (Cons' x y (List1 xs))
+
 instance Functor f => Functor (List1' f) where
   fmap _ Nil' = Nil'
   fmap f (Cons' x1 x2 xs) = Cons' (fmap f x1) (fmap f x2) (fmap f xs)
+
+instance Functor f => Monoid1 (List1' f) where
+  mempty1 = Nil'
+  mappend1 Nil' x = x
+  mappend1 (Cons' x1 x2 xs) ys = Cons' x1 x2 (mappend1 xs (list1'ToList1 ys))

@@ -114,4 +114,5 @@ library
                        transformers-compat == 0.3.*,
                        process >= 1.0 && < 1.3,
                        ansi-wl-pprint >= 0.6 && < 0.7,
-                       free == 4.9.*
+                       free == 4.9.*,
+                       comonad == 4.2.*
