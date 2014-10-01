@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 -- | Free non-distributive 'Alternative' with a freely generated 'some'
 -- operation.
 --
@@ -7,6 +8,7 @@
 module Control.Alternative.FreeStar
   ( Alt(..)
   , liftAlt
+  , runAlt
   ) where
 
 import Control.Applicative
@@ -19,6 +21,9 @@ newtype Alt f a = Alt
 
 liftAlt :: f a -> Alt f a
 liftAlt = Alt . ND.liftAlt . left
+
+runAlt :: (Functor f, Alternative g) => (forall x . f x -> g x) -> Alt f a -> g a
+runAlt f (Alt x) = ND.runAlt (coproduct f (toLan (some . runAlt f))) x
 
 instance Functor f => Functor (Alt f) where
   fmap f = Alt . fmap f . unAlt

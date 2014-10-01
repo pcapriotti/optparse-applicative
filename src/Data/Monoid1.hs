@@ -1,13 +1,17 @@
+{-# LANGUAGE RankNTypes #-}
 module Data.Monoid1
   ( Monoid1(..)
   , List1(..)
   , liftList1
+  , runList1
+  , runList1Alt
   , List1'(..)
   , list1'ToList1
   , list1ToList1'
   ) where
 
 import Control.Applicative
+import Data.Foldable (asum)
 
 class Functor f => Monoid1 f where
   mempty1 :: f a
@@ -19,6 +23,12 @@ newtype List1 f a = List1
 
 liftList1 :: f a -> List1 f a
 liftList1 = List1 . pure
+
+runList1 :: Monoid1 g => (forall x . f x -> g x) -> List1 f a -> g a
+runList1 f (List1 xs) = foldr mappend1 mempty1 (map f xs)
+
+runList1Alt :: Alternative g => (forall x . f x -> g x) -> List1 f a -> g a
+runList1Alt f (List1 xs) = asum (map f xs)
 
 instance Functor f => Functor (List1 f) where
   fmap f = List1 . map (fmap f) . unList1

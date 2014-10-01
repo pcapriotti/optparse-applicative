@@ -1,7 +1,13 @@
+{-# LANGUAGE RankNTypes #-}
 -- | Free non-distributive 'Alternative' functor.
 module Control.Alternative.FreeND
   ( Alt(..)
+  , Alt1(..)
+  , Alt2(..)
   , liftAlt
+  , runAlt
+  , runAlt1
+  , runAlt2
   ) where
 
 import Control.Applicative
@@ -37,6 +43,17 @@ data Alt f a
   = LiftAlt (f a)
   | Branch1 (Alt1 f a)
   | Branch2 (Alt2 f a)
+
+runAlt :: (Functor f, Alternative g) => (forall x . f x -> g x) -> Alt f a -> g a
+runAlt f (LiftAlt x) = f x
+runAlt f (Branch1 b1) = runAlt1 f b1
+runAlt f (Branch2 b2) = runAlt2 f b2
+
+runAlt1 :: (Functor f, Alternative g) => (forall x . f x -> g x) -> Alt1 f a -> g a
+runAlt1 f (Alt1 x) = runAp (coproduct f (runAlt2 f)) (ap'ToAp x)
+
+runAlt2 :: (Functor f, Alternative g) => (forall x . f x -> g x) -> Alt2 f a -> g a
+runAlt2 f (Alt2 x) = runList1Alt (coproduct f (runAlt1 f)) (list1'ToList1 x)
 
 liftAlt :: f a -> Alt f a
 liftAlt = LiftAlt
