@@ -21,7 +21,8 @@ data Ap' f a where
 
 ap'ToAp :: Ap' f a -> Ap f a
 ap'ToAp (Pure' x) = pure x
-ap'ToAp (Ap' a b u) = u <*> liftAp a <*> liftAp b
+ap'ToAp (Ap' a b u) = h <$> liftAp a <*> liftAp b <*> u
+  where h a0 b0 u0 = u0 a0 b0
 
 apToAp' :: Functor f => Ap f a -> Either (f a) (Ap' f a)
 apToAp' (Pure x) = Right (Pure' x)

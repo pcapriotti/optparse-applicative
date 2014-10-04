@@ -8,6 +8,11 @@ module Control.Alternative.FreeND
   , runAlt
   , runAlt1
   , runAlt2
+
+  , altToAp
+  , apToAlt
+  , altToList1
+  , list1ToAlt
   ) where
 
 import Control.Applicative

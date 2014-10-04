@@ -97,9 +97,12 @@ library
                        Control.Alternative.FreeND,
                        Control.Alternative.FreeStar,
                        Data.Monoid1,
+                       Data.Bimonoid,
+                       Data.Bimonoid.Expr,
                        Options.Applicative,
                        Options.Applicative.Arrows,
                        Options.Applicative.BashCompletion,
+                       Options.Applicative.Basic,
                        Options.Applicative.Builder,
                        Options.Applicative.Builder.Completer,
                        Options.Applicative.Builder.Internal,
@@ -121,4 +124,7 @@ library
                        ansi-wl-pprint >= 0.6 && < 0.7,
                        free == 4.9.*,
                        comonad == 4.2.*,
-                       kan-extensions == 4.1.*
+                       kan-extensions == 4.1.*,
+                       semigroups == 0.15.*,
+                       mtl == 2.2.*,
+                       bifunctors == 4.1.*
