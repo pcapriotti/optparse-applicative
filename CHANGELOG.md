@@ -1,4 +1,4 @@
-## Version 0.11.0 (unreleased)
+## Version 0.11.0 (4 Oct 2014)
 
 - Added Alternative instances for `Chunk` and `ReadM`.
 
