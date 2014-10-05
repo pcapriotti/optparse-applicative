@@ -173,16 +173,20 @@ the type will be normally inferred from the context in which the parser is
 used.
 
 You can also create a custom reader that doesn't use the `Read` typeclass, and
-use it to parse option arguments:
+use it to parse option arguments.  A custom reader is a value in the `ReadM`
+monad.
 
 ```haskell
 data FluxCapacitor = ...
 
 parseFluxCapacitor :: Monad m => String -> m FluxCapacitor
 
-option parseFluxCapacitor
+option (str >>= parseFluxCapacitor)
   ( long "flux-capacitor" )
 ```
+
+Use `readerAbort` or `readerError` within the `ReadM` monad to exit with an
+error message.
 
 ### Flags
 
