@@ -7,6 +7,7 @@ import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.Except
 import Control.Monad.State.Strict
+import Control.Monad.Trans.Except
 import Data.Bifunctor
 import Data.Bimonoid
 import Data.Functor.Identity
@@ -14,10 +15,9 @@ import Data.Functor.Compose
 import Data.Traversable (sequenceA)
 
 import Options.Applicative.Help.Pretty
-import Options.Applicative.Error
 import Options.Applicative.Name
 import Options.Applicative.Usage
-import Options.Applicative.Validate
+import Options.Applicative.Types
 
 class Pretty1 f where
   pretty1 :: f a -> Doc
@@ -28,9 +28,12 @@ data ParserState a = ParserState
   deriving (Eq, Ord, Read, Show)
 
 newtype ArgParser a = ArgParser
-  { runArgParser :: StateT (ParserState String) Err a }
+  { runArgParser :: StateT (ParserState String) (Except ParseError) a }
   deriving ( Functor, Applicative, Monad, Alternative, MonadPlus
            , MonadState (ParserState String), MonadError ParseError )
+
+errMsg :: String -> ArgParser a
+errMsg = ArgParser . lift . throwE . ErrorMsg
 
 nextArg :: ArgParser String
 nextArg = (tryNextArg >>= hoistMaybe)
@@ -53,26 +56,26 @@ resetArgs = modify $ \s -> s
 
 type Names = Name
 
-data Option a
-  = Option Name (Validate a)
+data BaseOption a
+  = BaseOption Name (ReadM a)
   | Flag Name a
   | Command String a
 
-instance Functor Option where
-  fmap f (Option n v) = Option n (fmap f v)
+instance Functor BaseOption where
+  fmap f (BaseOption n v) = BaseOption n (fmap f v)
   fmap f (Flag n x) = Flag n (f x)
   fmap f (Command n x) = Command n (f x)
 
 class Functor f => Opt f where
   optFind :: String -> f a -> Maybe (ArgParser a)
 
-instance Pretty1 Option where
-  pretty1 (Option n _) = pretty n </> string "ARG"
+instance Pretty1 BaseOption where
+  pretty1 (BaseOption n _) = pretty n </> string "ARG"
   pretty1 (Flag n _) = pretty n
   pretty1 (Command arg _) = string arg
 
-instance Opt Option where
-  optFind arg (Option n v)
+instance Opt BaseOption where
+  optFind arg (BaseOption n v)
     | matchName n arg = Just (argParser1 v)
   optFind arg (Flag n x)
     | matchName n arg = Just (pure x)
@@ -114,17 +117,17 @@ instance (Pretty1 f, Pretty1 g) => Pretty1 (OptSum f g) where
   pretty1 (OptLeft x) = pretty1 x
   pretty1 (OptRight y) = pretty1 y
 
-type Parser = Alt Option
+type Parser = Alt BaseOption
 
 evalParser :: Functor f => Alt f a -> Maybe a
 evalParser = runAlt $ const Nothing
 
 -- | Convert a 'Validate' value into an argument parser that consumes exactly
 -- one argument.
-argParser1 :: Validate a -> ArgParser a
+argParser1 :: ReadM a -> ArgParser a
 argParser1 v = do
   x <- nextArg
-  ArgParser . lift $ runReaderT (runValidate v) x
+  ArgParser . lift $ runReaderT (unReadM v) x
 
 matchName :: Name -> String -> Bool
 matchName (ShortName n) ('-':[c]) = n == c

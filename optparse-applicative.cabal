@@ -109,7 +109,6 @@ library
                        Options.Applicative.Classes,
                        Options.Applicative.Common,
                        Options.Applicative.Extra,
-                       Options.Applicative.Error,
                        Options.Applicative.Internal,
                        Options.Applicative.Help,
                        Options.Applicative.Help.Pretty,
@@ -118,7 +117,6 @@ library
                        Options.Applicative.Help.Types,
                        Options.Applicative.Name,
                        Options.Applicative.Types,
-                       Options.Applicative.Validate,
                        Options.Applicative.WithArgs
   ghc-options:         -Wall
   hs-source-dirs:      src
