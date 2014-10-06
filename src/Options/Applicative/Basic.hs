@@ -11,41 +11,16 @@ import Data.Bifunctor
 import Data.Bimonoid
 import Data.Functor.Identity
 import Data.Functor.Compose
-import Data.Semigroup hiding (Option, Product)
-import qualified Data.Semigroup as S
 import Data.Traversable (sequenceA)
 
 import Options.Applicative.Help.Pretty
+import Options.Applicative.Error
+import Options.Applicative.Name
 import Options.Applicative.Usage
+import Options.Applicative.Validate
 
 class Pretty1 f where
   pretty1 :: f a -> Doc
-
-data Name
-  = LongName String
-  | ShortName Char
-  deriving (Eq, Read, Show)
-
-instance Pretty Name where
-  pretty (LongName n) = string $ '-' : '-' : n
-  pretty (ShortName c) = string $ '-' : [c]
-
-newtype ParseError = ParseError
-  { unParseError :: S.Option (Last ParseError1) }
-  deriving (Eq, Ord, Read, Show, Monoid)
-
-data ParseError1 = ErrMsg String
-  deriving (Eq, Ord, Read, Show)
-
-type Err = Except ParseError
-
-errMsg :: MonadError ParseError m => String -> m a
-errMsg = throwError . ParseError . S.Option . Just . Last . ErrMsg
-
-newtype Validate a = Validate
-  { runValidate :: ReaderT String Err a }
-  deriving ( Functor, Applicative, Monad, Alternative, MonadPlus
-           , MonadReader String, MonadError ParseError )
 
 data ParserState a = ParserState
   { pendingArgs :: [a]
@@ -75,6 +50,8 @@ resetArgs :: ArgParser ()
 resetArgs = modify $ \s -> s
   { pendingArgs = reverse (skippedArgs s)
   , skippedArgs = [] }
+
+type Names = Name
 
 data Option a
   = Option Name (Validate a)
@@ -110,6 +87,9 @@ data WithDesc i f a = WithDesc
 
 instance Functor f => Functor (WithDesc i f) where
   fmap f (WithDesc d x) = WithDesc d (fmap f x)
+
+instance Opt f => Opt (WithDesc i f) where
+  optFind arg (WithDesc _ x) = optFind arg x
 
 instance Pretty i => Pretty1 (WithDesc i f) where
   pretty1 (WithDesc d _) = pretty d
