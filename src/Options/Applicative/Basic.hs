@@ -10,6 +10,7 @@ import Control.Monad.State.Strict
 import Data.Bifunctor
 import Data.Bimonoid
 import Data.Functor.Identity
+import Data.Functor.Compose
 import Data.Semigroup hiding (Option, Product)
 import qualified Data.Semigroup as S
 import Data.Traversable (sequenceA)
@@ -69,6 +70,11 @@ tryNextArg = do
 
 skipArg :: String -> ArgParser ()
 skipArg arg = modify $ \s -> s { skippedArgs = arg : skippedArgs s }
+
+resetArgs :: ArgParser ()
+resetArgs = modify $ \s -> s
+  { pendingArgs = reverse (skippedArgs s)
+  , skippedArgs = [] }
 
 data Option a
   = Option Name (Validate a)
@@ -191,9 +197,11 @@ hoistMaybe = maybe empty pure
 
 class OptParser f where
   runParser :: f a -> ArgParser a
+
+class HasUsage f where
   usage :: f a -> Usage Doc
 
-instance (Pretty1 f, Opt f) => OptParser (Alt f) where
+instance Opt f => OptParser (Alt f) where
   runParser p0 = do
     marg <- tryNextArg
     case marg of
@@ -209,6 +217,7 @@ instance (Pretty1 f, Opt f) => OptParser (Alt f) where
             r <- m
             runParser (fmap ($r) p')
 
+instance (Functor f, Pretty1 f) => HasUsage (Alt f) where
   usage = getBConst . runAlt (BConst . pure . pretty1)
 
 class Nat f g where
@@ -256,6 +265,8 @@ instance OptParser f => OptParser (WithSub f) where
     case x of
       Left p' -> runParser p'
       Right (Identity r) -> pure r
+
+instance HasUsage f => HasUsage (WithSub f) where
   usage = usage . unWithSub
 
 -- | Add a description to a parser.
@@ -269,4 +280,16 @@ instance Functor f => Functor (WithInfo i f) where
 
 instance OptParser f => OptParser (WithInfo i f) where
   runParser = runParser . unWithInfo
+
+instance HasUsage f => HasUsage (WithInfo i f) where
   usage = usage . unWithInfo
+
+-- | Compose parsers.
+instance (OptParser f, OptParser g) => OptParser (Compose f g) where
+  runParser p = do
+    p' <- runParser (getCompose p)
+    resetArgs
+    runParser p'
+
+instance HasUsage f => HasUsage (Compose f g) where
+  usage = usage . getCompose
