@@ -111,6 +111,23 @@ instance Pretty i => Pretty1 (WithDesc i f) where
 instance Opt Identity where
   optFind _ _ = Nothing
 
+data OptSum f g a
+  = OptLeft (f a)
+  | OptRight (g a)
+  deriving (Eq, Ord, Read, Show)
+
+instance (Functor f, Functor g) => Functor (OptSum f g) where
+  fmap f (OptLeft x) = OptLeft (fmap f x)
+  fmap f (OptRight y) = OptRight (fmap f y)
+
+instance (Opt f, Opt g) => Opt (OptSum f g) where
+  optFind arg (OptLeft x) = optFind arg x
+  optFind arg (OptRight y) = optFind arg y
+
+instance (Pretty1 f, Pretty1 g) => Pretty1 (OptSum f g) where
+  pretty1 (OptLeft x) = pretty1 x
+  pretty1 (OptRight y) = pretty1 y
+
 type Parser = Alt Option
 
 evalParser :: Functor f => Alt f a -> Maybe a
