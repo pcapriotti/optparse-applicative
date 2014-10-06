@@ -46,10 +46,15 @@ newtype Validate a = Validate
   deriving ( Functor, Applicative, Monad, Alternative, MonadPlus
            , MonadReader String, MonadError ParseError )
 
+data ParserState a = ParserState
+  { pendingArgs :: [a]
+  , skippedArgs :: [a] }
+  deriving (Eq, Ord, Read, Show)
+
 newtype ArgParser a = ArgParser
-  { runArgParser :: StateT [String] Err a }
+  { runArgParser :: StateT (ParserState String) Err a }
   deriving ( Functor, Applicative, Monad, Alternative, MonadPlus
-           , MonadState [String], MonadError ParseError )
+           , MonadState (ParserState String), MonadError ParseError )
 
 nextArg :: ArgParser String
 nextArg = (tryNextArg >>= hoistMaybe)
@@ -57,10 +62,13 @@ nextArg = (tryNextArg >>= hoistMaybe)
 
 tryNextArg :: ArgParser (Maybe String)
 tryNextArg = do
-  xs <- get
+  xs <- gets pendingArgs
   case xs of
     [] -> pure Nothing
-    (x : xt) -> Just x <$ put xt
+    (x : xt) -> Just x <$ modify (\s -> s { pendingArgs = xt })
+
+skipArg :: String -> ArgParser ()
+skipArg arg = modify $ \s -> s { skippedArgs = arg : skippedArgs s }
 
 data Option a
   = Option Name (Validate a)
@@ -165,7 +173,7 @@ instance (Pretty1 f, Opt f) => OptParser (Alt f) where
     where
       go arg p = do
         case stepParser arg p of
-          Step Nothing _ -> errMsg $ "unrecognized: " ++ arg
+          Step Nothing _ -> skipArg arg >> runParser p
           Step (Just (Day m p')) _ -> do
             r <- m
             runParser (fmap ($r) p')
