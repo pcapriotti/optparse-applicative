@@ -54,11 +54,9 @@ resetArgs = modify $ \s -> s
   { pendingArgs = reverse (skippedArgs s)
   , skippedArgs = [] }
 
-type Names = Name
-
 data BaseOption a
-  = BaseOption Name (ReadM a)
-  | Flag Name a
+  = BaseOption Names (ReadM a)
+  | Flag Names a
   | Command String a
 
 instance Functor BaseOption where
@@ -75,10 +73,10 @@ instance Pretty1 BaseOption where
   pretty1 (Command arg _) = string arg
 
 instance Opt BaseOption where
-  optFind arg (BaseOption n v)
-    | matchName n arg = Just (argParser1 v)
-  optFind arg (Flag n x)
-    | matchName n arg = Just (pure x)
+  optFind arg (BaseOption ns v)
+    | matchNames arg ns = Just (argParser1 v)
+  optFind arg (Flag ns x)
+    | matchNames arg ns = Just (pure x)
   optFind arg (Command cmd x)
     | arg == cmd = Just (pure x)
   optFind _ _ = empty
@@ -129,9 +127,12 @@ argParser1 v = do
   x <- nextArg
   ArgParser . lift $ runReaderT (unReadM v) x
 
-matchName :: Name -> String -> Bool
-matchName (ShortName n) ('-':[c]) = n == c
-matchName (LongName n) ('-':'-':arg) = n == arg
+matchNames :: String -> Names -> Bool
+matchNames = any . matchName
+
+matchName :: String -> Name -> Bool
+matchName ('-':[c]) (ShortName n) = n == c
+matchName ('-':'-':arg) (LongName n) = n == arg
 matchName _ _ = False
 
 -- Day convolution

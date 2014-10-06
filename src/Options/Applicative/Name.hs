@@ -7,7 +7,7 @@ data Name
   | ShortName Char
   deriving (Eq, Read, Show)
 
-type Names = Name
+type Names = [Name]
 
 instance Pretty Name where
   pretty (LongName n) = string $ '-' : '-' : n
