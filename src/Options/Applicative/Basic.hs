@@ -108,6 +108,9 @@ instance Functor f => Functor (WithDesc i f) where
 instance Pretty i => Pretty1 (WithDesc i f) where
   pretty1 (WithDesc d _) = pretty d
 
+instance Opt Identity where
+  optFind _ _ = Nothing
+
 type Parser = Alt Option
 
 evalParser :: Functor f => Alt f a -> Maybe a
