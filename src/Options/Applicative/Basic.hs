@@ -80,7 +80,7 @@ instance Functor Option where
   fmap f (Flag n x) = Flag n (f x)
   fmap f (Command n x) = Command n (f x)
 
-class (Functor f, Pretty1 f) => Opt f where
+class Functor f => Opt f where
   optFind :: String -> f a -> Maybe (ArgParser a)
 
 instance Pretty1 Option where
@@ -96,6 +96,17 @@ instance Opt Option where
   optFind arg (Command cmd x)
     | arg == cmd = Just (pure x)
   optFind _ _ = empty
+
+data WithDesc i f a = WithDesc
+  { desc :: i
+  , unWithDesc :: f a }
+  deriving (Eq, Ord, Read, Show)
+
+instance Functor f => Functor (WithDesc i f) where
+  fmap f (WithDesc d x) = WithDesc d (fmap f x)
+
+instance Pretty i => Pretty1 (WithDesc i f) where
+  pretty1 (WithDesc d _) = pretty d
 
 type Parser = Alt Option
 
@@ -231,6 +242,7 @@ instance OptParser f => OptParser (WithSub f) where
 data WithInfo i f a = WithInfo
   { info :: i
   , unWithInfo :: f a }
+  deriving (Eq, Ord, Read, Show)
 
 instance Functor f => Functor (WithInfo i f) where
   fmap f (WithInfo i x) = WithInfo i (fmap f x)
