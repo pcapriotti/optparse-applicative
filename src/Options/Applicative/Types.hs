@@ -112,6 +112,9 @@ data OptProperties = OptProperties
   , propShowDefault :: Maybe String       -- ^ what to show in the help text as the default
   }
 
+instance Pretty OptProperties where
+  pretty d = string (propMetaVar d)
+
 -- | A single option of a parser.
 data Option a = Option
   { optMain :: OptReader a               -- ^ reader for this option
