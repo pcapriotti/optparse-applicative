@@ -15,20 +15,18 @@ module Options.Applicative.Builder.Internal (
   fieldMod,
 
   baseProps,
-  mkCommand,
-  mkParser,
-  mkOption,
   mkProps,
+  withDefault,
 
   internal
   ) where
 
-import Control.Applicative (pure, (<*>), empty, (<|>))
+import Control.Applicative
 import Control.Monad (mplus)
 import Data.Monoid (Monoid(..))
 
-import Options.Applicative.Common
 import Options.Applicative.Types
+import Options.Applicative.WithArgs
 
 data OptionFields a = OptionFields
   { optNames :: [OptName]
@@ -36,8 +34,7 @@ data OptionFields a = OptionFields
   , optNoArgError :: ParseError }
 
 data FlagFields a = FlagFields
-  { flagNames :: [OptName]
-  , flagActive :: a }
+  { flagNames :: [OptName] }
 
 data CommandFields a = CommandFields
   { cmdCommands :: [(String, ParserInfo a)] }
@@ -139,26 +136,6 @@ baseProps = OptProperties
   , propHelp = mempty
   , propShowDefault = Nothing }
 
-mkCommand :: Mod CommandFields a -> ([String], String -> Maybe (ParserInfo a))
-mkCommand m = (map fst cmds, (`lookup` cmds))
-  where
-    Mod f _ _ = m
-    CommandFields cmds = f (CommandFields [])
-
-mkParser :: DefaultProp a
-         -> (OptProperties -> OptProperties)
-         -> OptReader a
-         -> Parser a
-mkParser d@(DefaultProp def _) g rdr = liftOpt opt <|> maybe empty pure def
-  where
-    opt = mkOption d g rdr
-
-mkOption :: DefaultProp a
-         -> (OptProperties -> OptProperties)
-         -> OptReader a
-         -> Option a
-mkOption d g rdr = Option rdr (mkProps d g)
-
 mkProps :: DefaultProp a
         -> (OptProperties -> OptProperties)
         -> OptProperties
@@ -166,6 +143,9 @@ mkProps (DefaultProp def sdef) g = props
   where
     props = (g baseProps)
       { propShowDefault = sdef <*> def }
+
+withDefault :: Alternative f => DefaultProp a -> f a -> f a
+withDefault (DefaultProp def _) = (<|> maybe empty pure def)
 
 -- | Hide this option from the help text
 internal :: Mod f a

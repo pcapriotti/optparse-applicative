@@ -29,7 +29,6 @@ module Options.Applicative.Arrows (
   A(..),
   asA,
   runA,
-  ParserA,
   ) where
 
 import Control.Arrow
@@ -70,6 +69,3 @@ instance Applicative f => Category (A f) where
 instance Applicative f => Arrow (A f) where
   arr = A . pure
   first (A f) = A $ first <$> f
-
--- | The type of arrows associated to the applicative 'Parser' functor.
-type ParserA = A Parser

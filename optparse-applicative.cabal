@@ -107,15 +107,12 @@ library
                        Options.Applicative.Builder.Completer,
                        Options.Applicative.Builder.Internal,
                        Options.Applicative.Classes,
-                       Options.Applicative.Common,
                        Options.Applicative.Extra,
-                       Options.Applicative.Internal,
                        Options.Applicative.Help,
                        Options.Applicative.Help.Pretty,
                        Options.Applicative.Help.Chunk,
                        Options.Applicative.Help.Core,
                        Options.Applicative.Help.Types,
-                       Options.Applicative.Name,
                        Options.Applicative.Types,
                        Options.Applicative.WithArgs
   ghc-options:         -Wall

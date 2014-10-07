@@ -17,7 +17,6 @@ module Options.Applicative.Builder (
   -- >    <> metavar "FILENAME" )
   --
   -- creates a parser for an option called \"output\".
-  subparser,
   strArgument,
   argument,
   flag,
@@ -27,7 +26,6 @@ module Options.Applicative.Builder (
   infoOption,
   strOption,
   option,
-  nullOption,
 
   -- * Modifiers
   short,
@@ -94,7 +92,7 @@ module Options.Applicative.Builder (
   CommandFields
   ) where
 
-import Control.Applicative (pure, (<|>))
+import Control.Applicative
 import Data.Monoid (Monoid (..)
 #if __GLASGOW_HASKELL__ > 702
   , (<>)
@@ -103,10 +101,12 @@ import Data.Monoid (Monoid (..)
 
 import Options.Applicative.Builder.Completer
 import Options.Applicative.Builder.Internal
-import Options.Applicative.Common
-import Options.Applicative.Types
+import Options.Applicative.Basic
+import Options.Applicative.Classes
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
+import Options.Applicative.Types
+import Options.Applicative.WithArgs
 
 -- readers --
 
@@ -176,9 +176,9 @@ hidden = optionMod $ \p ->
   p { propVisibility = min Hidden (propVisibility p) }
 
 -- | Add a command to a subparser option.
-command :: String -> ParserInfo a -> Mod CommandFields a
-command cmd pinfo = fieldMod $ \p ->
-  p { cmdCommands = (cmd, pinfo) : cmdCommands p }
+command :: (Applicative f, HasCommand f)
+        => String -> WithSub f a -> WithSub f a
+command cmd sub = wrapSub (mkCommand cmd sub)
 
 -- | Add a list of possible completion values.
 completeWith :: HasCompleter f => [String] -> Mod f a
@@ -200,33 +200,24 @@ completer f = fieldMod $ modCompleter (`mappend` f)
 
 -- parsers --
 
--- | Builder for a command parser. The 'command' modifier can be used to
--- specify individual commands.
-subparser :: Mod CommandFields a -> Parser a
-subparser m = mkParser d g rdr
-  where
-    Mod _ d g = metavar "COMMAND" `mappend` m
-    rdr = uncurry CmdReader (mkCommand m)
-
 -- | Builder for an argument parser.
-argument :: ReadM a -> Mod ArgumentFields a -> Parser a
-argument p (Mod f d g) = mkParser d g (ArgReader rdr)
-  where
-    ArgumentFields compl = f (ArgumentFields mempty)
-    rdr = CReader compl p
+argument :: HasArgument f
+         => ReadM a -> Mod ArgumentFields a -> f a
+argument p (Mod _ d g) = mkArgument (mkProps d g) p
 
 -- | Builder for a 'String' argument.
-strArgument :: Mod ArgumentFields String -> Parser String
+strArgument :: HasArgument f => Mod ArgumentFields String -> f String
 strArgument = argument str
 
 -- | Builder for a flag parser.
 --
 -- A flag that switches from a \"default value\" to an \"active value\" when
 -- encountered. For a simple boolean value, use `switch` instead.
-flag :: a                         -- ^ default value
+flag :: (HasFlag f, Alternative f)
+     => a                         -- ^ default value
      -> a                         -- ^ active value
      -> Mod FlagFields a          -- ^ option modifier
-     -> Parser a
+     -> f a
 flag defv actv m = flag' actv m <|> pure defv
 
 -- | Builder for a flag parser without a default value.
@@ -239,19 +230,18 @@ flag defv actv m = flag' actv m <|> pure defv
 -- > length <$> many (flag' () (short 't'))
 --
 -- is a parser that counts the number of "-t" arguments on the command line.
-flag' :: a                         -- ^ active value
+flag' :: (Alternative f, HasFlag f)
+      => a                         -- ^ active value
       -> Mod FlagFields a          -- ^ option modifier
-      -> Parser a
-flag' actv (Mod f d g) = mkParser d g rdr
+      -> f a
+flag' x (Mod f d g) = mkFlag (mkProps d g) (flagNames fields) x
   where
-    rdr = let fields = f (FlagFields [] actv)
-          in FlagReader (flagNames fields)
-                        (flagActive fields)
+    fields = f (FlagFields [])
 
 -- | Builder for a boolean flag.
 --
 -- > switch = flag False True
-switch :: Mod FlagFields Bool -> Parser Bool
+switch :: (Alternative f, HasFlag f) => Mod FlagFields Bool -> f Bool
 switch = flag False True
 
 -- | An option that always fails.
@@ -259,33 +249,24 @@ switch = flag False True
 -- When this option is encountered, the option parser immediately aborts with
 -- the given parse error.  If you simply want to output a message, use
 -- 'infoOption' instead.
-abortOption :: ParseError -> Mod OptionFields (a -> a) -> Parser (a -> a)
+abortOption :: HasOption f => ParseError -> Mod OptionFields a -> f a
 abortOption err m = option (readerAbort err) . (`mappend` m) $ mconcat
-  [ noArgError err
-  , value id
-  , metavar "" ]
+  [ noArgError err , metavar "" ]
 
 -- | An option that always fails and displays a message.
-infoOption :: String -> Mod OptionFields (a -> a) -> Parser (a -> a)
+infoOption :: HasOption f => String -> Mod OptionFields a -> f a
 infoOption = abortOption . InfoMsg
 
 -- | Builder for an option taking a 'String' argument.
-strOption :: Mod OptionFields String -> Parser String
+strOption :: HasOption f => Mod OptionFields String -> f String
 strOption = option str
 
--- | Same as 'option'.
-{-# DEPRECATED nullOption "Use 'option' instead" #-}
-nullOption :: ReadM a -> Mod OptionFields a -> Parser a
-nullOption = option
-
 -- | Builder for an option using the 'auto' reader.
-option :: ReadM a -> Mod OptionFields a -> Parser a
-option r m = mkParser d g rdr
+option :: HasOption f => ReadM a -> Mod OptionFields a -> f a
+option r m = mkOption (mkProps d g) (optNames fields) r
   where
     Mod f d g = metavar "ARG" `mappend` m
     fields = f (OptionFields [] mempty (ErrorMsg ""))
-    crdr = CReader (optCompleter fields) r
-    rdr = OptReader (optNames fields) crdr (optNoArgError fields)
 
 -- | Modifier for 'ParserInfo'.
 newtype InfoMod a = InfoMod
@@ -297,59 +278,58 @@ instance Monoid (InfoMod a) where
 
 -- | Show a full description in the help text of this parser.
 fullDesc :: InfoMod a
-fullDesc = InfoMod $ \i -> i { infoFullDesc = True }
+fullDesc = InfoMod . overMetadata $ \i -> i { mdFullDesc = True }
 
 -- | Only show a brief description in the help text of this parser.
 briefDesc :: InfoMod a
-briefDesc = InfoMod $ \i -> i { infoFullDesc = False }
+briefDesc = InfoMod . overMetadata $ \i -> i { mdFullDesc = False }
 
 -- | Specify a header for this parser.
 header :: String -> InfoMod a
-header s = InfoMod $ \i -> i { infoHeader = paragraph s }
+header s = InfoMod . overMetadata $ \i -> i { mdHeader = paragraph s }
 
 -- | Specify a header for this parser as a 'Text.PrettyPrint.ANSI.Leijen.Doc'
 -- value.
 headerDoc :: Maybe Doc -> InfoMod a
-headerDoc doc = InfoMod $ \i -> i { infoHeader = Chunk doc }
+headerDoc doc = InfoMod . overMetadata $ \i -> i { mdHeader = Chunk doc }
 
 -- | Specify a footer for this parser.
 footer :: String -> InfoMod a
-footer s = InfoMod $ \i -> i { infoFooter = paragraph s }
+footer s = InfoMod . overMetadata $ \i -> i { mdFooter = paragraph s }
 
 -- | Specify a footer for this parser as a 'Text.PrettyPrint.ANSI.Leijen.Doc'
 -- value.
 footerDoc :: Maybe Doc -> InfoMod a
-footerDoc doc = InfoMod $ \i -> i { infoFooter = Chunk doc }
+footerDoc doc = InfoMod . overMetadata $ \i -> i { mdFooter = Chunk doc }
 
 -- | Specify a short program description.
 progDesc :: String -> InfoMod a
-progDesc s = InfoMod $ \i -> i { infoProgDesc = paragraph s }
+progDesc s = InfoMod . overMetadata $ \i -> i { mdProgDesc = paragraph s }
 
 -- | Specify a short program description as a 'Text.PrettyPrint.ANSI.Leijen.Doc'
 -- value.
 progDescDoc :: Maybe Doc -> InfoMod a
-progDescDoc doc = InfoMod $ \i -> i { infoProgDesc = Chunk doc }
+progDescDoc doc = InfoMod . overMetadata $ \i -> i { mdProgDesc = Chunk doc }
 
 -- | Specify an exit code if a parse error occurs.
 failureCode :: Int -> InfoMod a
-failureCode n = InfoMod $ \i -> i { infoFailureCode = n }
+failureCode n = InfoMod . overMetadata $ \i -> i { mdFailureCode = n }
 
 -- | Disable parsing of regular options after arguments
 noIntersperse :: InfoMod a
-noIntersperse = InfoMod $ \p -> p { infoIntersperse = False }
+noIntersperse = InfoMod . overMetadata $ \p -> p { mdIntersperse = False }
 
 -- | Create a 'ParserInfo' given a 'Parser' and a modifier.
 info :: Parser a -> InfoMod a -> ParserInfo a
-info parser m = applyInfoMod m base
+info parser m = applyInfoMod m (WithInfo md parser)
   where
-    base = ParserInfo
-      { infoParser = parser
-      , infoFullDesc = True
-      , infoProgDesc = mempty
-      , infoHeader = mempty
-      , infoFooter = mempty
-      , infoFailureCode = 1
-      , infoIntersperse = True }
+    md = Metadata
+      { mdFullDesc = True
+      , mdProgDesc = mempty
+      , mdHeader = mempty
+      , mdFooter = mempty
+      , mdFailureCode = 1
+      , mdIntersperse = True }
 
 newtype PrefsMod = PrefsMod
   { applyPrefsMod :: ParserPrefs -> ParserPrefs }

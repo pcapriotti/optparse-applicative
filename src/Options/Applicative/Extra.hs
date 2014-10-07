@@ -4,11 +4,7 @@ module Options.Applicative.Extra (
   --
   -- | This module contains high-level functions to run parsers.
   helper,
-  hsubparser,
   execParser,
-  execParserMaybe,
-  customExecParser,
-  customExecParserMaybe,
   execParserPure,
   getParseResult,
   handleParseResult,
@@ -21,66 +17,44 @@ module Options.Applicative.Extra (
   CompletionResult(..),
   ) where
 
-import Control.Applicative (pure, (<$>), (<|>), (<**>))
+import Control.Applicative
 import Data.Monoid (mempty, mconcat)
 import System.Environment (getArgs, getProgName)
-import System.Exit (exitSuccess, exitWith, ExitCode(..))
+import System.Exit
 import System.IO (hPutStrLn, stderr)
 
-import Options.Applicative.BashCompletion
-import Options.Applicative.Builder hiding (briefDesc)
-import Options.Applicative.Builder.Internal
-import Options.Applicative.Common
+import Options.Applicative.Basic
+import Options.Applicative.Builder
+import Options.Applicative.Classes
 import Options.Applicative.Help
 
-import Options.Applicative.Internal
 import Options.Applicative.Types
 
 -- | A hidden \"helper\" option which always fails.
-helper :: Parser (a -> a)
+helper :: HasOption f => f a
 helper = abortOption ShowHelpText $ mconcat
   [ long "help"
   , short 'h'
   , help "Show this help text"
   , hidden ]
 
-hsubparser :: Mod CommandFields a -> Parser a
-hsubparser m = mkParser d g rdr
-  where
-    Mod _ d g = m `mappend` metavar "COMMAND"
-    (cmds, subs) = mkCommand m
-    rdr = CmdReader cmds (fmap add_helper . subs)
-    add_helper pinfo = pinfo
-      { infoParser = infoParser pinfo <**> helper }
-
 -- | Run a program description.
 --
 -- Parse command line arguments. Display help text and exit if any parse error
 -- occurs.
-execParser :: ParserInfo a -> IO a
-execParser = customExecParser (prefs idm)
-
--- | Run a program description with custom preferences.
-customExecParser :: ParserPrefs -> ParserInfo a -> IO a
-customExecParser pprefs pinfo
-  = execParserPure pprefs pinfo <$> getArgs
-  >>= handleParseResult
+execParser :: (HasMetadata f, HasUsage f, OptParser f) => f a -> IO a
+execParser p = (execParserPure p <$> getArgs) >>= handleParseResult
 
 -- | Handle `ParserResult`.
-handleParseResult :: ParserResult a -> IO a
-handleParseResult (Success a) = return a
-handleParseResult (Failure failure) = do
+handleParseResult :: Either (ParserFailure ParserHelp) a -> IO a
+handleParseResult (Right a) = return a
+handleParseResult (Left failure) = do
       progn <- getProgName
       let (msg, exit) = renderFailure failure progn
       case exit of
         ExitSuccess -> putStrLn msg
         _           -> hPutStrLn stderr msg
       exitWith exit
-handleParseResult (CompletionInvoked compl) = do
-      progn <- getProgName
-      msg <- execCompletion compl progn
-      putStr msg
-      exitSuccess
 
 -- | Extract the actual result from a `ParserResult` value.
 --
@@ -93,92 +67,69 @@ getParseResult :: ParserResult a -> Maybe a
 getParseResult (Success a) = Just a
 getParseResult _ = Nothing
 
--- | Run a program description in pure code.
---
--- This function behaves like 'execParser', but can be called from pure code.
--- Note that, in case of errors, no message is displayed, and this function
--- simply returns 'Nothing'.
---
--- If you need to keep track of error messages, use 'execParserPure' instead.
-{-# DEPRECATED execParserMaybe "Use execParserPure together with getParseResult instead" #-}
-execParserMaybe :: ParserInfo a -> [String] -> Maybe a
-execParserMaybe = customExecParserMaybe (prefs idm)
-
--- | Run a program description with custom preferences in pure code.
---
--- See 'execParserMaybe' for details.
-{-# DEPRECATED customExecParserMaybe "Use execParserPure together with getParseResult instead" #-}
-customExecParserMaybe :: ParserPrefs -> ParserInfo a -> [String] -> Maybe a
-customExecParserMaybe pprefs pinfo args = getParseResult $ execParserPure pprefs pinfo args
-
--- | The most general way to run a program description in pure code.
-execParserPure :: ParserPrefs       -- ^ Global preferences for this parser
-               -> ParserInfo a      -- ^ Description of the program to run
+-- | The most general way to run a parser in pure code.
+execParserPure :: (HasMetadata f, HasUsage f, OptParser f)
+               => f a               -- ^ Parser to run
                -> [String]          -- ^ Program arguments
-               -> ParserResult a
-execParserPure pprefs pinfo args =
-  case runP p pprefs of
-    (Right (Right r), _) -> Success r
-    (Right (Left c), _) -> CompletionInvoked c
-    (Left err, ctx) -> Failure $ parserFailure pprefs pinfo err ctx
-  where
-    pinfo' = pinfo
-      { infoParser = (Left <$> bashCompletionParser pinfo pprefs)
-                 <|> (Right <$> infoParser pinfo) }
-    p = runParserInfo pinfo' args
+               -> Either (ParserFailure ParserHelp) a
+execParserPure p args = either (Left . parserFailure p) pure
+                      . (`evalArgParser` args) . runParser $ p
 
 -- | Generate a `ParserFailure` from a `ParseError` in a given `Context`.
 --
 -- This function can be used, for example, to show the help text for a parser:
 --
 -- @handleParseResult . Failure $ parserFailure pprefs pinfo ShowHelpText mempty@
-parserFailure :: ParserPrefs -> ParserInfo a
-              -> ParseError -> Context
-              -> ParserFailure ParserHelp
-parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
-  let h = with_context ctx pinfo $ \names pinfo' -> mconcat
-            [ base_help pinfo'
-            , usage_help progn names pinfo'
+
+parserFailure :: (HasMetadata f, HasUsage f) => f a
+              -> ParseError -> ParserFailure ParserHelp
+parserFailure p err = ParserFailure $ \progn ->
+  ( mconcat [ base_help
+            , usage_help progn []
             , error_help ]
-  in (h, exit_code, prefColumns pprefs)
+  , exit_code
+  , 80 )
+
+-- parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
+--   let h = with_context ctx pinfo $ \names pinfo' -> mconcat
+--             [ base_help pinfo'
+--             , usage_help progn names pinfo'
+--             , error_help ]
+--   in (h, exit_code, prefColumns pprefs)
   where
-    exit_code = case msg of
-      ErrorMsg _   -> ExitFailure (infoFailureCode pinfo)
-      UnknownError -> ExitFailure (infoFailureCode pinfo)
+    md = getMetadata p
+
+    exit_code = case err of
+      ErrorMsg _   -> ExitFailure (mdFailureCode md)
+      UnknownError -> ExitFailure (mdFailureCode md)
       _            -> ExitSuccess
 
-    with_context :: Context
-                 -> ParserInfo a
-                 -> (forall b . [String] -> ParserInfo b -> c)
-                 -> c
-    with_context NullContext i f = f [] i
-    with_context (Context n i) _ f = f n i
-
-    usage_help progn names i = case msg of
+    usage_help progn names = case err of
       InfoMsg _ -> mempty
       _         -> usageHelp $ vcatChunks
-        [ pure . parserUsage pprefs (infoParser i) . unwords $ progn : names
-        , fmap (indent 2) . infoProgDesc $ i ]
+        [ pure . parserUsage p . unwords $ progn : names
+        , fmap (indent 2) . mdProgDesc $ md ]
 
-    error_help = errorHelp $ case msg of
+    error_help = errorHelp $ case err of
       ShowHelpText -> mempty
       ErrorMsg m   -> stringChunk m
       InfoMsg  m   -> stringChunk m
       UnknownError -> mempty
 
-    base_help :: ParserInfo a -> ParserHelp
-    base_help i
+    base_help :: ParserHelp
+    base_help
       | show_full_help
-      = mconcat [h, f, parserHelp pprefs (infoParser i)]
+      = mconcat [h, f, parserHelp p]
       | otherwise
       = mempty
       where
-        h = headerHelp (infoHeader i)
-        f = footerHelp (infoFooter i)
+        h = headerHelp (mdHeader md)
+        f = footerHelp (mdFooter md)
 
-    show_full_help = case msg of
+    show_full_help = case err of
       ShowHelpText -> True
-      _            -> prefShowHelpOnError pprefs
+      _            -> False
+
 
 renderFailure :: ParserFailure ParserHelp -> String -> (String, ExitCode)
 renderFailure failure progn =

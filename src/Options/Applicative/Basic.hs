@@ -14,8 +14,8 @@ import Data.Functor.Identity
 import Data.Functor.Compose
 import Data.Traversable (sequenceA)
 
+import Options.Applicative.Help.Chunk
 import Options.Applicative.Help.Pretty
-import Options.Applicative.Name
 import Options.Applicative.Usage
 import Options.Applicative.Types
 
@@ -28,9 +28,14 @@ data ParserState a = ParserState
   deriving (Eq, Ord, Read, Show)
 
 newtype ArgParser a = ArgParser
-  { runArgParser :: StateT (ParserState String) (Except ParseError) a }
+  { unArgParser :: StateT (ParserState String) (Except ParseError) a }
   deriving ( Functor, Applicative, Monad, Alternative, MonadPlus
            , MonadState (ParserState String), MonadError ParseError )
+
+evalArgParser :: ArgParser a -> [String] -> Either ParseError a
+evalArgParser p args = runExcept . (`evalStateT` st0) . unArgParser $ p
+  where
+    st0 = ParserState args []
 
 errMsg :: String -> ArgParser a
 errMsg = ArgParser . lift . throwE . ErrorMsg
@@ -55,12 +60,12 @@ resetArgs = modify $ \s -> s
   , skippedArgs = [] }
 
 data BaseOption a
-  = BaseOption Names (ReadM a)
-  | Flag Names a
+  = RegOption [OptName] (ReadM a)
+  | Flag [OptName] a
   | Command String a
 
 instance Functor BaseOption where
-  fmap f (BaseOption n v) = BaseOption n (fmap f v)
+  fmap f (RegOption n v) = RegOption n (fmap f v)
   fmap f (Flag n x) = Flag n (f x)
   fmap f (Command n x) = Command n (f x)
 
@@ -68,12 +73,12 @@ class Functor f => Opt f where
   optFind :: String -> f a -> Maybe (ArgParser a)
 
 instance Pretty1 BaseOption where
-  pretty1 (BaseOption n _) = pretty n </> string "ARG"
+  pretty1 (RegOption n _) = pretty n </> string "ARG"
   pretty1 (Flag n _) = pretty n
   pretty1 (Command arg _) = string arg
 
 instance Opt BaseOption where
-  optFind arg (BaseOption ns v)
+  optFind arg (RegOption ns v)
     | matchNames arg ns = Just (argParser1 v)
   optFind arg (Flag ns x)
     | matchNames arg ns = Just (pure x)
@@ -82,7 +87,7 @@ instance Opt BaseOption where
   optFind _ _ = empty
 
 data WithDesc i f a = WithDesc
-  { desc :: i
+  { bundledDesc :: i
   , unWithDesc :: f a }
   deriving (Eq, Ord, Read, Show)
 
@@ -115,8 +120,6 @@ instance (Pretty1 f, Pretty1 g) => Pretty1 (OptSum f g) where
   pretty1 (OptLeft x) = pretty1 x
   pretty1 (OptRight y) = pretty1 y
 
-type Parser = Alt BaseOption
-
 evalParser :: Functor f => Alt f a -> Maybe a
 evalParser = runAlt $ const Nothing
 
@@ -127,12 +130,12 @@ argParser1 v = do
   x <- nextArg
   ArgParser . lift $ runReaderT (unReadM v) x
 
-matchNames :: String -> Names -> Bool
+matchNames :: String -> [OptName] -> Bool
 matchNames = any . matchName
 
-matchName :: String -> Name -> Bool
-matchName ('-':[c]) (ShortName n) = n == c
-matchName ('-':'-':arg) (LongName n) = n == arg
+matchName :: String -> OptName -> Bool
+matchName ('-':[c]) (OptShort n) = n == c
+matchName ('-':'-':arg) (OptLong n) = n == arg
 matchName _ _ = False
 
 -- Day convolution
@@ -229,6 +232,12 @@ instance Applicative f => Nat Identity f where
 newtype WithSub f a = WithSub
   { unWithSub :: f (ApSum (WithSub f) Identity a) }
 
+liftSub :: Applicative f => f a -> WithSub f a
+liftSub = WithSub . fmap pure
+
+wrapSub :: Applicative f => f (WithSub f a) -> WithSub f a
+wrapSub = WithSub . fmap (ApSum . Left)
+
 instance Functor f => Functor (WithSub f) where
   fmap f = WithSub . fmap (fmap f) . unWithSub
 
@@ -255,7 +264,7 @@ instance HasUsage f => HasUsage (WithSub f) where
 
 -- | Add a description to a parser.
 data WithInfo i f a = WithInfo
-  { info :: i
+  { bundledInfo :: i
   , unWithInfo :: f a }
   deriving (Eq, Ord, Read, Show)
 
@@ -277,3 +286,16 @@ instance (OptParser f, OptParser g) => OptParser (Compose f g) where
 
 instance HasUsage f => HasUsage (Compose f g) where
   usage = usage . getCompose
+
+--
+
+data Metadata = Metadata
+  { mdFullDesc :: Bool      -- ^ whether the help text should contain full
+                            -- documentation
+  , mdProgDesc :: Chunk Doc -- ^ brief parser description
+  , mdHeader :: Chunk Doc   -- ^ header of the full parser description
+  , mdFooter :: Chunk Doc   -- ^ footer of the full parser description
+  , mdFailureCode :: Int    -- ^ exit code for a parser failure
+  , mdIntersperse :: Bool   -- ^ allow regular options and flags to occur
+                              -- after arguments (default: True)
+  }
