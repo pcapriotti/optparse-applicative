@@ -14,8 +14,9 @@ type Option = WithInfo OptProperties (OptSum (WithSub ParserInfo BaseOption) Ide
 
 newtype Parser a = Parser
   { unParser :: Compose (Alt Option) ArgParser a }
-  deriving ( Functor, Applicative, Alternative, OptParser
-           , HasOption (WithInfo OptProperties BaseOption) )
+  deriving ( Functor, Applicative, Alternative, OptParser, HasUsage
+           , HasOption (WithInfo OptProperties BaseOption)
+           , HasSubOption ParserInfo (WithInfo OptProperties BaseOption) )
 
 instance HasOption (WithInfo OptProperties Argument) Parser where
   liftOption (WithInfo i arg) = Parser . Compose . liftAlt

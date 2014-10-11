@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RankNTypes, FlexibleContexts #-}
 module Options.Applicative.Extra (
   -- * Extra parser utilities
   --
@@ -6,13 +6,10 @@ module Options.Applicative.Extra (
   helper,
   execParser,
   execParserPure,
-  getParseResult,
   handleParseResult,
   parserFailure,
   renderFailure,
   ParserFailure(..),
-  overFailure,
-  ParserResult(..),
   ParserPrefs(..),
   CompletionResult(..),
   ) where
@@ -34,7 +31,7 @@ import Options.Applicative.Types
 --
 -- Parse command line arguments. Display help text and exit if any parse error
 -- occurs.
-execParser :: (HasMetadata f, HasUsage f, OptParser f) => f a -> IO a
+execParser :: (HasInfo Metadata f, HasUsage f, OptParser f) => f a -> IO a
 execParser p = (execParserPure p <$> getArgs) >>= handleParseResult
 
 -- | Handle `ParserResult`.
@@ -48,19 +45,8 @@ handleParseResult (Left failure) = do
         _           -> hPutStrLn stderr msg
       exitWith exit
 
--- | Extract the actual result from a `ParserResult` value.
---
--- This function returns 'Nothing' in case of errors.  Possible error messages
--- or completion actions are simply discarded.
---
--- If you want to display error messages and invoke completion actions
--- appropriately, use 'handleParseResult' instead.
-getParseResult :: ParserResult a -> Maybe a
-getParseResult (Success a) = Just a
-getParseResult _ = Nothing
-
 -- | The most general way to run a parser in pure code.
-execParserPure :: (HasMetadata f, HasUsage f, OptParser f)
+execParserPure :: (HasInfo Metadata f, HasUsage f, OptParser f)
                => f a               -- ^ Parser to run
                -> [String]          -- ^ Program arguments
                -> Either (ParserFailure ParserHelp) a
@@ -73,7 +59,7 @@ execParserPure p args = either (Left . parserFailure p) pure
 --
 -- @handleParseResult . Failure $ parserFailure pprefs pinfo ShowHelpText mempty@
 
-parserFailure :: (HasMetadata f, HasUsage f) => f a
+parserFailure :: (HasInfo Metadata f, HasUsage f) => f a
               -> ParseError -> ParserFailure ParserHelp
 parserFailure p err = ParserFailure $ \progn ->
   ( mconcat [ base_help
@@ -89,7 +75,7 @@ parserFailure p err = ParserFailure $ \progn ->
 --             , error_help ]
 --   in (h, exit_code, prefColumns pprefs)
   where
-    md = getMetadata p
+    md = getInfo p
 
     exit_code = case err of
       ErrorMsg _   -> ExitFailure (mdFailureCode md)

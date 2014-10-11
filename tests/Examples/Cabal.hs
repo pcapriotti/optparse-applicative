@@ -3,8 +3,6 @@ module Examples.Cabal where
 
 import Options.Applicative
 import Options.Applicative.Arrows
-import Options.Applicative.Basic
-import Options.Applicative.Classes
 
 #if __GLASGOW_HASKELL__ <= 702
 import Data.Monoid
@@ -46,24 +44,24 @@ version = infoOption "0.0.0"
   <> help "Print version information" )
 
 parser :: Parser Args
-parser = Args
-  <$> commonOpts
-  <*> cmds
-  where
-    cmds = command "install"
-              ( info installParser
-                    ( progDesc "Installs a list of packages"))
-        <|> command "update"
+parser = runA $ proc () -> do
+  opts <- asA commonOpts -< ()
+  cmds <- (asA . subparser)
+            ( command "install"
+              (info installParser
+                    (progDesc "Installs a list of packages"))
+           <> command "update"
               (info updateParser
                     (progDesc "Updates list of known packages"))
-        <|> command "configure"
+           <> command "configure"
               (info configureParser
                     (progDesc "Prepare to build the package"))
-        <|> command "build"
+           <> command "build"
               (info buildParser
-                    (progDesc "Make this package ready for installation"))
+                    (progDesc "Make this package ready for installation")) ) -< ()
+  A version >>> A helper -< Args opts cmds
 
-commonOpts :: (Functor f, HasOption f) => f CommonOpts
+commonOpts :: Parser CommonOpts
 commonOpts = CommonOpts
   <$> option auto
       ( short 'v'
@@ -119,7 +117,7 @@ buildOpts = runA $ proc () -> do
            <> value "dist" ) -< ()
   returnA -< BuildOpts bdir
 
-pinfo :: f Args
+pinfo :: ParserInfo Args
 pinfo = info parser
   ( progDesc "An example modelled on cabal" )
 

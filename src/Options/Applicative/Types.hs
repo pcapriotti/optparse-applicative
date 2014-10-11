@@ -15,8 +15,7 @@ module Options.Applicative.Types (
   mkCompleter,
   CompletionResult(..),
   ParserFailure(..),
-  ParserResult(..),
-  overFailure,
+  ParserResult,
   Args,
   ArgPolicy(..),
   OptHelpInfo(..),
@@ -161,34 +160,7 @@ instance Functor ParserFailure where
   fmap f (ParserFailure err) = ParserFailure $ \progn ->
     let (h, exit, cols) = err progn in (f h, exit, cols)
 
--- | Result of 'execParserPure'.
-data ParserResult a
-  = Success a
-  | Failure (ParserFailure ParserHelp)
-  | CompletionInvoked CompletionResult
-  deriving Show
-
-instance Functor ParserResult where
-  fmap f (Success a) = Success (f a)
-  fmap _ (Failure f) = Failure f
-  fmap _ (CompletionInvoked c) = CompletionInvoked c
-
-overFailure :: (ParserHelp -> ParserHelp)
-            -> ParserResult a -> ParserResult a
-overFailure f (Failure failure) = Failure $ fmap f failure
-overFailure _ r = r
-
-instance Applicative ParserResult where
-  pure = Success
-  Success f <*> r = fmap f r
-  Failure f <*> _ = Failure f
-  CompletionInvoked c <*> _ = CompletionInvoked c
-
-instance Monad ParserResult where
-  return = pure
-  Success x >>= f = f x
-  Failure f >>= _ = Failure f
-  CompletionInvoked c >>= _ = CompletionInvoked c
+type ParserResult = Either (ParserFailure ParserHelp)
 
 type Args = [String]
 

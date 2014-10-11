@@ -12,6 +12,7 @@ import Data.Bifunctor
 import Data.Bimonoid
 import Data.Functor.Identity
 import Data.Functor.Compose
+import Data.Monoid
 
 import Options.Applicative.Help.Chunk
 import Options.Applicative.Help.Pretty
@@ -20,6 +21,9 @@ import Options.Applicative.Types
 
 class Pretty1 f where
   pretty1 :: f a -> Doc
+
+instance Pretty1 Identity where
+  pretty1 _ = mempty
 
 data ParserState a = ParserState
   { pendingArgs :: [a]
@@ -254,6 +258,9 @@ instance (Opt f, Functor p, OptParser p) => Opt (WithSub p f) where
       Left p -> runParser p
       Right r -> pure r
 
+instance Pretty1 f => Pretty1 (WithSub p f) where
+  pretty1 = pretty1 . unWithSub
+
 ---
 
 -- | Add a description to a functor.
@@ -267,6 +274,9 @@ instance Functor f => Functor (WithInfo i f) where
 
 instance Opt f => Opt (WithInfo i f) where
   optFind arg = optFind arg . unWithInfo
+
+instance Pretty1 f => Pretty1 (WithInfo i f) where
+  pretty1 = pretty1 . unWithInfo
 
 instance OptParser f => OptParser (WithInfo i f) where
   runParser = runParser . unWithInfo

@@ -28,10 +28,10 @@ import Test.QuickCheck (Positive (..))
 import Test.QuickCheck.Arbitrary
 
 import Options.Applicative
+import Options.Applicative.Types
 import Options.Applicative.Help.Pretty (Doc, SimpleDoc(..))
 import qualified Options.Applicative.Help.Pretty as Doc
 import Options.Applicative.Help.Chunk
-import Options.Applicative.Help.Types
 
 #if __GLASGOW_HASKELL__ <= 702
 (<>) :: Monoid a => a -> a -> a
@@ -39,32 +39,30 @@ import Options.Applicative.Help.Types
 #endif
 
 run :: ParserInfo a -> [String] -> ParserResult a
-run = execParserPure (prefs idm)
+run = execParserPure
 
 assertError :: Show a => ParserResult a
             -> (ParserFailure ParserHelp -> Assertion) -> Assertion
 assertError x f = case x of
-  Success r -> assertFailure $ "expected failure, got success: " ++ show r
-  Failure e -> f e
-  CompletionInvoked _ -> assertFailure "expected failure, got completion"
+  Right r -> assertFailure $ "expected failure, got success: " ++ show r
+  Left e -> f e
 
 assertResult :: ParserResult a -> (a -> Assertion) -> Assertion
 assertResult x f = case x of
-  Success r -> f r
-  Failure e -> do
+  Right r -> f r
+  Left e -> do
     let (msg, _) = renderFailure e "test"
     assertFailure $ "unexpected parse error\n" ++ msg
-  CompletionInvoked _ -> assertFailure "expected result, got completion"
 
 assertHasLine :: String -> String -> Assertion
 assertHasLine l s
   | l `elem` lines s = return ()
   | otherwise = assertFailure $ "expected line:\n\t" ++ l ++ "\nnot found"
 
-checkHelpTextWith :: Show a => ExitCode -> ParserPrefs -> String
+checkHelpTextWith :: Show a => ExitCode -> String
                   -> ParserInfo a -> [String] -> Assertion
-checkHelpTextWith ecode pprefs name p args = do
-  let result = execParserPure pprefs p args
+checkHelpTextWith ecode name p args = do
+  let result = execParserPure p args
   assertError result $ \failure -> do
     expected <- readFile $ name ++ ".err.txt"
     let (msg, code) = renderFailure failure name
@@ -72,7 +70,7 @@ checkHelpTextWith ecode pprefs name p args = do
     ecode @=? code
 
 checkHelpText :: Show a => String -> ParserInfo a -> [String] -> Assertion
-checkHelpText = checkHelpTextWith ExitSuccess (prefs idm)
+checkHelpText = checkHelpTextWith ExitSuccess
 
 case_hello :: Assertion
 case_hello = checkHelpText "hello" Hello.opts ["--help"]
@@ -82,11 +80,9 @@ case_modes = checkHelpText "commands" Commands.opts ["--help"]
 
 case_cmd_header :: Assertion
 case_cmd_header = do
-  let i = info (helper <*> Commands.sample) (header "foo")
-  checkHelpTextWith (ExitFailure 1) (prefs idm)
-                    "commands_header" i ["-zzz"]
-  checkHelpTextWith (ExitFailure 1) (prefs showHelpOnError)
-                    "commands_header_full" i ["-zzz"]
+  let i = info (helper <*> Commands.sample) (header "foo") :: ParserInfo Commands.Sample
+  checkHelpTextWith (ExitFailure 1) "commands_header" i ["-zzz"]
+  checkHelpTextWith (ExitFailure 1) "commands_header_full" i ["-zzz"]
 
 case_cabal_conf :: Assertion
 case_cabal_conf = checkHelpText "cabal" Cabal.pinfo ["configure", "--help"]
@@ -95,9 +91,9 @@ case_args :: Assertion
 case_args = do
   let result = run Commands.opts ["hello", "foo", "bar"]
   case result of
-    Success (Commands.Hello args) ->
+    Right (Commands.Hello args) ->
       ["foo", "bar"] @=? args
-    Success Commands.Goodbye ->
+    Right Commands.Goodbye ->
       assertFailure "unexpected result: Goodbye"
     _ ->
       assertFailure "unexpected parse error"
@@ -106,9 +102,9 @@ case_args_opts :: Assertion
 case_args_opts = do
   let result = run Commands.opts ["hello", "foo", "--bar"]
   case result of
-    Success (Commands.Hello xs) ->
+    Right (Commands.Hello xs) ->
       assertFailure $ "unexpected result: Hello " ++ show xs
-    Success Commands.Goodbye ->
+    Right Commands.Goodbye ->
       assertFailure "unexpected result: Goodbye"
     _ -> return ()
 
@@ -116,9 +112,9 @@ case_args_ddash :: Assertion
 case_args_ddash = do
   let result = run Commands.opts ["hello", "foo", "--", "--bar", "--", "baz"]
   case result of
-    Success (Commands.Hello args) ->
+    Right (Commands.Hello args) ->
       ["foo", "--bar", "--", "baz"] @=? args
-    Success Commands.Goodbye ->
+    Right Commands.Goodbye ->
       assertFailure "unexpected result: Goodbye"
     _ -> assertFailure "unexpected parse error"
 
@@ -126,7 +122,7 @@ case_alts :: Assertion
 case_alts = do
   let result = run Alternatives.opts ["-b", "-a", "-b", "-a", "-a", "-b"]
   case result of
-    Success xs -> [b, a, b, a, a, b] @=? xs
+    Right xs -> [b, a, b, a, a, b] @=? xs
       where a = Alternatives.A
             b = Alternatives.B
     _ -> assertFailure "unexpected parse error"
@@ -138,16 +134,15 @@ case_show_default = do
           <> help "set count"
           <> value (0 :: Int)
           <> showDefault )
-      i = info (p <**> helper) idm
+      i = info (p <**> helper) idm :: ParserInfo Int
       result = run i ["--help"]
   case result of
-    Failure failure -> do
+    Left failure -> do
       let (msg, _) = renderFailure failure "test"
       assertHasLine
         "  -n ARG                   set count (default: 0)"
         msg
-    Success r -> assertFailure $ "unexpected result: " ++ show r
-    CompletionInvoked _ -> assertFailure "unexpected completion"
+    Right r -> assertFailure $ "unexpected result: " ++ show r
 
 case_alt_cont :: Assertion
 case_alt_cont = do
@@ -155,7 +150,7 @@ case_alt_cont = do
       i = info p idm
       result = run i ["-a", "-b"]
   case result of
-    Success r -> assertFailure $ "unexpected result: " ++ show r
+    Right r -> assertFailure $ "unexpected result: " ++ show r
     _ -> return ()
 
 case_alt_help :: Assertion
@@ -170,7 +165,7 @@ case_alt_help = do
                      <> metavar "CS"
                      <> help "Cloud service name" )
       p3 = flag' Nothing ( long "dry-run" )
-      i = info (p <**> helper) idm
+      i = info (p <**> helper) idm :: ParserInfo (Maybe String)
   checkHelpText "alt" i ["--help"]
 
 case_nested_commands :: Assertion
@@ -178,8 +173,8 @@ case_nested_commands = do
   let p3 = strOption (short 'a' <> metavar "A")
       p2 = subparser (command "b" (info p3 idm))
       p1 = subparser (command "c" (info p2 idm))
-      i = info (p1 <**> helper) idm
-  checkHelpTextWith (ExitFailure 1) (prefs idm) "nested" i ["c", "b"]
+      i = info (p1 <**> helper) idm :: ParserInfo ()
+  checkHelpTextWith (ExitFailure 1) "nested" i ["c", "b"]
 
 case_many_args :: Assertion
 case_many_args = do
@@ -188,7 +183,7 @@ case_many_args = do
       nargs = 20000
       result = run i (replicate nargs "foo")
   case result of
-    Success xs -> nargs @=? length xs
+    Right xs -> nargs @=? length xs
     _ -> assertFailure "unexpected parse error"
 
 case_disambiguate :: Assertion
@@ -196,10 +191,10 @@ case_disambiguate = do
   let p =   flag' (1 :: Int) (long "foo")
         <|> flag' 2 (long "bar")
         <|> flag' 3 (long "baz")
-      i = info p idm
-      result = execParserPure (prefs disambiguate) i ["--f"]
+      i = info p idm :: ParserInfo Int
+      result = execParserPure i ["--f"]
   case result of
-    Success val -> 1 @=? val
+    Right val -> 1 @=? val
     _ -> assertFailure "unexpected parse error"
 
 case_ambiguous :: Assertion
@@ -207,38 +202,37 @@ case_ambiguous = do
   let p =   flag' (1 :: Int) (long "foo")
         <|> flag' 2 (long "bar")
         <|> flag' 3 (long "baz")
-      i = info p idm
-      result = execParserPure (prefs disambiguate) i ["--ba"]
+      i = info p idm :: ParserInfo Int
+      result = execParserPure i ["--ba"]
   case result of
-    Success val -> assertFailure $ "unexpected result " ++ show val
+    Right val -> assertFailure $ "unexpected result " ++ show val
     _ -> return ()
 
-case_completion :: Assertion
-case_completion = do
-  let p = (,)
-        <$> strOption (long "foo"<> value "")
-        <*> strOption (long "bar"<> value "")
-      i = info p idm
-      result = run i ["--bash-completion-index", "0"]
-  case result of
-    CompletionInvoked (CompletionResult err) -> do
-      completions <- lines <$> err "test"
-      ["--foo", "--bar"] @=? completions
-    Failure _ -> assertFailure "unexpected failure"
-    Success val -> assertFailure $ "unexpected result " ++ show val
+-- case_completion :: Assertion
+-- case_completion = do
+--   let p = (,)
+--         <$> strOption (long "foo"<> value "")
+--         <*> strOption (long "bar"<> value "")
+--       i = info p idm
+--       result = run i ["--bash-completion-index", "0"]
+--   case result of
+--     CompletionInvoked (CompletionResult err) -> do
+--       completions <- lines <$> err "test"
+--       ["--foo", "--bar"] @=? completions
+--     Left _ -> assertFailure "unexpected failure"
+--     Right val -> assertFailure $ "unexpected result " ++ show val
 
 case_bind_usage :: Assertion
 case_bind_usage = do
   let p = many (argument str (metavar "ARGS..."))
-      i = info (p <**> helper) briefDesc
+      i = info (p <**> helper) briefDesc :: ParserInfo [String]
       result = run i ["--help"]
   case result of
-    Failure failure -> do
+    Left failure -> do
       let text = head . lines . fst $ renderFailure failure "test"
       "Usage: test [ARGS...]" @=? text
-    Success val ->
+    Right val ->
       assertFailure $ "unexpected result " ++ show val
-    CompletionInvoked _ -> assertFailure "unexpected completion"
 
 case_issue_19 :: Assertion
 case_issue_19 = do
@@ -248,13 +242,13 @@ case_issue_19 = do
       i = info (p <**> helper) idm
       result = run i ["-x", "foo"]
   case result of
-    Success r -> Just "foo" @=? r
+    Right r -> Just "foo" @=? r
     _ -> assertFailure "unexpected parse error"
 
 case_arguments1_none :: Assertion
 case_arguments1_none = do
   let p = some (argument str idm)
-      i = info (p <**> helper) idm
+      i = info (p <**> helper) idm  :: ParserInfo [String]
       result = run i []
   assertError result $ \(ParserFailure _) -> return ()
 
@@ -264,7 +258,7 @@ case_arguments1_some = do
       i = info (p <**> helper) idm
       result = run i ["foo", "--", "bar", "baz"]
   case result of
-    Success r -> ["foo", "bar", "baz"] @=? r
+    Right r -> ["foo", "bar", "baz"] @=? r
     _ -> assertFailure "unexpected parse error"
 
 case_arguments_switch :: Assertion
@@ -291,8 +285,8 @@ case_backtracking = do
       p1 = (,)
         <$> subparser (command "c" (info p2 idm))
         <*> switch (short 'b')
-      i = info (p1 <**> helper) idm
-      result = execParserPure (prefs noBacktrack) i ["c", "-b"]
+      i = info (p1 <**> helper) idm :: ParserInfo ()
+      result = execParserPure i ["c", "-b"]
   assertError result $ \ _ -> return ()
 
 case_error_context :: Assertion
@@ -336,7 +330,7 @@ case_arg_order_2 = do
       i = info p idm
       result = run i ["2", "-b", "3", "-a", "6"]
   case result of
-    Success res -> (2, 6, 3) @=? res
+    Right res -> (2, 6, 3) @=? res
     _ -> assertFailure "unexpected parse error"
 
 case_arg_order_3 :: Assertion
@@ -348,7 +342,7 @@ case_arg_order_3 = do
       i = info p idm
       result = run i ["-n", "3", "5"]
   case result of
-    Success res -> (3, 5) @=? res
+    Right res -> (3, 5) @=? res
     _ -> assertFailure "unexpected parse error"
 
 case_issue_47 :: Assertion
@@ -368,8 +362,8 @@ case_long_help = do
         ( progDesc (concat
             [ "This is a very long program description. "
             , "This text should be automatically wrapped "
-            , "to fit the size of the terminal" ]) )
-  checkHelpTextWith ExitSuccess (prefs (columns 50)) "formatting" i ["--help"]
+            , "to fit the size of the terminal" ]) ) :: ParserInfo ()
+  checkHelpText "formatting" i ["--help"]
 
 case_issue_50 :: Assertion
 case_issue_50 = do
@@ -401,15 +395,15 @@ case_intersperse_2 = do
   assertResult result1 $ \args -> ["-x", "foo"] @=? args
   assertError result2 $ \_ -> return ()
 
-case_issue_52 :: Assertion
-case_issue_52 = do
-  let p = subparser
-        ( metavar "FOO"
-        <> command "run" (info (pure "foo") idm) )
-      i = info p idm
-  assertError (run i []) $ \failure -> do
-    let text = head . lines . fst $ renderFailure failure "test"
-    "Usage: test FOO" @=? text
+-- case_issue_52 :: Assertion
+-- case_issue_52 = do
+--   let p = subparser
+--         ( metavar "FOO"
+--         <> command "run" (info (pure "foo") idm) )
+--       i = info p idm
+--   assertError (run i []) $ \failure -> do
+--     let text = head . lines . fst $ renderFailure failure "test"
+--     "Usage: test FOO" @=? text
 
 case_multiple_subparsers :: Assertion
 case_multiple_subparsers = do
@@ -419,7 +413,7 @@ case_multiple_subparsers = do
       p2 = subparser
         (command "commit" (info (pure ())
              ( progDesc "Record changes to the repository" )))
-      i = info (p1 *> p2 <**> helper) idm
+      i = info (p1 *> p2 <**> helper) idm :: ParserInfo ()
   checkHelpText "subparsers" i ["--help"]
 
 case_argument_error :: Assertion

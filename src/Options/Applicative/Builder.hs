@@ -27,6 +27,7 @@ module Options.Applicative.Builder (
   strOption,
   option,
   helper,
+  subparser,
 
   -- * Modifiers
   short,
@@ -42,7 +43,7 @@ module Options.Applicative.Builder (
   ParseError(..),
   hidden,
   internal,
-  -- command,
+  command,
   completeWith,
   action,
   completer,
@@ -94,6 +95,7 @@ module Options.Applicative.Builder (
   ) where
 
 import Control.Applicative
+import Data.Foldable (asum)
 import Data.Monoid (Monoid (..)
 #if __GLASGOW_HASKELL__ > 702
   , (<>)
@@ -175,10 +177,17 @@ hidden :: Mod f a
 hidden = optionMod $ \p ->
   p { propVisibility = min Hidden (propVisibility p) }
 
+type Command i f a = (String, WithInfo i f a)
+
+subparser :: ( HasSubOption (WithInfo i f) (WithInfo OptProperties BaseOption) f
+             , Alternative f)
+          => [Command i f a] -> f a
+subparser cs = asum . (<$> cs) $ \(cmd, sub) ->
+  liftSubOption . WithInfo baseProps . BaseCommand cmd $ sub
+
 -- | Create a command invoking a subparser.
--- command :: (Applicative f, HasCommand f)
---         => String -> WithSub f a -> WithSub f a
--- command cmd sub = wrapSub (mkCommand cmd sub)
+command :: String -> WithInfo i f a -> [Command i f a]
+command cmd sub = [(cmd, sub)]
 
 -- | Add a list of possible completion values.
 completeWith :: HasCompleter f => [String] -> Mod f a
