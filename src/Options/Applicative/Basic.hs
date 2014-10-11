@@ -12,7 +12,6 @@ import Data.Bifunctor
 import Data.Bimonoid
 import Data.Functor.Identity
 import Data.Functor.Compose
-import Data.Traversable (sequenceA)
 
 import Options.Applicative.Help.Chunk
 import Options.Applicative.Help.Pretty
@@ -60,29 +59,33 @@ resetArgs = modify $ \s -> s
   , skippedArgs = [] }
 
 data BaseOption a
-  = RegOption OptProperties [OptName] (ReadM a)
-  | Flag OptProperties [OptName] a
-  | Command String a
+  = BaseReg [OptName] (ReadM a)
+  | BaseFlag [OptName] a
+  | BaseCommand String a
+
+newtype Argument a = Argument
+  { unArgument :: ReadM a }
+  deriving Functor
 
 instance Functor BaseOption where
-  fmap f (RegOption prop n v) = RegOption prop n (fmap f v)
-  fmap f (Flag prop n x) = Flag prop n (f x)
-  fmap f (Command n x) = Command n (f x)
+  fmap f (BaseReg n v) = BaseReg  n (fmap f v)
+  fmap f (BaseFlag n x) = BaseFlag n (f x)
+  fmap f (BaseCommand n x) = BaseCommand n (f x)
 
 class Functor f => Opt f where
   optFind :: String -> f a -> Maybe (ArgParser a)
 
 instance Pretty1 BaseOption where
-  pretty1 (RegOption _ n _) = pretty n </> string "ARG"
-  pretty1 (Flag _ n _) = pretty n
-  pretty1 (Command arg _) = string arg
+  pretty1 (BaseReg n _) = pretty n </> string "ARG"
+  pretty1 (BaseFlag n _) = pretty n
+  pretty1 (BaseCommand arg _) = string arg
 
 instance Opt BaseOption where
-  optFind arg (RegOption _ ns v)
+  optFind arg (BaseReg ns v)
     | matchNames arg ns = Just (argParser1 v)
-  optFind arg (Flag _ ns x)
+  optFind arg (BaseFlag ns x)
     | matchNames arg ns = Just (pure x)
-  optFind arg (Command cmd x)
+  optFind arg (BaseCommand cmd x)
     | arg == cmd = Just (pure x)
   optFind _ _ = empty
 
@@ -253,7 +256,7 @@ instance (Opt f, Functor p, OptParser p) => Opt (WithSub p f) where
 
 ---
 
--- | Add a description to a parser.
+-- | Add a description to a functor.
 data WithInfo i f a = WithInfo
   { bundledInfo :: i
   , unWithInfo :: f a }
@@ -261,6 +264,9 @@ data WithInfo i f a = WithInfo
 
 instance Functor f => Functor (WithInfo i f) where
   fmap f (WithInfo i x) = WithInfo i (fmap f x)
+
+instance Opt f => Opt (WithInfo i f) where
+  optFind arg = optFind arg . unWithInfo
 
 instance OptParser f => OptParser (WithInfo i f) where
   runParser = runParser . unWithInfo
@@ -277,6 +283,9 @@ instance (OptParser f, OptParser g) => OptParser (Compose f g) where
 
 instance HasUsage f => HasUsage (Compose f g) where
   usage = usage . getCompose
+
+overInfo :: (i -> i) -> WithInfo i f a -> WithInfo i f a
+overInfo f i = i { bundledInfo = f (bundledInfo i) }
 
 --
 

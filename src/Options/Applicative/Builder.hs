@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP, FlexibleContexts #-}
 module Options.Applicative.Builder (
   -- * Parser builders
   --
@@ -26,6 +26,7 @@ module Options.Applicative.Builder (
   infoOption,
   strOption,
   option,
+  helper,
 
   -- * Modifiers
   short,
@@ -106,7 +107,6 @@ import Options.Applicative.Classes
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
 import Options.Applicative.Types
-import Options.Applicative.WithArgs
 
 -- readers --
 
@@ -201,19 +201,20 @@ completer f = fieldMod $ modCompleter (`mappend` f)
 -- parsers --
 
 -- | Builder for an argument parser.
-argument :: HasArgument f
+argument :: HasOption (WithInfo OptProperties Argument) f
          => ReadM a -> Mod ArgumentFields a -> f a
-argument p (Mod _ d g) = mkArgument (mkProps d g) p
+argument p (Mod _ d g) = liftOption $ WithInfo (mkProps d g) (Argument p)
 
 -- | Builder for a 'String' argument.
-strArgument :: HasArgument f => Mod ArgumentFields String -> f String
+strArgument :: HasOption (WithInfo OptProperties Argument) f
+            => Mod ArgumentFields String -> f String
 strArgument = argument str
 
 -- | Builder for a flag parser.
 --
 -- A flag that switches from a \"default value\" to an \"active value\" when
 -- encountered. For a simple boolean value, use `switch` instead.
-flag :: (HasFlag f, Alternative f)
+flag :: (HasOption (WithInfo OptProperties BaseOption) f, Alternative f)
      => a                         -- ^ default value
      -> a                         -- ^ active value
      -> Mod FlagFields a          -- ^ option modifier
@@ -230,18 +231,19 @@ flag defv actv m = flag' actv m <|> pure defv
 -- > length <$> many (flag' () (short 't'))
 --
 -- is a parser that counts the number of "-t" arguments on the command line.
-flag' :: (Alternative f, HasFlag f)
+flag' :: (HasOption (WithInfo OptProperties BaseOption) f, Alternative f)
       => a                         -- ^ active value
       -> Mod FlagFields a          -- ^ option modifier
       -> f a
-flag' x (Mod f d g) = mkFlag (mkProps d g) (flagNames fields) x
+flag' x (Mod f d g) = liftOption . WithInfo (mkProps d g) . BaseFlag (flagNames fields) $ x
   where
     fields = f (FlagFields [])
 
 -- | Builder for a boolean flag.
 --
 -- > switch = flag False True
-switch :: (Alternative f, HasFlag f) => Mod FlagFields Bool -> f Bool
+switch :: (HasOption (WithInfo OptProperties BaseOption) f, Alternative f)
+       => Mod FlagFields Bool -> f Bool
 switch = flag False True
 
 -- | An option that always fails.
@@ -249,24 +251,36 @@ switch = flag False True
 -- When this option is encountered, the option parser immediately aborts with
 -- the given parse error.  If you simply want to output a message, use
 -- 'infoOption' instead.
-abortOption :: HasOption f => ParseError -> Mod OptionFields a -> f a
+abortOption :: HasOption (WithInfo OptProperties BaseOption) f
+            => ParseError -> Mod OptionFields a -> f a
 abortOption err m = option (readerAbort err) . (`mappend` m) $ mconcat
   [ noArgError err , metavar "" ]
 
 -- | An option that always fails and displays a message.
-infoOption :: HasOption f => String -> Mod OptionFields a -> f a
+infoOption :: HasOption (WithInfo OptProperties BaseOption) f
+           => String -> Mod OptionFields a -> f a
 infoOption = abortOption . InfoMsg
 
 -- | Builder for an option taking a 'String' argument.
-strOption :: HasOption f => Mod OptionFields String -> f String
+strOption :: HasOption (WithInfo OptProperties BaseOption) f
+          => Mod OptionFields String -> f String
 strOption = option str
 
 -- | Builder for an option using the 'auto' reader.
-option :: HasOption f => ReadM a -> Mod OptionFields a -> f a
-option r m = mkOption (mkProps d g) (optNames fields) r
+option :: HasOption (WithInfo OptProperties BaseOption) f
+       => ReadM a -> Mod OptionFields a -> f a
+option r m = liftOption . WithInfo (mkProps d g) . BaseReg (optNames fields) $ r
   where
     Mod f d g = metavar "ARG" `mappend` m
     fields = f (OptionFields [] mempty (ErrorMsg ""))
+
+-- | A hidden \"helper\" option which always fails.
+helper :: HasOption (WithInfo OptProperties BaseOption) f => f a
+helper = abortOption ShowHelpText $ mconcat
+  [ long "help"
+  , short 'h'
+  , help "Show this help text"
+  , hidden ]
 
 -- | Modifier for 'ParserInfo'.
 newtype InfoMod i f a = InfoMod

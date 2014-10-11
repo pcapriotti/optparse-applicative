@@ -30,14 +30,6 @@ import Options.Applicative.Help
 
 import Options.Applicative.Types
 
--- | A hidden \"helper\" option which always fails.
-helper :: HasOption f => f a
-helper = abortOption ShowHelpText $ mconcat
-  [ long "help"
-  , short 'h'
-  , help "Show this help text"
-  , hidden ]
-
 -- | Run a program description.
 --
 -- Parse command line arguments. Display help text and exit if any parse error
