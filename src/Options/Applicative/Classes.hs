@@ -30,14 +30,23 @@ instance HasFlag f => HasFlag (Alt f) where
 instance HasCommand f => HasCommand (Alt f) where
   mkCommand n x = liftAlt $ mkCommand n x
 
-instance (Applicative f, HasOption f) => HasOption (WithSub f) where
+instance (Functor f, HasOption f) => HasOption (WithSub p f) where
   mkOption prop n v = liftSub $ mkOption prop n v
 
-instance (Applicative f, HasFlag f) => HasFlag (WithSub f) where
+instance (Functor f, HasFlag f) => HasFlag (WithSub p f) where
   mkFlag prop n x = liftSub $ mkFlag prop n x
 
-instance (Applicative f, HasCommand f) => HasCommand (WithSub f) where
+instance (Functor f, HasCommand f) => HasCommand (WithSub p f) where
   mkCommand n x = liftSub $ mkCommand n x
 
-instance (Applicative f, HasArgument f) => HasArgument (WithSub f) where
+instance (Functor f, HasArgument f) => HasArgument (WithSub p f) where
   mkArgument prop v = liftSub $ mkArgument prop v
+
+instance HasOption BaseOption where
+  mkOption = RegOption
+
+instance HasFlag BaseOption where
+  mkFlag = Flag
+
+instance HasCommand BaseOption where
+  mkCommand = Command

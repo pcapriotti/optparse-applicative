@@ -41,7 +41,7 @@ module Options.Applicative.Builder (
   ParseError(..),
   hidden,
   internal,
-  command,
+  -- command,
   completeWith,
   action,
   completer,
@@ -175,10 +175,10 @@ hidden :: Mod f a
 hidden = optionMod $ \p ->
   p { propVisibility = min Hidden (propVisibility p) }
 
--- | Add a command to a subparser option.
-command :: (Applicative f, HasCommand f)
-        => String -> WithSub f a -> WithSub f a
-command cmd sub = wrapSub (mkCommand cmd sub)
+-- | Create a command invoking a subparser.
+-- command :: (Applicative f, HasCommand f)
+--         => String -> WithSub f a -> WithSub f a
+-- command cmd sub = wrapSub (mkCommand cmd sub)
 
 -- | Add a list of possible completion values.
 completeWith :: HasCompleter f => [String] -> Mod f a
@@ -269,58 +269,58 @@ option r m = mkOption (mkProps d g) (optNames fields) r
     fields = f (OptionFields [] mempty (ErrorMsg ""))
 
 -- | Modifier for 'ParserInfo'.
-newtype InfoMod a = InfoMod
-  { applyInfoMod :: ParserInfo a -> ParserInfo a }
+newtype InfoMod i f a = InfoMod
+  { applyInfoMod :: WithInfo i f a -> WithInfo i f a }
 
-instance Monoid (InfoMod a) where
+instance Monoid (InfoMod i f a) where
   mempty = InfoMod id
   mappend m1 m2 = InfoMod $ applyInfoMod m2 . applyInfoMod m1
 
 -- | Show a full description in the help text of this parser.
-fullDesc :: InfoMod a
-fullDesc = InfoMod . overMetadata $ \i -> i { mdFullDesc = True }
+fullDesc :: InfoMod Metadata f a
+fullDesc = InfoMod . overInfo $ \i -> i { mdFullDesc = True }
 
 -- | Only show a brief description in the help text of this parser.
-briefDesc :: InfoMod a
-briefDesc = InfoMod . overMetadata $ \i -> i { mdFullDesc = False }
+briefDesc :: InfoMod Metadata f a
+briefDesc = InfoMod . overInfo $ \i -> i { mdFullDesc = False }
 
 -- | Specify a header for this parser.
-header :: String -> InfoMod a
-header s = InfoMod . overMetadata $ \i -> i { mdHeader = paragraph s }
+header :: String -> InfoMod Metadata f a
+header s = InfoMod . overInfo $ \i -> i { mdHeader = paragraph s }
 
 -- | Specify a header for this parser as a 'Text.PrettyPrint.ANSI.Leijen.Doc'
 -- value.
-headerDoc :: Maybe Doc -> InfoMod a
-headerDoc doc = InfoMod . overMetadata $ \i -> i { mdHeader = Chunk doc }
+headerDoc :: Maybe Doc -> InfoMod Metadata f a
+headerDoc doc = InfoMod . overInfo $ \i -> i { mdHeader = Chunk doc }
 
 -- | Specify a footer for this parser.
-footer :: String -> InfoMod a
-footer s = InfoMod . overMetadata $ \i -> i { mdFooter = paragraph s }
+footer :: String -> InfoMod Metadata f a
+footer s = InfoMod . overInfo $ \i -> i { mdFooter = paragraph s }
 
 -- | Specify a footer for this parser as a 'Text.PrettyPrint.ANSI.Leijen.Doc'
 -- value.
-footerDoc :: Maybe Doc -> InfoMod a
-footerDoc doc = InfoMod . overMetadata $ \i -> i { mdFooter = Chunk doc }
+footerDoc :: Maybe Doc -> InfoMod Metadata f a
+footerDoc doc = InfoMod . overInfo $ \i -> i { mdFooter = Chunk doc }
 
 -- | Specify a short program description.
-progDesc :: String -> InfoMod a
-progDesc s = InfoMod . overMetadata $ \i -> i { mdProgDesc = paragraph s }
+progDesc :: String -> InfoMod Metadata f a
+progDesc s = InfoMod . overInfo $ \i -> i { mdProgDesc = paragraph s }
 
 -- | Specify a short program description as a 'Text.PrettyPrint.ANSI.Leijen.Doc'
 -- value.
-progDescDoc :: Maybe Doc -> InfoMod a
-progDescDoc doc = InfoMod . overMetadata $ \i -> i { mdProgDesc = Chunk doc }
+progDescDoc :: Maybe Doc -> InfoMod Metadata f a
+progDescDoc doc = InfoMod . overInfo $ \i -> i { mdProgDesc = Chunk doc }
 
 -- | Specify an exit code if a parse error occurs.
-failureCode :: Int -> InfoMod a
-failureCode n = InfoMod . overMetadata $ \i -> i { mdFailureCode = n }
+failureCode :: Int -> InfoMod Metadata f a
+failureCode n = InfoMod . overInfo $ \i -> i { mdFailureCode = n }
 
 -- | Disable parsing of regular options after arguments
-noIntersperse :: InfoMod a
-noIntersperse = InfoMod . overMetadata $ \p -> p { mdIntersperse = False }
+noIntersperse :: InfoMod Metadata f a
+noIntersperse = InfoMod . overInfo $ \p -> p { mdIntersperse = False }
 
 -- | Create a 'ParserInfo' given a 'Parser' and a modifier.
-info :: Parser a -> InfoMod a -> ParserInfo a
+info :: f a -> InfoMod Metadata f a -> WithInfo Metadata f a
 info parser m = applyInfoMod m (WithInfo md parser)
   where
     md = Metadata

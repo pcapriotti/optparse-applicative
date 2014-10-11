@@ -60,27 +60,27 @@ resetArgs = modify $ \s -> s
   , skippedArgs = [] }
 
 data BaseOption a
-  = RegOption [OptName] (ReadM a)
-  | Flag [OptName] a
+  = RegOption OptProperties [OptName] (ReadM a)
+  | Flag OptProperties [OptName] a
   | Command String a
 
 instance Functor BaseOption where
-  fmap f (RegOption n v) = RegOption n (fmap f v)
-  fmap f (Flag n x) = Flag n (f x)
+  fmap f (RegOption prop n v) = RegOption prop n (fmap f v)
+  fmap f (Flag prop n x) = Flag prop n (f x)
   fmap f (Command n x) = Command n (f x)
 
 class Functor f => Opt f where
   optFind :: String -> f a -> Maybe (ArgParser a)
 
 instance Pretty1 BaseOption where
-  pretty1 (RegOption n _) = pretty n </> string "ARG"
-  pretty1 (Flag n _) = pretty n
+  pretty1 (RegOption _ n _) = pretty n </> string "ARG"
+  pretty1 (Flag _ n _) = pretty n
   pretty1 (Command arg _) = string arg
 
 instance Opt BaseOption where
-  optFind arg (RegOption ns v)
+  optFind arg (RegOption _ ns v)
     | matchNames arg ns = Just (argParser1 v)
-  optFind arg (Flag ns x)
+  optFind arg (Flag _ ns x)
     | matchNames arg ns = Just (pure x)
   optFind arg (Command cmd x)
     | arg == cmd = Just (pure x)
@@ -185,6 +185,9 @@ hoistMaybe = maybe empty pure
 class OptParser f where
   runParser :: f a -> ArgParser a
 
+instance OptParser ArgParser where
+  runParser = id
+
 class HasUsage f where
   usage :: f a -> Usage Doc
 
@@ -225,42 +228,30 @@ instance (Nat g f, Applicative f, Applicative g) => Applicative (ApSum f g) wher
       go (Right f) (Left x) = Left (nat f <*> x)
       go (Right f) (Right x) = Right (f <*> x)
 
-instance Applicative f => Nat Identity f where
-  nat = pure . runIdentity
+instance (Functor f, Applicative g) => Nat f (Compose f g) where
+  nat = Compose . fmap pure
 
--- | Add subparser support to a parser.
-newtype WithSub f a = WithSub
-  { unWithSub :: f (ApSum (WithSub f) Identity a) }
+--- Subparsers
 
-liftSub :: Applicative f => f a -> WithSub f a
-liftSub = WithSub . fmap pure
+newtype WithSub p f a = WithSub
+  { unWithSub :: f (Either (p a) a) }
 
-wrapSub :: Applicative f => f (WithSub f a) -> WithSub f a
-wrapSub = WithSub . fmap (ApSum . Left)
+liftSub :: Functor f => f a -> WithSub p f a
+liftSub = WithSub . fmap Right
 
-instance Functor f => Functor (WithSub f) where
-  fmap f = WithSub . fmap (fmap f) . unWithSub
+wrapSub :: Functor f => f (p a) -> WithSub p f a
+wrapSub = WithSub . fmap Left
 
-instance Applicative f => Applicative (WithSub f) where
-  pure = WithSub . pure . pure
-  f <*> x = WithSub $ (<*>) <$> unWithSub f <*> unWithSub x
+instance (Functor f, Functor p) => Functor (WithSub p f) where
+  fmap f (WithSub x) = WithSub (fmap (bimap (fmap f) f) x)
 
-instance Alternative f => Alternative (WithSub f) where
-  empty = WithSub empty
-  x <|> y = WithSub $ unWithSub x <|> unWithSub y
+instance (Opt f, Functor p, OptParser p) => Opt (WithSub p f) where
+  optFind arg (WithSub opt) = (<$> optFind arg opt) $ \m ->
+    m >>= \x -> case x of
+      Left p -> runParser p
+      Right r -> pure r
 
-  some = WithSub . fmap sequenceA . some . unWithSub
-  many p = some p <|> pure []
-
-instance OptParser f => OptParser (WithSub f) where
-  runParser p = do
-    x <- getApSum <$> runParser (unWithSub p)
-    case x of
-      Left p' -> runParser p'
-      Right (Identity r) -> pure r
-
-instance HasUsage f => HasUsage (WithSub f) where
-  usage = usage . unWithSub
+---
 
 -- | Add a description to a parser.
 data WithInfo i f a = WithInfo
