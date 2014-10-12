@@ -20,9 +20,17 @@ parsers.
 
 ## Getting started
 
+Install with
+
+```sh
+cabal install optparse-applicative
+```
+
 Here is a simple example of an applicative option parser:
 
 ```haskell
+import Options.Applicative
+
 data Sample = Sample
   { hello :: String
   , quiet :: Bool }
