@@ -26,15 +26,11 @@ Install with
 cabal install optparse-applicative
 ```
 
-and import with
-
-```haskell
-import Options.Applicative
-```
-
 Here is a simple example of an applicative option parser:
 
 ```haskell
+import Options.Applicative
+
 data Sample = Sample
   { hello :: String
   , quiet :: Bool }
