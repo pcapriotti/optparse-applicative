@@ -13,6 +13,7 @@ import Data.Bimonoid
 import Data.Functor.Identity
 import Data.Functor.Compose
 import Data.Monoid
+import Data.Traversable (sequenceA)
 
 import Options.Applicative.Help.Chunk
 import Options.Applicative.Help.Pretty
@@ -285,14 +286,32 @@ instance HasUsage f => HasUsage (WithInfo i f) where
   usage = usage . unWithInfo
 
 -- | Compose parsers.
-instance (OptParser f, OptParser g) => OptParser (Compose f g) where
+
+newtype ComposeP f g a = ComposeP
+  { getComposeP :: f (g a) }
+
+instance (Functor f, Functor g) => Functor (ComposeP f g) where
+    fmap f (ComposeP x) = ComposeP (fmap (fmap f) x)
+
+instance (Applicative f, Applicative g) => Applicative (ComposeP f g) where
+    pure x = ComposeP (pure (pure x))
+    ComposeP f <*> ComposeP x = ComposeP ((<*>) <$> f <*> x)
+
+instance (Alternative f, Applicative g) => Alternative (ComposeP f g) where
+    empty = ComposeP empty
+    ComposeP x <|> ComposeP y = ComposeP (x <|> y)
+
+    some = ComposeP . fmap sequenceA . some . getComposeP
+    many x = some x <|> pure []
+
+instance (OptParser f, OptParser g) => OptParser (ComposeP f g) where
   runParser p = do
-    p' <- runParser (getCompose p)
+    p' <- runParser (getComposeP p)
     resetArgs
     runParser p'
 
-instance HasUsage f => HasUsage (Compose f g) where
-  usage = usage . getCompose
+instance HasUsage f => HasUsage (ComposeP f g) where
+  usage = usage . getComposeP
 
 overInfo :: (i -> i) -> WithInfo i f a -> WithInfo i f a
 overInfo f i = i { bundledInfo = f (bundledInfo i) }
