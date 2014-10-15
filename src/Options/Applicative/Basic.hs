@@ -65,7 +65,6 @@ resetArgs = modify $ \s -> s
 
 data BaseOption a
   = BaseReg [OptName] (ArgParser a)
-  | BaseFlag [OptName] a
   | BaseCommand String a
 
 newtype Argument a = Argument
@@ -74,7 +73,6 @@ newtype Argument a = Argument
 
 instance Functor BaseOption where
   fmap f (BaseReg n v) = BaseReg  n (fmap f v)
-  fmap f (BaseFlag n x) = BaseFlag n (f x)
   fmap f (BaseCommand n x) = BaseCommand n (f x)
 
 class Functor f => Opt f where
@@ -82,14 +80,11 @@ class Functor f => Opt f where
 
 instance Pretty1 BaseOption where
   pretty1 (BaseReg n _) = pretty n </> string "ARG"
-  pretty1 (BaseFlag n _) = pretty n
   pretty1 (BaseCommand arg _) = string arg
 
 instance Opt BaseOption where
   optFind arg (BaseReg ns v)
     | matchNames arg ns = Just v
-  optFind arg (BaseFlag ns x)
-    | matchNames arg ns = Just (pure x)
   optFind arg (BaseCommand cmd x)
     | arg == cmd = Just (pure x)
   optFind _ _ = empty

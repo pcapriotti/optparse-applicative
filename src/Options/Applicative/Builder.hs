@@ -245,7 +245,10 @@ flag' :: (HasOption (WithInfo OptProperties BaseOption) f, Alternative f)
       => a                         -- ^ active value
       -> Mod FlagFields a          -- ^ option modifier
       -> f a
-flag' x (Mod f d g) = liftOption . WithInfo (mkProps d g) . BaseFlag (flagNames fields) $ x
+flag' x (Mod f d g) = liftOption
+                    . WithInfo (mkProps d g)
+                    . BaseReg (flagNames fields)
+                    $ pure x
   where
     fields = f (FlagFields [])
 
