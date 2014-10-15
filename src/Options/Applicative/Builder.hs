@@ -95,6 +95,7 @@ module Options.Applicative.Builder (
   ) where
 
 import Control.Applicative
+import Control.Monad.Except
 import Data.Foldable (asum)
 import Data.Monoid (Monoid (..)
 #if __GLASGOW_HASKELL__ > 702
@@ -262,8 +263,13 @@ switch = flag False True
 -- 'infoOption' instead.
 abortOption :: HasOption (WithInfo OptProperties BaseOption) f
             => ParseError -> Mod OptionFields a -> f a
-abortOption err m = option (readerAbort err) . (`mappend` m) $ mconcat
-  [ noArgError err , metavar "" ]
+abortOption err m = liftOption
+                  . WithInfo (mkProps d g)
+                  . BaseReg (optNames fields)
+                  $ throwError err
+  where
+    Mod f d g = metavar "" `mappend` m
+    fields = f (OptionFields [] mempty err)
 
 -- | An option that always fails and displays a message.
 infoOption :: HasOption (WithInfo OptProperties BaseOption) f
@@ -278,7 +284,10 @@ strOption = option str
 -- | Builder for an option using the 'auto' reader.
 option :: HasOption (WithInfo OptProperties BaseOption) f
        => ReadM a -> Mod OptionFields a -> f a
-option r m = liftOption . WithInfo (mkProps d g) . BaseReg (optNames fields) $ r
+option r m = liftOption
+           . WithInfo (mkProps d g)
+           . BaseReg (optNames fields)
+           . argParser1 $ r
   where
     Mod f d g = metavar "ARG" `mappend` m
     fields = f (OptionFields [] mempty (ErrorMsg ""))

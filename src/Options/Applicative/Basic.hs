@@ -64,7 +64,7 @@ resetArgs = modify $ \s -> s
   , skippedArgs = [] }
 
 data BaseOption a
-  = BaseReg [OptName] (ReadM a)
+  = BaseReg [OptName] (ArgParser a)
   | BaseFlag [OptName] a
   | BaseCommand String a
 
@@ -87,7 +87,7 @@ instance Pretty1 BaseOption where
 
 instance Opt BaseOption where
   optFind arg (BaseReg ns v)
-    | matchNames arg ns = Just (argParser1 v)
+    | matchNames arg ns = Just v
   optFind arg (BaseFlag ns x)
     | matchNames arg ns = Just (pure x)
   optFind arg (BaseCommand cmd x)
