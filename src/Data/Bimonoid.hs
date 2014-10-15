@@ -47,3 +47,6 @@ instance Monoid m => Applicative (BConst m) where
 instance StarBimonoid m => Alternative (BConst m) where
   empty = BConst zero
   x <|> y = BConst $ getBConst x `plus` getBConst y
+
+  some = BConst . star . getBConst
+  many x = some x <|> pure []
