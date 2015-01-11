@@ -135,12 +135,12 @@ parserHelp pprefs p = bodyHelp . vsepChunks $
     mkTitle :: String -> String
     mkTitle t = "Available " ++ map toLower t ++ ":"
     gather :: [(String, Chunk Doc)] -> [(String, Chunk Doc)]
-    gather l = gather' l []
+    gather = reverse . flip gather' []
     gather' :: [(String, Chunk Doc)] -> [(String, Chunk Doc)] -> [(String, Chunk Doc)]
     gather' [] acc = acc
     gather' ((a, b):xs) acc = case lookup a acc of
                                  Just _ -> gather' xs (insert a b acc)
-                                 Nothing -> gather' xs ((a, b): acc)
+                                 Nothing -> gather' xs ((a, b) : acc)
     insert :: String -> Chunk Doc -> [(String, Chunk Doc)] -> [(String, Chunk Doc)]
     insert _ _ [] = []
     insert key d ((a, b):l) = if a == key
