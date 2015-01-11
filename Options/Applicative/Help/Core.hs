@@ -15,6 +15,7 @@ module Options.Applicative.Help.Core (
 import Control.Monad (guard)
 import Data.List (intersperse, sort)
 import Data.Maybe (maybeToList, catMaybes)
+import Data.Char (toLower)
 import Data.Monoid (mempty, mappend)
 
 import Options.Applicative.Common
@@ -59,16 +60,15 @@ optDesc pprefs style info opt =
   in render desc'
 
 -- | Generate descriptions for commands.
-cmdDesc :: Parser a -> Chunk Doc
-cmdDesc = vcatChunks . mapParser desc
-  where
-    desc _ opt =
-      case optMain opt of
-        CmdReader cmds p ->
-          tabulate [(string cmd, align (extractChunk d))
-                   | cmd <- reverse cmds
-                   , d <- maybeToList . fmap infoProgDesc $ p cmd ]
-        _ -> mempty
+cmdDesc :: Parser a -> [(String, Chunk Doc)]
+cmdDesc = mapParser desc
+  where desc _ opt = (,) (propMetaVar . optProps $ opt) $
+          case optMain opt of
+            CmdReader cmds p ->
+              tabulate [(string cmd,align (extractChunk d))
+                       | cmd <- reverse cmds
+                       , d <- maybeToList . fmap infoProgDesc $ p cmd]
+            _ -> mempty
 
 -- | Generate a brief help text for a parser.
 briefDesc :: ParserPrefs -> Parser a -> Chunk Doc
@@ -127,11 +127,25 @@ footerHelp chunk = ParserHelp mempty mempty mempty mempty chunk
 -- | Generate the help text for a program.
 parserHelp :: ParserPrefs -> Parser a -> ParserHelp
 parserHelp pprefs p = bodyHelp . vsepChunks $
-  [ with_title "Available options:" (fullDesc pprefs p)
-  , with_title "Available commands:" (cmdDesc p) ]
+  with_title "options" (fullDesc pprefs p) :
+  map (\(t, d) -> with_title (t ++ "s") d) (gather $ cmdDesc p)
   where
     with_title :: String -> Chunk Doc -> Chunk Doc
-    with_title title = fmap (string title .$.)
+    with_title title = fmap (string (mkTitle title) .$.)
+    mkTitle :: String -> String
+    mkTitle t = "Available " ++ map toLower t ++ ":"
+    gather :: [(String, Chunk Doc)] -> [(String, Chunk Doc)]
+    gather l = gather' l []
+    gather' :: [(String, Chunk Doc)] -> [(String, Chunk Doc)] -> [(String, Chunk Doc)]
+    gather' [] acc = acc
+    gather' ((a, b):xs) acc = case lookup a acc of
+                                 Just _ -> gather' xs (insert a b acc)
+                                 Nothing -> gather' xs ((a, b): acc)
+    insert :: String -> Chunk Doc -> [(String, Chunk Doc)] -> [(String, Chunk Doc)]
+    insert _ _ [] = []
+    insert key d ((a, b):l) = if a == key
+                                 then (a, chunked (.$.) b d) : l
+                                 else (a, b) : insert key d l
 
 -- | Generate option summary.
 parserUsage :: ParserPrefs -> Parser a -> String -> Doc
@@ -139,5 +153,6 @@ parserUsage pprefs p progn = hsep
   [ string "Usage:"
   , string progn
   , align (extractChunk (briefDesc pprefs p)) ]
+
 
 {-# ANN footerHelp "HLint: ignore Eta reduce" #-}
