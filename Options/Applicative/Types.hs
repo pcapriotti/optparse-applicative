@@ -74,7 +74,8 @@ data ParserInfo a = ParserInfo
   , infoFooter :: Chunk Doc   -- ^ footer of the full parser description
   , infoFailureCode :: Int    -- ^ exit code for a parser failure
   , infoIntersperse :: Bool   -- ^ allow regular options and flags to occur
-                              -- after arguments (default: True)
+                              -- after arguments (default: True))
+  , isHidden :: Bool
   }
 
 instance Functor ParserInfo where

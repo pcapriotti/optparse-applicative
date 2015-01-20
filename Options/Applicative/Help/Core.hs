@@ -14,7 +14,7 @@ module Options.Applicative.Help.Core (
 
 import Control.Monad (guard)
 import Data.List (intersperse, sort)
-import Data.Maybe (maybeToList, catMaybes)
+import Data.Maybe (maybeToList, catMaybes, fromMaybe)
 import Data.Char (toLower)
 import Data.Monoid (mempty, mappend)
 
@@ -65,9 +65,9 @@ cmdDesc = mapParser desc
   where desc _ opt = (,) (propMetaVar . optProps $ opt) $
           case optMain opt of
             CmdReader cmds p ->
-              tabulate [(string cmd,align (extractChunk d))
-                       | cmd <- reverse cmds
-                       , d <- maybeToList . fmap infoProgDesc $ p cmd]
+             tabulate [(string cmd, align (extractChunk d))
+                      | cmd <- reverse . filter (fromMaybe False . fmap (not . isHidden) . p) $ cmds
+                      , d <- maybeToList . fmap infoProgDesc $ p cmd]
             _ -> mempty
 
 -- | Generate a brief help text for a parser.
@@ -153,6 +153,3 @@ parserUsage pprefs p progn = hsep
   [ string "Usage:"
   , string progn
   , align (extractChunk (briefDesc pprefs p)) ]
-
-
-{-# ANN footerHelp "HLint: ignore Eta reduce" #-}

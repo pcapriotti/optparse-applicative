@@ -44,6 +44,7 @@ module Options.Applicative.Builder (
   hidden,
   internal,
   command,
+  command',
   completeWith,
   action,
   completer,
@@ -107,6 +108,7 @@ import Options.Applicative.Common
 import Options.Applicative.Types
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
+import Data.List (intercalate)
 
 -- readers --
 
@@ -179,6 +181,19 @@ hidden = optionMod $ \p ->
 command :: String -> ParserInfo a -> Mod CommandFields a
 command cmd pinfo = fieldMod $ \p ->
   p { cmdCommands = (cmd, pinfo) : cmdCommands p }
+
+-- | Add a command to a subparser option with specified list of aliases.
+command' :: String -> [String] -> ParserInfo a -> Mod CommandFields a
+command' cmd as pinfo = foldl (\c al -> commandAlias al pinfo <> c) (command cmd pinfo') as
+  where pinfo' = pinfo { infoProgDesc =
+                           vcatChunks $
+                           [infoProgDesc pinfo, paragraph $ "Aliases: " ++ intercalate ", " as ++ "."]
+                           }
+
+-- | Add a commandAlias to a subparser option.
+commandAlias :: String -> ParserInfo a -> Mod CommandFields a
+commandAlias cmd pinfo = fieldMod $ \p ->
+  p { cmdCommands = (cmd, pinfo { isHidden = True }) : cmdCommands p }
 
 -- | Add a list of possible completion values.
 completeWith :: HasCompleter f => [String] -> Mod f a
@@ -349,7 +364,8 @@ info parser m = applyInfoMod m base
       , infoHeader = mempty
       , infoFooter = mempty
       , infoFailureCode = 1
-      , infoIntersperse = True }
+      , infoIntersperse = True
+      , isHidden = False }
 
 newtype PrefsMod = PrefsMod
   { applyPrefsMod :: ParserPrefs -> ParserPrefs }
