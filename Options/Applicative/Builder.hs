@@ -184,11 +184,10 @@ command cmd pinfo = fieldMod $ \p ->
 
 -- | Add a command to a subparser option with specified list of aliases.
 command' :: String -> [String] -> ParserInfo a -> Mod CommandFields a
-command' cmd as pinfo = foldl (\c al -> commandAlias al pinfo <> c) (command cmd pinfo') as
-  where pinfo' = pinfo { infoProgDesc =
-                           vcatChunks $
-                           [infoProgDesc pinfo, paragraph $ "Aliases: " ++ intercalate ", " as ++ "."]
-                           }
+command' cmd [] pinfo = command cmd pinfo
+command' cmd as pinfo = foldl (\c a -> commandAlias a pinfo <> c) (command cmd pinfo') as
+  where pinfo' = pinfo { infoProgDesc = desc }
+        desc = vcatChunks [infoProgDesc pinfo, paragraph $ "Aliases: " ++ intercalate ", " as ++ "."]
 
 -- | Add a commandAlias to a subparser option.
 commandAlias :: String -> ParserInfo a -> Mod CommandFields a
