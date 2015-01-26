@@ -70,6 +70,8 @@ instance HasValue OptionFields where
   hasValueDummy _ = ()
 instance HasValue ArgumentFields where
   hasValueDummy _ = ()
+instance HasValue CommandFields where
+  hasValueDummy _ = ()
 
 class HasMetavar f where
   hasMetavarDummy :: f a -> ()
