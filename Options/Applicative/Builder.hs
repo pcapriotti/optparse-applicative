@@ -278,7 +278,7 @@ strOption = option str
 nullOption :: ReadM a -> Mod OptionFields a -> Parser a
 nullOption = option
 
--- | Builder for an option using the 'auto' reader.
+-- | Builder for an option using the given reader.
 option :: ReadM a -> Mod OptionFields a -> Parser a
 option r m = mkParser d g rdr
   where
