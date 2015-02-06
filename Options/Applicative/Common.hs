@@ -161,10 +161,6 @@ searchParser f (MultP p1 p2) = foldr1 (<!>)
 searchParser f (AltP p1 p2) = msum
   [ searchParser f p1
   , searchParser f p2 ]
-searchParser f (BindP p k) = do
-  p' <- searchParser f p
-  x <- hoistMaybe (evalParser p')
-  return (k x)
 
 searchOpt :: MonadP m => ParserPrefs -> OptWord -> Parser a
           -> NondetT (StateT Args m) (Parser a)
@@ -240,7 +236,6 @@ evalParser (NilP r) = r
 evalParser (OptP _) = Nothing
 evalParser (MultP p1 p2) = evalParser p1 <*> evalParser p2
 evalParser (AltP p1 p2) = evalParser p1 <|> evalParser p2
-evalParser (BindP p k) = evalParser p >>= evalParser . k
 
 -- | Map a polymorphic function over all the options of a parser, and collect
 -- the results in a list.
@@ -274,7 +269,6 @@ treeMapParser g = simplify . go False False g
     go m d f (MultP p1 p2) = MultNode [go m d f p1, go m d f p2]
     go m d f (AltP p1 p2) = AltNode [go m d' f p1, go m d' f p2]
       where d' = d || has_default p1 || has_default p2
-    go _ d f (BindP p _) = go True d f p
 
 simplify :: OptTree a -> OptTree a
 simplify (Leaf x) = Leaf x
