@@ -15,7 +15,6 @@ module Options.Applicative.Types (
   readerError,
   CReader(..),
   Parser(..),
-  ParserM(..),
   Completer(..),
   mkCompleter,
   CompletionResult(..),
@@ -28,11 +27,6 @@ module Options.Applicative.Types (
   OptTree(..),
   ParserHelp(..),
 
-  fromM,
-  oneM,
-  manyM,
-  someM,
-
   optVisibility,
   optMetaVar,
   optHelp,
@@ -40,8 +34,8 @@ module Options.Applicative.Types (
   ) where
 
 import Control.Applicative
-  (Applicative(..), Alternative(..), (<$>), optional)
-import Control.Monad (ap, liftM, MonadPlus, mzero, mplus)
+  (Applicative(..), Alternative(..), (<$>))
+import Control.Monad (MonadPlus, mzero, mplus)
 import Control.Monad.Trans.Except (Except, throwE)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, ask)
@@ -183,54 +177,20 @@ data Parser a
   | OptP (Option a)
   | forall x . MultP (Parser (x -> a)) (Parser x)
   | AltP (Parser a) (Parser a)
-  | forall x . BindP (Parser x) (x -> Parser a)
 
 instance Functor Parser where
   fmap f (NilP x) = NilP (fmap f x)
   fmap f (OptP opt) = OptP (fmap f opt)
   fmap f (MultP p1 p2) = MultP (fmap (f.) p1) p2
   fmap f (AltP p1 p2) = AltP (fmap f p1) (fmap f p2)
-  fmap f (BindP p k) = BindP p (fmap f . k)
 
 instance Applicative Parser where
   pure = NilP . Just
   (<*>) = MultP
 
-newtype ParserM r = ParserM
-  { runParserM :: forall x . (r -> Parser x) -> Parser x }
-
-instance Monad ParserM where
-  return x = ParserM $ \k -> k x
-  ParserM f >>= g = ParserM $ \k -> f (\x -> runParserM (g x) k)
-
-instance Functor ParserM where
-  fmap = liftM
-
-instance Applicative ParserM where
-  pure = return
-  (<*>) = ap
-
-fromM :: ParserM a -> Parser a
-fromM (ParserM f) = f pure
-
-oneM :: Parser a -> ParserM a
-oneM p = ParserM (BindP p)
-
-manyM :: Parser a -> ParserM [a]
-manyM p = do
-  mx <- oneM (optional p)
-  case mx of
-    Nothing -> return []
-    Just x -> (x:) <$> manyM p
-
-someM :: Parser a -> ParserM [a]
-someM p = (:) <$> oneM p <*> manyM p
-
 instance Alternative Parser where
   empty = NilP Nothing
   (<|>) = AltP
-  many p = fromM $ manyM p
-  some p = fromM $ (:) <$> oneM p <*> manyM p
 
 newtype Completer = Completer
   { runCompleter :: String -> IO [String] }
