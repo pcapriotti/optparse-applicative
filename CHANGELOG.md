@@ -1,3 +1,7 @@
+## Version 0.11.0.2 (17 Feb 2015)
+
+- Updated dependency bounds.
+
 ## Version 0.11.0.1 (5 Oct 2014)
 
 - Updated documentation.
