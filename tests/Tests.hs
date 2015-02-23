@@ -351,6 +351,37 @@ case_arg_order_3 = do
     Success res -> (3, 5) @=? res
     _ -> assertFailure "unexpected parse error"
 
+case_unix_style :: Assertion
+case_unix_style = do
+  let p = (,)
+          <$> flag' (1 :: Int) (short 'x')
+          <*> flag' (2 :: Int) (short 'c')
+      i = info p idm
+      result = run i ["-xc"]
+  case result of
+    Success res -> (1, 2) @=? res
+    _ -> assertFailure "unexpected parse error"
+
+case_unix_with_options :: Assertion
+case_unix_with_options = do
+  let p = (,)
+          <$> flag' (1 :: Int) (short 'x')
+          <*> strOption (short 'a')
+      i = info p idm
+      result = run i ["-xac"]
+  case result of
+    Success res -> (1, "c") @=? res
+    _ -> assertFailure "unexpected parse error"
+
+case_count_flags :: Assertion
+case_count_flags = do
+  let p = length <$> many (flag' () (short 't'))
+      i = info p idm
+      result = run i ["-ttt"]
+  case result of
+    Success res -> 3 @=? res
+    _ -> assertFailure "unexpected parse error"
+
 case_issue_47 :: Assertion
 case_issue_47 = do
   let p = option r (long "test" <> value 9) :: Parser Int
