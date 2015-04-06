@@ -28,7 +28,7 @@ mappendWith s x y = mconcat [x, s, y]
 -- | The free monoid on a semigroup 'a'.
 newtype Chunk a = Chunk
   { unChunk :: Maybe a }
-  deriving (Eq, Show)
+  deriving (Eq, Read, Show)
 
 instance Functor Chunk where
   fmap f = Chunk . fmap f . unChunk
