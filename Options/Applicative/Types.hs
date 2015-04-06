@@ -92,18 +92,18 @@ data ParserPrefs = ParserPrefs
                                  -- subcommand fails (default: True)
   , prefColumns :: Int           -- ^ number of columns in the terminal, used to
                                  -- format the help page (default: 80)
-  }
+  } deriving (Eq, Show)
 
 data OptName = OptShort !Char
              | OptLong !String
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Show)
 
 -- | Visibility of an option in the help text.
 data OptVisibility
   = Internal          -- ^ does not appear in the help text at all
   | Hidden            -- ^ only visible in the full description
   | Visible           -- ^ visible both in the full and brief descriptions
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Show)
 
 -- | Specification for an individual parser option.
 data OptProperties = OptProperties
@@ -111,13 +111,16 @@ data OptProperties = OptProperties
   , propHelp :: Chunk Doc                 -- ^ help text for this option
   , propMetaVar :: String                 -- ^ metavariable for this option
   , propShowDefault :: Maybe String       -- ^ what to show in the help text as the default
-  }
+  } deriving Show
 
 -- | A single option of a parser.
 data Option a = Option
   { optMain :: OptReader a               -- ^ reader for this option
   , optProps :: OptProperties            -- ^ properties of this option
   }
+
+instance Show (Option a) where
+    show opt = "Option {optProps = " ++ show (optProps opt) ++ "}"
 
 instance Functor Option where
   fmap f (Option m p) = Option (fmap f m) p
@@ -298,11 +301,12 @@ type Args = [String]
 data ArgPolicy
   = SkipOpts
   | AllowOpts
-  deriving Eq
+  deriving (Eq, Show)
 
 data OptHelpInfo = OptHelpInfo
   { hinfoMulti :: Bool
-  , hinfoDefault :: Bool }
+  , hinfoDefault :: Bool
+  } deriving (Eq, Show)
 
 data OptTree a
   = Leaf a
