@@ -58,7 +58,7 @@ hsubparser m = mkParser d g rdr
 -- Parse command line arguments. Display help text and exit if any parse error
 -- occurs.
 execParser :: ParserInfo a -> IO a
-execParser = customExecParser (prefs idm)
+execParser = customExecParser defaultPrefs
 
 -- | Run a program description with custom preferences.
 customExecParser :: ParserPrefs -> ParserInfo a -> IO a
@@ -102,7 +102,7 @@ getParseResult _ = Nothing
 -- If you need to keep track of error messages, use 'execParserPure' instead.
 {-# DEPRECATED execParserMaybe "Use execParserPure together with getParseResult instead" #-}
 execParserMaybe :: ParserInfo a -> [String] -> Maybe a
-execParserMaybe = customExecParserMaybe (prefs idm)
+execParserMaybe = customExecParserMaybe defaultPrefs
 
 -- | Run a program description with custom preferences in pure code.
 --

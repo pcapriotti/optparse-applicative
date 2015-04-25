@@ -39,7 +39,7 @@ import Options.Applicative.Help.Types
 #endif
 
 run :: ParserInfo a -> [String] -> ParserResult a
-run = execParserPure (prefs idm)
+run = execParserPure defaultPrefs
 
 assertError :: Show a => ParserResult a
             -> (ParserFailure ParserHelp -> Assertion) -> Assertion
@@ -72,7 +72,7 @@ checkHelpTextWith ecode pprefs name p args = do
     ecode @=? code
 
 checkHelpText :: Show a => String -> ParserInfo a -> [String] -> Assertion
-checkHelpText = checkHelpTextWith ExitSuccess (prefs idm)
+checkHelpText = checkHelpTextWith ExitSuccess defaultPrefs
 
 case_hello :: Assertion
 case_hello = checkHelpText "hello" Hello.opts ["--help"]
@@ -83,7 +83,7 @@ case_modes = checkHelpText "commands" Commands.opts ["--help"]
 case_cmd_header :: Assertion
 case_cmd_header = do
   let i = info (helper <*> Commands.sample) (header "foo")
-  checkHelpTextWith (ExitFailure 1) (prefs idm)
+  checkHelpTextWith (ExitFailure 1) defaultPrefs
                     "commands_header" i ["-zzz"]
   checkHelpTextWith (ExitFailure 1) (prefs showHelpOnError)
                     "commands_header_full" i ["-zzz"]
@@ -179,7 +179,7 @@ case_nested_commands = do
       p2 = subparser (command "b" (info p3 idm))
       p1 = subparser (command "c" (info p2 idm))
       i = info (p1 <**> helper) idm
-  checkHelpTextWith (ExitFailure 1) (prefs idm) "nested" i ["c", "b"]
+  checkHelpTextWith (ExitFailure 1) defaultPrefs "nested" i ["c", "b"]
 
 case_many_args :: Assertion
 case_many_args = do

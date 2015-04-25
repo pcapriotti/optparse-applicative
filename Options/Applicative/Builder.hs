@@ -84,6 +84,7 @@ module Options.Applicative.Builder (
   noBacktrack,
   columns,
   prefs,
+  defaultPrefs,
 
   -- * Types
   Mod,
@@ -388,3 +389,7 @@ prefs m = applyPrefsMod m base
 -- | Trivial option modifier.
 idm :: Monoid m => m
 idm = mempty
+
+-- | Default preferences.
+defaultPrefs :: ParserPrefs
+defaultPrefs = prefs idm
