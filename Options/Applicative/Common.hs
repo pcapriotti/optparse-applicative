@@ -91,9 +91,7 @@ instance Monoid MatchResult where
 argMatches :: MonadP m => OptReader a -> String
            -> Maybe (StateT Args m a)
 argMatches opt arg = case opt of
-  ArgReader rdr -> Just $ do
-    result <- lift $ runReadM (crReader rdr) arg
-    return result
+  ArgReader rdr -> Just . lift $ runReadM (crReader rdr) arg
   CmdReader _ f ->
     flip fmap (f arg) $ \subp -> StateT $ \args -> do
       setContext (Just arg) subp

@@ -34,5 +34,3 @@ import Options.Applicative.Common
 import Options.Applicative.Builder
 import Options.Applicative.Builder.Completer
 import Options.Applicative.Extra
-
-{-# ANN module "HLint: ignore Use import/export shortcut" #-}

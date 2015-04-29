@@ -47,7 +47,7 @@ helper = abortOption ShowHelpText $ mconcat
 hsubparser :: Mod CommandFields a -> Parser a
 hsubparser m = mkParser d g rdr
   where
-    Mod _ d g = m `mappend` metavar "COMMAND"
+    Mod _ d g = metavar "COMMAND" `mappend` m
     (cmds, subs) = mkCommand m
     rdr = CmdReader cmds (fmap add_helper . subs)
     add_helper pinfo = pinfo
