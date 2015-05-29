@@ -2,10 +2,12 @@
 module Data.Monoid1
   ( Monoid1(..)
   , List1(..)
+  , hoistList1
   , liftList1
   , runList1
   , runList1Alt
   , List1'(..)
+  , hoistList1'
   , list1'ToList1
   , list1ToList1'
   ) where
@@ -29,6 +31,9 @@ runList1 f (List1 xs) = foldr mappend1 mempty1 (map f xs)
 
 runList1Alt :: Alternative g => (forall x . f x -> g x) -> List1 f a -> g a
 runList1Alt f (List1 xs) = asum (map f xs)
+
+hoistList1 :: (forall x. f x -> g x) -> List1 f a -> List1 g a
+hoistList1 phi (List1 xs) = List1 $ map phi xs
 
 instance Functor f => Functor (List1 f) where
   fmap f = List1 . map (fmap f) . unList1
@@ -57,6 +62,10 @@ list1ToList1' :: List1 f a -> Either (f a) (List1' f a)
 list1ToList1' (List1 []) = Right Nil'
 list1ToList1' (List1 [x]) = Left x
 list1ToList1' (List1 (x : y : xs)) = Right (Cons' x y (List1 xs))
+
+hoistList1' :: (forall x. f x -> g x) -> List1' f a -> List1' g a
+hoistList1' _ Nil' = Nil'
+hoistList1' phi (Cons' x y rest) = Cons' (phi x) (phi y) (hoistList1 phi rest)
 
 instance Functor f => Functor (List1' f) where
   fmap _ Nil' = Nil'

@@ -1,8 +1,10 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE RankNTypes #-}
 module Control.Applicative.Free.Complement
   ( Ap'(..)
   , ap'ToAp
   , apToAp'
+  , hoistAp'
   , liftAp2
   ) where
 
@@ -42,3 +44,7 @@ instance Applicative (Ap' f) where
 
 liftAp2 :: f (a -> b) -> f a -> Ap' f b
 liftAp2 x y = Ap' x y (pure ($))
+
+hoistAp' :: (forall x. f x -> g x) -> Ap' f a -> Ap' g a
+hoistAp' _ (Pure' a) = Pure' a
+hoistAp' phi (Ap' a b u) = Ap' (phi a) (phi b) (hoistAp phi u)
