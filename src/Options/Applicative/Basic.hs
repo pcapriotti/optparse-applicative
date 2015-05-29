@@ -12,7 +12,7 @@ import Data.Bifunctor
 import Data.Bimonoid
 import Data.Functor.Identity
 import Data.Functor.Compose
-import Data.Monoid
+import Data.Monoid (mempty)
 import Data.Traversable (sequenceA)
 
 import Options.Applicative.Help.Chunk

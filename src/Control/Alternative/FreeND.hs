@@ -8,7 +8,7 @@ module Control.Alternative.FreeND
   , runAlt
   , runAlt1
   , runAlt2
-
+  , hoistAlt
   , altToAp
   , apToAlt
   , altToList1
@@ -62,6 +62,23 @@ runAlt2 f (Alt2 x) = runList1Alt (coproduct f (runAlt1 f)) (list1'ToList1 x)
 
 liftAlt :: f a -> Alt f a
 liftAlt = LiftAlt
+
+hoistAlt :: (forall x. f x -> g x) -> Alt f a -> Alt g a
+hoistAlt phi (LiftAlt x) = LiftAlt (phi x)
+hoistAlt phi (Branch1 b1) = Branch1 $ hoistAlt1 phi b1
+hoistAlt phi (Branch2 b2) = Branch2 $ hoistAlt2 phi b2
+
+hoistAlt1 :: (forall x. f x -> g x) -> Alt1 f a -> Alt1 g a
+hoistAlt1 phi (Alt1 x) = Alt1 $ hoistAp'  (Coproduct . coproduct
+                                            (Left . phi)
+                                            (Right . hoistAlt2 phi))
+                                          x
+
+hoistAlt2 :: (forall x. f x -> g x) -> Alt2 f a -> Alt2 g a
+hoistAlt2 phi (Alt2 x) = Alt2 $ hoistList1' (Coproduct . coproduct
+                                              (Left . phi)
+                                              (Right . hoistAlt1 phi))
+                                            x
 
 altToAp :: Alt f a -> Ap (Coproduct f (Alt2 f)) a
 altToAp (LiftAlt x) = liftAp (left x)
