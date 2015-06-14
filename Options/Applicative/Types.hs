@@ -57,6 +57,7 @@ data ParseError
   | InfoMsg String
   | ShowHelpText
   | UnknownError
+  | MissingError (OptTree (Chunk Doc))
   deriving Show
 
 instance Monoid ParseError where

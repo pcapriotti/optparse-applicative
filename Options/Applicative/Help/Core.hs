@@ -1,6 +1,7 @@
 module Options.Applicative.Help.Core (
   cmdDesc,
   briefDesc,
+  fold_tree,
   fullDesc,
   ParserHelp(..),
   errorHelp,
@@ -13,50 +14,13 @@ module Options.Applicative.Help.Core (
   ) where
 
 import Control.Monad (guard)
-import Data.List (intersperse, sort)
 import Data.Maybe (maybeToList, catMaybes)
-import Data.Monoid (mempty, mappend)
+import Data.Monoid (mempty)
 
 import Options.Applicative.Common
 import Options.Applicative.Types
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
-
--- | Style for rendering an option.
-data OptDescStyle = OptDescStyle
-  { descSep :: Doc
-  , descHidden :: Bool
-  , descSurround :: Bool }
-
--- | Generate description for a single option.
-optDesc :: ParserPrefs -> OptDescStyle -> OptHelpInfo -> Option a -> Chunk Doc
-optDesc pprefs style info opt =
-  let ns = optionNames $ optMain opt
-      mv = stringChunk $ optMetaVar opt
-      descs = map (string . showOption) (sort ns)
-      desc' = listToChunk (intersperse (descSep style) descs) <<+>> mv
-      show_opt
-        | optVisibility opt == Hidden
-        = descHidden style
-        | otherwise
-        = optVisibility opt == Visible
-      suffix
-        | hinfoMulti info
-        = stringChunk . prefMultiSuffix $ pprefs
-        | otherwise
-        = mempty
-      render chunk
-        | not show_opt
-        = mempty
-        | isEmpty chunk || not (descSurround style)
-        = mappend chunk suffix
-        | hinfoDefault info
-        = mappend (fmap brackets chunk) suffix
-        | null (drop 1 descs)
-        = mappend chunk suffix
-        | otherwise
-        = mappend (fmap parens chunk) suffix
-  in render desc'
 
 -- | Generate descriptions for commands.
 cmdDesc :: Parser a -> Chunk Doc
@@ -79,12 +43,13 @@ briefDesc pprefs = fold_tree . treeMapParser (optDesc pprefs style)
       , descHidden = False
       , descSurround = True }
 
-    fold_tree (Leaf x) = x
-    fold_tree (MultNode xs) = foldr ((<</>>) . fold_tree) mempty xs
-    fold_tree (AltNode xs) = alt_node
-                           . filter (not . isEmpty)
-                           . map fold_tree $ xs
-
+fold_tree :: OptTree (Chunk Doc) -> Chunk Doc
+fold_tree (Leaf x) = x
+fold_tree (MultNode xs) = foldr ((<</>>) . fold_tree) mempty xs
+fold_tree (AltNode xs) = alt_node
+                       . filter (not . isEmpty)
+                       . map fold_tree $ xs
+  where
     alt_node :: [Chunk Doc] -> Chunk Doc
     alt_node [n] = n
     alt_node ns = fmap parens

@@ -143,9 +143,10 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
   in (h, exit_code, prefColumns pprefs)
   where
     exit_code = case msg of
-      ErrorMsg _   -> ExitFailure (infoFailureCode pinfo)
-      UnknownError -> ExitFailure (infoFailureCode pinfo)
-      _            -> ExitSuccess
+      ErrorMsg _     -> ExitFailure (infoFailureCode pinfo)
+      UnknownError   -> ExitFailure (infoFailureCode pinfo)
+      MissingError _ -> ExitFailure (infoFailureCode pinfo)
+      _              -> ExitSuccess
 
     with_context :: Context
                  -> ParserInfo a
@@ -161,10 +162,11 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
         , fmap (indent 2) . infoProgDesc $ i ]
 
     error_help = errorHelp $ case msg of
-      ShowHelpText -> mempty
-      ErrorMsg m   -> stringChunk m
-      InfoMsg  m   -> stringChunk m
-      UnknownError -> mempty
+      ShowHelpText   -> mempty
+      ErrorMsg m     -> stringChunk m
+      InfoMsg  m     -> stringChunk m
+      MissingError x -> stringChunk "Missing:" <<+>> fold_tree x
+      UnknownError   -> mempty
 
     base_help :: ParserInfo a -> ParserHelp
     base_help i

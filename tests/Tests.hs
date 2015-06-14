@@ -28,6 +28,7 @@ import Test.QuickCheck (Positive (..))
 import Test.QuickCheck.Arbitrary
 
 import Options.Applicative
+import Options.Applicative.Types
 import Options.Applicative.Help.Pretty (Doc, SimpleDoc(..))
 import qualified Options.Applicative.Help.Pretty as Doc
 import Options.Applicative.Help.Chunk
@@ -282,8 +283,8 @@ case_issue_35 = do
       i = info p idm
       result = run i []
   assertError result $ \failure -> do
-    let text = head . lines . fst $ renderFailure failure "test"
-    "Usage: test -f" @=? text
+    let text = lines . fst $ renderFailure failure "test"
+    ["Missing: -f", "", "Usage: test -f"] @=? text
 
 case_backtracking :: Assertion
 case_backtracking = do
@@ -439,8 +440,8 @@ case_issue_52 = do
         <> command "run" (info (pure "foo") idm) )
       i = info p idm
   assertError (run i []) $ \failure -> do
-    let text = head . lines . fst $ renderFailure failure "test"
-    "Usage: test FOO" @=? text
+    let text = lines . fst $ renderFailure failure "test"
+    ["Missing: FOO", "", "Usage: test FOO"] @=? text
 
 case_multiple_subparsers :: Assertion
 case_multiple_subparsers = do
@@ -472,6 +473,16 @@ case_reader_error_mplus = do
   assertError (run i ["foo"]) $ \failure -> do
     let text = head . lines . fst $ renderFailure failure "test"
     "foo /= 42" @=? text
+
+case_missing_flags_described :: Assertion
+case_missing_flags_described = do
+  let p = (,)
+        <$> option str (short 'a')
+        <*> option str (short 'b')
+      i = info p idm
+  assertError (run i ["-b", "3"]) $ \failure -> do
+    let text = head . lines . fst $ renderFailure failure "test"
+    "Missing: -a ARG" @=? text
 
 ---
 
