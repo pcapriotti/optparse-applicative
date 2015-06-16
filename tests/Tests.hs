@@ -32,7 +32,6 @@ import Options.Applicative.Types
 import Options.Applicative.Help.Pretty (Doc, SimpleDoc(..))
 import qualified Options.Applicative.Help.Pretty as Doc
 import Options.Applicative.Help.Chunk
-import Options.Applicative.Help.Types
 
 #if __GLASGOW_HASKELL__ <= 702
 (<>) :: Monoid a => a -> a -> a
@@ -483,6 +482,24 @@ case_missing_flags_described = do
   assertError (run i ["-b", "3"]) $ \failure -> do
     let text = head . lines . fst $ renderFailure failure "test"
     "Missing: -a ARG" @=? text
+
+case_many_missing_flags_described :: Assertion
+case_many_missing_flags_described = do
+  let p = (,)
+        <$> option str (short 'a')
+        <*> option str (short 'b')
+      i = info p idm
+  assertError (run i []) $ \failure -> do
+    let text = head . lines . fst $ renderFailure failure "test"
+    "Missing: -a ARG -b ARG" @=? text
+
+case_alt_missing_flags_described :: Assertion
+case_alt_missing_flags_described = do
+  let p = option str (short 'a') <|> option str (short 'b')
+      i = info p idm
+  assertError (run i []) $ \failure -> do
+    let text = head . lines . fst $ renderFailure failure "test"
+    "Missing: (-a ARG | -b ARG)" @=? text
 
 ---
 

@@ -146,7 +146,8 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
       ErrorMsg _     -> ExitFailure (infoFailureCode pinfo)
       UnknownError   -> ExitFailure (infoFailureCode pinfo)
       MissingError _ -> ExitFailure (infoFailureCode pinfo)
-      _              -> ExitSuccess
+      ShowHelpText   -> ExitSuccess
+      InfoMsg  _     -> ExitSuccess
 
     with_context :: Context
                  -> ParserInfo a
