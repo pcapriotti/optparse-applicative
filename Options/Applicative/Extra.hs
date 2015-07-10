@@ -136,8 +136,8 @@ parserFailure :: ParserPrefs -> ParserInfo a
               -> ParseError -> [Context]
               -> ParserFailure ParserHelp
 parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
-  let h = with_context ctx pinfo $ \names pinfo' -> mconcat
-            [ base_help pinfo'
+  let h = with_context ctx pinfo $ \names pinfo' opts -> mconcat
+            [ base_help pinfo' opts
             , usage_help progn names pinfo'
             , error_help ]
   in (h, exit_code, prefColumns pprefs)
@@ -151,10 +151,10 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
 
     with_context :: [Context]
                  -> ParserInfo a
-                 -> (forall b . [String] -> ParserInfo b -> c)
+                 -> (forall b b'. [String] -> ParserInfo b -> Maybe (ParserInfo b') -> c)
                  -> c
-    with_context [] i f = f [] i
-    with_context c@(Context _ i:_) _ f = f (contextNames c) i
+    with_context [] i f = f [] i Nothing
+    with_context c@(Context n i:_) i' f = f (contextNames c) i (Just i')
 
     usage_help progn names i = case msg of
       InfoMsg _ -> mempty
@@ -169,15 +169,18 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
       MissingError x -> stringChunk "Missing:" <<+>> fold_tree x
       UnknownError   -> mempty
 
-    base_help :: ParserInfo a -> ParserHelp
-    base_help i
+    base_help :: ParserInfo a -> Maybe (ParserInfo b) -> ParserHelp
+    base_help i i'
       | show_full_help
-      = mconcat [h, f, parserHelp pprefs (infoParser i)]
+      = mconcat [h, f, parserHelp']
       | otherwise
       = mempty
       where
         h = headerHelp (infoHeader i)
         f = footerHelp (infoFooter i)
+        parserHelp' = case i' of
+                            Just i'' -> parserHelpWithGlobal pprefs (infoParser i) (infoParser i'')
+                            Nothing  -> parserHelp pprefs (infoParser i)
 
     show_full_help = case msg of
       ShowHelpText -> True

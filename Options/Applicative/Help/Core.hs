@@ -10,6 +10,7 @@ module Options.Applicative.Help.Core (
   bodyHelp,
   footerHelp,
   parserHelp,
+  parserHelpWithGlobal,
   parserUsage,
   ) where
 
@@ -93,6 +94,15 @@ footerHelp chunk = ParserHelp mempty mempty mempty mempty chunk
 parserHelp :: ParserPrefs -> Parser a -> ParserHelp
 parserHelp pprefs p = bodyHelp . vsepChunks $
   [ with_title "Available options:" (fullDesc pprefs p)
+  , with_title "Available commands:" (cmdDesc p) ]
+  where
+    with_title :: String -> Chunk Doc -> Chunk Doc
+    with_title title = fmap (string title .$.)
+
+parserHelpWithGlobal :: ParserPrefs -> Parser a -> Parser b -> ParserHelp
+parserHelpWithGlobal pprefs p p' = bodyHelp . vsepChunks $
+  [ with_title "Available options:" (fullDesc pprefs p)
+  , with_title "Global options:" (fullDesc pprefs p')
   , with_title "Available commands:" (cmdDesc p) ]
   where
     with_title :: String -> Chunk Doc -> Chunk Doc
