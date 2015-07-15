@@ -187,7 +187,7 @@ completeWith xs = completer (listCompleter xs)
 
 -- | Add a bash completion action. Common actions include @file@ and
 -- @directory@. See
--- http://www.gnu.org/software/bash/manual/html_node/Programmable-Completion-Builtins.html#Programmable-Completion-Builtins
+-- <http://www.gnu.org/software/bash/manual/html_node/Programmable-Completion-Builtins.html#Programmable-Completion-Builtins>
 -- for a complete list.
 action :: HasCompleter f => String -> Mod f a
 action act = completer (bashCompleter act)
