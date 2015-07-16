@@ -1,7 +1,6 @@
 {-# LANGUAGE CPP #-}
 module Options.Applicative.Help.Chunk
-  ( mappendWith
-  , Chunk(..)
+  ( Chunk(..)
   , chunked
   , listToChunk
   , (<<+>>)
@@ -21,9 +20,6 @@ import Data.Maybe
 import Data.Monoid
 
 import Options.Applicative.Help.Pretty
-
-mappendWith :: Monoid a => a -> a -> a -> a
-mappendWith s x y = mconcat [x, s, y]
 
 -- | The free monoid on a semigroup 'a'.
 newtype Chunk a = Chunk
