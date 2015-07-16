@@ -45,6 +45,7 @@ import Control.Monad (ap, liftM, MonadPlus, mzero, mplus)
 import Control.Monad.Trans.Except (Except, throwE)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, ask)
+import Data.Default.Class (Default(..))
 import Data.Monoid (Monoid(..))
 import System.Exit (ExitCode(..))
 
@@ -83,6 +84,7 @@ instance Functor ParserInfo where
 -- | Global preferences for a top-level 'Parser'.
 data ParserPrefs = ParserPrefs
   { prefMultiSuffix :: String    -- ^ metavar suffix for multiple options
+                                 -- (default: @""@)
   , prefDisambiguate :: Bool     -- ^ automatically disambiguate abbreviations
                                  -- (default: False)
   , prefShowHelpOnError :: Bool  -- ^ always show help text on parse errors
@@ -92,6 +94,14 @@ data ParserPrefs = ParserPrefs
   , prefColumns :: Int           -- ^ number of columns in the terminal, used to
                                  -- format the help page (default: 80)
   }
+
+instance Default ParserPrefs where
+  def = ParserPrefs
+    { prefMultiSuffix = ""
+    , prefDisambiguate = False
+    , prefShowHelpOnError = False
+    , prefBacktrack = True
+    , prefColumns = 80 }
 
 data OptName = OptShort !Char
              | OptLong !String

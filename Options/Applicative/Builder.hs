@@ -96,6 +96,7 @@ module Options.Applicative.Builder (
   ) where
 
 import Control.Applicative (pure, (<|>))
+import Data.Default.Class (Default(..))
 import Data.Monoid (Monoid (..)
 #if __GLASGOW_HASKELL__ > 702
   , (<>)
@@ -375,14 +376,7 @@ columns :: Int -> PrefsMod
 columns cols = PrefsMod $ \p -> p { prefColumns = cols }
 
 prefs :: PrefsMod -> ParserPrefs
-prefs m = applyPrefsMod m base
-  where
-    base = ParserPrefs
-      { prefMultiSuffix = ""
-      , prefDisambiguate = False
-      , prefShowHelpOnError = False
-      , prefBacktrack = True
-      , prefColumns = 80 }
+prefs m = applyPrefsMod m def
 
 -- convenience shortcuts
 
@@ -392,4 +386,4 @@ idm = mempty
 
 -- | Default preferences.
 defaultPrefs :: ParserPrefs
-defaultPrefs = prefs idm
+defaultPrefs = def
