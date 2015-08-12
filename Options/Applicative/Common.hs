@@ -53,13 +53,13 @@ module Options.Applicative.Common (
   ) where
 
 import Control.Applicative (pure, (<*>), (<$>), (<|>), (<$))
+import Control.Arrow (left)
 import Control.Monad (guard, mzero, msum, when, liftM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), get, put, runStateT)
 import Data.List (isPrefixOf, sort, intersperse)
-import Data.Maybe (maybeToList, isNothing)
+import Data.Maybe (maybeToList)
 import Data.Monoid (Monoid(..))
-import Data.Bifunctor
 
 import Options.Applicative.Internal
 import Options.Applicative.Types
@@ -212,12 +212,12 @@ runParser SkipOpts p ("--" : argt) = runParser AllowOpts p argt
 runParser policy p args = case args of
   [] -> do
     prefs <- getPrefs
-    exitP p $ MissingError `first` result prefs
+    exitP p $ MissingError `left` result prefs
   (arg : argt) -> do
     prefs <- getPrefs
     (mp', args') <- do_step prefs arg argt
     case mp' of
-      Nothing -> hoistEither (MissingError `first` (result prefs)) <|> parseError arg
+      Nothing -> hoistEither (MissingError `left` (result prefs)) <|> parseError arg
       Just p' -> runParser policy p' args'
   where
     result (prefs') = (,) <$> evalParser False False (optDesc prefs' missingStyle) p <*> pure args
