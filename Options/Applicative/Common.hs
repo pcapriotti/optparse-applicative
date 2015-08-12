@@ -119,8 +119,11 @@ optMatches disambiguate opt (OptWord arg1 val) = case opt of
       lift $ runReadM (withReadM (errorFor arg1) (crReader rdr)) arg'
   FlagReader names x -> do
     guard $ has_name arg1 names
-    guard $ isNothing val
-    Just $ return x
+    Just $ do
+      args <- get
+      let val' = (\s -> '-' : s) <$> val
+      put $ maybeToList val' ++ args
+      return x
   _ -> Nothing
   where
     errorFor name msg = "option " ++ showOption name ++ ": " ++ msg
