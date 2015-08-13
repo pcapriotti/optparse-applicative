@@ -49,7 +49,7 @@ class (Alternative m, MonadPlus m) => MonadP m where
   missingArgP :: ParseError -> Completer -> m a
   tryP :: m a -> m (Either ParseError a)
   errorP :: ParseError -> m a
-  exitP :: Parser b -> Maybe a -> m a
+  exitP :: Parser b -> Either ParseError a -> m a
 
 newtype P a = P (ExceptT ParseError (WriterT Context (Reader ParserPrefs)) a)
 
@@ -92,7 +92,7 @@ instance MonadP P where
 
   missingArgP e _ = errorP e
   tryP (P p) = P $ lift $ runExceptT p
-  exitP _ = P . hoistMaybe
+  exitP _ = P . (either throwE return)
   errorP = P . throwE
 
 hoistMaybe :: MonadPlus m => Maybe a -> m a
