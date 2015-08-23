@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Options.Applicative.Builder.Internal (
   -- * Internals
   Mod(..),
@@ -23,9 +24,12 @@ module Options.Applicative.Builder.Internal (
   internal
   ) where
 
-import Control.Applicative (pure, (<*>), empty, (<|>))
+import Control.Applicative (empty, (<|>))
 import Control.Monad (mplus)
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative (pure, (<*>))
 import Data.Monoid (Monoid(..))
+#endif
 
 import Options.Applicative.Common
 import Options.Applicative.Types

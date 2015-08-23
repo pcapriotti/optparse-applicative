@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Options.Applicative.Builder.Completer
   ( Completer
   , mkCompleter
@@ -6,10 +7,12 @@ module Options.Applicative.Builder.Completer
   , bashCompleter
   ) where
 
-import Control.Applicative ((<$>), pure)
 import Control.Exception (IOException, try)
 import Data.List (isPrefixOf)
 import System.Process (readProcess)
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>), pure)
+#endif
 
 import Options.Applicative.Types
 

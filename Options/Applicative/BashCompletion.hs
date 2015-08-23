@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 -- | You don't need to import this module to enable bash completion.
 --
 -- See
@@ -7,7 +8,10 @@ module Options.Applicative.BashCompletion
   ( bashCompletionParser
   ) where
 
-import Control.Applicative ((<$>), (<*>), many)
+import Control.Applicative (many)
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>), (<*>))
+#endif
 import Data.Foldable (asum)
 import Data.List (isPrefixOf)
 import Data.Maybe (fromMaybe, listToMaybe)
