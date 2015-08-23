@@ -68,7 +68,7 @@ maintainer:          paolo@capriotti.io
 copyright:           (c) 2012-2014 Paolo Capriotti <paolo@capriotti.io>
 category:            System
 build-type:          Simple
-cabal-version:       >= 1.8
+cabal-version:       >= 1.8.0.4
 extra-source-files:  CHANGELOG.md
                      README.md
                      tests/Examples/Alternatives.hs
