@@ -136,6 +136,11 @@ long :: HasName f => String -> Mod f a
 long = fieldMod . name . OptLong
 
 -- | Specify a default value for an option.
+--
+-- /Note/: Because this modifier means the parser will never fail,
+-- do not use it with combinators such as 'some' or 'many', as
+-- these combinators continue until a failure occurs.
+-- Careless use will thus result in a hang.
 value :: HasValue f => a -> Mod f a
 value x = Mod id (DefaultProp (Just x) Nothing) id
 
