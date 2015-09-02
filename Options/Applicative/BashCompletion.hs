@@ -44,11 +44,13 @@ bashCompletionQuery pinfo pprefs ws i _ = case runCompletion compl pprefs of
       . sequence
       . mapParser (const opt_completions)
 
-    opt_completions opt = case optMain opt of
-      OptReader ns _ _ -> return $ show_names ns
-      FlagReader ns _  -> return $ show_names ns
-      ArgReader rdr    -> run_completer (crCompleter rdr)
-      CmdReader ns _   -> return $ filter_names ns
+    opt_completions opt = case (propVisibility $ optProps opt, optMain opt) of
+      (Hidden, _)           -> return []
+      (Internal, _)         -> return []
+      (_, OptReader ns _ _) -> return $ show_names ns
+      (_, FlagReader ns _)  -> return $ show_names ns
+      (_, ArgReader rdr)    -> run_completer (crCompleter rdr)
+      (_, CmdReader ns _)   -> return $ filter_names ns
 
     show_name :: OptName -> String
     show_name (OptShort c) = '-':[c]

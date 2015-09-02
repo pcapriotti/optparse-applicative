@@ -227,6 +227,20 @@ case_completion = do
     Failure _ -> assertFailure "unexpected failure"
     Success val -> assertFailure $ "unexpected result " ++ show val
 
+case_completion_hidden :: Assertion
+case_completion_hidden = do
+  let p = (,)
+        <$> strOption (long "foo"<> value "")
+        <*> strOption (long "bar"<> value "" <> hidden)
+      i = info p idm
+      result = run i ["--bash-completion-index", "0"]
+  case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      ["--foo"] @=? completions
+    Failure _ -> assertFailure "unexpected failure"
+    Success val -> assertFailure $ "unexpected result " ++ show val
+
 case_bind_usage :: Assertion
 case_bind_usage = do
   let p = many (argument str (metavar "ARGS..."))
