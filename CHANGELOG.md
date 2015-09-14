@@ -1,3 +1,19 @@
+## Version 0.12.0.0 (17 Sep 2015)
+
+- Add "missing" error condition descriptions when required flags and arguments
+  are not provided.
+
+- Allow multiple short flags to be concatenated together behind a single
+  hyphen, e.g. "-xcf".
+
+- Updated dependency bounds on `process` and `ansi-wl-pprint`.
+
+- Add `Show` and `Eq` instances to some types for easier debugging.
+
+- Add defaultPrefs, a default preferences value
+
+- Docs.
+
 ## Version 0.11.0.2 (17 Feb 2015)
 
 - Updated dependency bounds.
