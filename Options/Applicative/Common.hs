@@ -52,7 +52,7 @@ module Options.Applicative.Common (
   OptDescStyle (..)
   ) where
 
-import Control.Applicative (pure, (<*>), (<*), (<$>), (<|>), (<$))
+import Control.Applicative (pure, (<*>), (<*), (*>), (<$>), (<|>), (<$))
 import Control.Arrow (left)
 import Control.Monad (guard, mzero, msum, when, liftM)
 import Control.Monad.Trans.Class (lift)
@@ -102,14 +102,13 @@ argMatches opt arg = case opt of
     return result
   CmdReader _ f ->
     flip fmap (f arg) $ \subp -> StateT $ \args -> do
-      enterContext arg subp
       prefs <- getPrefs
       let runSubparser
             | prefBacktrack prefs = \i a ->
                 runParser (getPolicy i) (infoParser i) a
             | otherwise = \i a
             -> (,) <$> runParserInfo i a <*> pure []
-      runSubparser subp args <* exitContext
+      enterContext arg subp *> runSubparser subp args <* exitContext
   _ -> Nothing
 
 optMatches :: MonadP m => Bool -> OptReader a -> OptWord -> Maybe (StateT Args m a)
