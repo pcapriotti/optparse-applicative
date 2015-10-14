@@ -78,6 +78,7 @@ bashCompletionScript prog progn = return
   [ "_" ++ progn ++ "()"
   , "{"
   , "    local cmdline"
+  , "    local IFS=$'\n'"
   , "    CMDLINE=(--bash-completion-index $COMP_CWORD)"
   , ""
   , "    for arg in ${COMP_WORDS[@]}; do"
