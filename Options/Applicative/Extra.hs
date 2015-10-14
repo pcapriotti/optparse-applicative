@@ -133,7 +133,7 @@ execParserPure pprefs pinfo args =
 --
 -- @handleParseResult . Failure $ parserFailure pprefs pinfo ShowHelpText mempty@
 parserFailure :: ParserPrefs -> ParserInfo a
-              -> ParseError -> Context
+              -> ParseError -> [Context]
               -> ParserFailure ParserHelp
 parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
   let h = with_context ctx pinfo $ \names pinfo' -> mconcat
@@ -149,12 +149,12 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
       ShowHelpText   -> ExitSuccess
       InfoMsg  _     -> ExitSuccess
 
-    with_context :: Context
+    with_context :: [Context]
                  -> ParserInfo a
                  -> (forall b . [String] -> ParserInfo b -> c)
                  -> c
-    with_context NullContext i f = f [] i
-    with_context (Context n i) _ f = f n i
+    with_context [] i f = f [] i
+    with_context c@(Context _ i:_) _ f = f (contextNames c) i
 
     usage_help progn names i = case msg of
       InfoMsg _ -> mempty
