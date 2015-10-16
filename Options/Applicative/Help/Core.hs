@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Options.Applicative.Help.Core (
   cmdDesc,
   briefDesc,
@@ -15,7 +16,9 @@ module Options.Applicative.Help.Core (
 
 import Control.Monad (guard)
 import Data.Maybe (maybeToList, catMaybes)
+#if !MIN_VERSION_base(4,8,0)
 import Data.Monoid (mempty)
+#endif
 
 import Options.Applicative.Common
 import Options.Applicative.Types

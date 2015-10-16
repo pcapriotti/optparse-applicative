@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE CPP, ExistentialQuantification #-}
 module Options.Applicative.Internal
   ( P
   , Context(..)
@@ -28,7 +28,7 @@ module Options.Applicative.Internal
   , disamb
   ) where
 
-import Control.Applicative (Applicative(..), Alternative(..), (<$>))
+import Control.Applicative (Alternative(..))
 import Control.Monad (MonadPlus(..), liftM, ap, guard)
 import Control.Monad.Trans.Class (MonadTrans, lift)
 import Control.Monad.Trans.Except
@@ -38,7 +38,10 @@ import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Writer (runWriterT, WriterT, tell)
 import Control.Monad.Trans.State (StateT, get, put, evalStateT)
 import Data.Maybe (maybeToList)
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative (Applicative(..), (<$>))
 import Data.Monoid (Monoid(..))
+#endif
 
 import Options.Applicative.Types
 

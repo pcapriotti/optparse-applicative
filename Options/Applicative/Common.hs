@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE CPP, Rank2Types #-}
 module Options.Applicative.Common (
   -- * Option parsers
   --
@@ -52,14 +52,17 @@ module Options.Applicative.Common (
   OptDescStyle (..)
   ) where
 
-import Control.Applicative (pure, (<*>), (<$>), (<|>), (<$))
+import Control.Applicative ((<|>))
 import Control.Arrow (left)
 import Control.Monad (guard, mzero, msum, when, liftM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), get, put, runStateT)
 import Data.List (isPrefixOf, sort, intersperse)
 import Data.Maybe (maybeToList)
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative (pure, (<*>), (<$>), (<$))
 import Data.Monoid (Monoid(..))
+#endif
 
 import Options.Applicative.Internal
 import Options.Applicative.Types

@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types, ExistentialQuantification #-}
+{-# LANGUAGE CPP, Rank2Types, ExistentialQuantification #-}
 module Options.Applicative.Types (
   ParseError(..),
   ParserInfo(..),
@@ -39,14 +39,16 @@ module Options.Applicative.Types (
   optShowDefault
   ) where
 
-import Control.Applicative
-  (Applicative(..), Alternative(..), (<$>), optional)
+import Control.Applicative (Alternative(..), optional)
 import Control.Monad (ap, liftM, MonadPlus, mzero, mplus)
 import Control.Monad.Trans.Except (Except, throwE)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, ask)
-import Data.Monoid (Monoid(..))
 import System.Exit (ExitCode(..))
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative (Applicative(..), (<$>))
+import Data.Monoid (Monoid(..))
+#endif
 
 import Options.Applicative.Help.Types
 import Options.Applicative.Help.Pretty

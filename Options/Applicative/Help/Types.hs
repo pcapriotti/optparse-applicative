@@ -1,9 +1,12 @@
+{-# LANGUAGE CPP #-}
 module Options.Applicative.Help.Types (
   ParserHelp(..),
   renderHelp
   ) where
 
+#if !MIN_VERSION_base(4,8,0)
 import Data.Monoid
+#endif
 
 import Options.Applicative.Help.Chunk
 import Options.Applicative.Help.Pretty

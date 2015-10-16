@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE CPP, RankNTypes #-}
 module Options.Applicative.Extra (
   -- * Extra parser utilities
   --
@@ -21,8 +21,11 @@ module Options.Applicative.Extra (
   CompletionResult(..),
   ) where
 
-import Control.Applicative (pure, (<$>), (<|>), (<**>))
+import Control.Applicative ((<|>), (<**>))
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative (pure, (<$>))
 import Data.Monoid (mempty, mconcat)
+#endif
 import System.Environment (getArgs, getProgName)
 import System.Exit (exitSuccess, exitWith, ExitCode(..))
 import System.IO (hPutStrLn, stderr)

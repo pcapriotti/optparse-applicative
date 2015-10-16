@@ -18,7 +18,10 @@ module Options.Applicative.Help.Chunk
 import Control.Applicative
 import Control.Monad
 import Data.Maybe
+
+#if !MIN_VERSION_base(4,8,0)
 import Data.Monoid
+#endif
 
 import Options.Applicative.Help.Pretty
 
