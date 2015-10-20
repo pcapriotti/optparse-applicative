@@ -17,6 +17,7 @@ module Options.Applicative.Internal
   , runCompletion
   , SomeParser(..)
   , ComplError(..)
+  , contextNames
 
   , ListT
   , takeListT
@@ -35,15 +36,13 @@ import Control.Monad.Trans.Except
   (runExcept, runExceptT, withExcept, ExceptT(..), throwE, catchE)
 import Control.Monad.Trans.Reader
   (mapReaderT, runReader, runReaderT, Reader, ReaderT, ask)
-import Control.Monad.Trans.Writer (runWriterT, WriterT, tell)
-import Control.Monad.Trans.State (StateT, get, put, evalStateT)
-import Data.Maybe (maybeToList)
-import Data.Monoid (Monoid(..))
+import Control.Monad.Trans.State (StateT, get, put, modify, evalStateT, runStateT)
 
 import Options.Applicative.Types
 
 class (Alternative m, MonadPlus m) => MonadP m where
-  setContext :: Maybe String -> ParserInfo a -> m ()
+  enterContext :: String -> ParserInfo a -> m ()
+  exitContext :: m ()
   getPrefs :: m ParserPrefs
 
   missingArgP :: ParseError -> Completer -> m a
@@ -51,7 +50,7 @@ class (Alternative m, MonadPlus m) => MonadP m where
   errorP :: ParseError -> m a
   exitP :: Parser b -> Either ParseError a -> m a
 
-newtype P a = P (ExceptT ParseError (WriterT Context (Reader ParserPrefs)) a)
+newtype P a = P (ExceptT ParseError (StateT [Context] (Reader ParserPrefs)) a)
 
 instance Functor P where
   fmap f (P m) = P $ fmap f m
@@ -74,20 +73,16 @@ instance MonadPlus P where
 
 
 data Context
-  = forall a . Context [String] (ParserInfo a)
-  | NullContext
+  = forall a . Context String (ParserInfo a)
 
-contextNames :: Context -> [String]
-contextNames (Context ns _) = ns
-contextNames NullContext = []
-
-instance Monoid Context where
-  mempty = NullContext
-  mappend c (Context ns i) = Context (contextNames c ++ ns) i
-  mappend c _ = c
+contextNames :: [Context] -> [String]
+contextNames ns =
+  let go (Context n _) = n
+  in  reverse $ go <$> ns
 
 instance MonadP P where
-  setContext name = P . lift . tell . Context (maybeToList name)
+  enterContext name pinfo = P $ lift $ modify $ (:) $ Context name pinfo
+  exitContext = P $ lift $ modify $ drop 1
   getPrefs = P . lift . lift $ ask
 
   missingArgP e _ = errorP e
@@ -101,8 +96,8 @@ hoistMaybe = maybe mzero return
 hoistEither :: MonadP m => Either ParseError a -> m a
 hoistEither = either errorP return
 
-runP :: P a -> ParserPrefs -> (Either ParseError a, Context)
-runP (P p) = runReader . runWriterT . runExceptT $ p
+runP :: P a -> ParserPrefs -> (Either ParseError a, [Context])
+runP (P p) = runReader . flip runStateT [] . runExceptT $ p
 
 uncons :: [a] -> Maybe (a, [a])
 uncons [] = Nothing
@@ -165,7 +160,8 @@ instance MonadPlus Completion where
   mplus (Completion x) (Completion y) = Completion $ mplus x y
 
 instance MonadP Completion where
-  setContext _ _ = return ()
+  enterContext _ _ = return ()
+  exitContext = return ()
   getPrefs = Completion $ lift ask
 
   missingArgP _ = Completion . lift . lift . ComplOption
