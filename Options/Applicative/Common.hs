@@ -242,8 +242,9 @@ runParserInfo i = runParserFully (getPolicy i) (infoParser i)
 runParserFully :: MonadP m => ArgPolicy -> Parser a -> Args -> m a
 runParserFully policy p args = do
   (r, args') <- runParser policy p args
-  guard $ null args'
-  return r
+  case args' of
+    []  -> return r
+    a:_ -> parseError a
 
 -- | The default value of a 'Parser'.  This function returns an error if any of
 -- the options don't have a default value.
