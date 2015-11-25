@@ -258,13 +258,11 @@ evalParser m d f (OptP opt)
       = Left $ Leaf (f (OptHelpInfo m d) opt)
       | otherwise
       = Left $ MultNode []
-evalParser m d f (MultP p1 p2) = case evalParser m d f p1 <*> evalParser m d f p2 of
-  Right a -> Right a
-  Left _  -> case (evalParser m d f p1, evalParser m d f p2) of
-    (Left a', Left b') -> Left $ MultNode [a', b']
-    (Left a', _)       -> Left $ MultNode [a']
-    (_, Left b')       -> Left $ MultNode [b']
-    _                  -> Left $ MultNode []
+evalParser m d f (MultP p1 p2) = case (evalParser m d f p1, evalParser m d f p2) of
+  (Right a', Right b') -> Right $ a' b'
+  (Left a', Left b')   -> Left $ MultNode [a', b']
+  (Left a', _)         -> Left $ MultNode [a']
+  (_, Left b')         -> Left $ MultNode [b']
 evalParser m d f (AltP p1 p2) = case (evalParser m d f p1, evalParser m d f p2) of
   (Right a', _)        -> Right a'
   (_, Right b')        -> Right b'
