@@ -145,11 +145,11 @@ value :: HasValue f => a -> Mod f a
 value x = Mod id (DefaultProp (Just x) Nothing) id
 
 -- | Specify a function to show the default value for an option.
-showDefaultWith :: (a -> String) -> Mod f a
+showDefaultWith :: HasValue f => (a -> String) -> Mod f a
 showDefaultWith s = Mod id (DefaultProp Nothing (Just s)) id
 
 -- | Show the default value for this option using its 'Show' instance.
-showDefault :: Show a => Mod f a
+showDefault :: HasValue f => Show a => Mod f a
 showDefault = showDefaultWith show
 
 -- | Specify the help text for an option.
