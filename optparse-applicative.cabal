@@ -112,5 +112,5 @@ library
   build-depends:       base == 4.*,
                        transformers >= 0.2 && < 0.5,
                        transformers-compat >= 0.3 && < 0.5,
-                       process >= 1.0 && < 1.4,
+                       process >= 1.0 && < 1.5,
                        ansi-wl-pprint >= 0.6.6 && < 0.7
