@@ -27,6 +27,7 @@ module Options.Applicative.Types (
   OptHelpInfo(..),
   OptTree(..),
   ParserHelp(..),
+  SomeParser(..),
 
   fromM,
   oneM,
@@ -57,8 +58,7 @@ data ParseError
   | InfoMsg String
   | ShowHelpText
   | UnknownError
-  | MissingError (OptTree (Chunk Doc))
-  deriving Show
+  | MissingError SomeParser
 
 instance Monoid ParseError where
   mempty = UnknownError
@@ -118,6 +118,8 @@ data Option a = Option
   { optMain :: OptReader a               -- ^ reader for this option
   , optProps :: OptProperties            -- ^ properties of this option
   }
+
+data SomeParser = forall a . SomeParser (Parser a)
 
 instance Show (Option a) where
     show opt = "Option {optProps = " ++ show (optProps opt) ++ "}"

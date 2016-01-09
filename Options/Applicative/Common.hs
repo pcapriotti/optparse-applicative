@@ -47,25 +47,19 @@ module Options.Applicative.Common (
   -- * Low-level utilities
   mapParser,
   treeMapParser,
-  optionNames,
-  optDesc,
-  OptDescStyle (..)
+  optionNames
   ) where
 
 import Control.Applicative (pure, (<*>), (<*), (*>), (<$>), (<|>), (<$))
-import Control.Arrow (left)
 import Control.Monad (guard, mzero, msum, when, liftM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), get, put, runStateT)
-import Data.List (isPrefixOf, sort, intersperse)
-import Data.Maybe (maybeToList)
+import Data.List (isPrefixOf)
+import Data.Maybe (maybeToList, isJust)
 import Data.Monoid (Monoid(..))
 
 import Options.Applicative.Internal
 import Options.Applicative.Types
-
-import Options.Applicative.Help.Pretty
-import Options.Applicative.Help.Chunk
 
 showOption :: OptName -> String
 showOption (OptLong n) = "--" ++ n
@@ -157,37 +151,36 @@ parseWord ('-' : w) = case w of
 parseWord _ = Nothing
 
 searchParser :: Monad m
-             => ParserPrefs
-             -> (forall r . Option r -> NondetT m r)
+             => (forall r . Option r -> NondetT m r)
              -> Parser a -> NondetT m (Parser a)
-searchParser _ _ (NilP _) = mzero
-searchParser _ f (OptP opt) = liftM pure (f opt)
-searchParser pprefs f (MultP p1 p2) = foldr1 (<!>)
-  [ do p1' <- searchParser pprefs f p1
+searchParser _ (NilP _) = mzero
+searchParser f (OptP opt) = liftM pure (f opt)
+searchParser f (MultP p1 p2) = foldr1 (<!>)
+  [ do p1' <- searchParser f p1
        return (p1' <*> p2)
-  , do p2' <- searchParser pprefs f p2
+  , do p2' <- searchParser f p2
        return (p1 <*> p2') ]
-searchParser pprefs f (AltP p1 p2) = msum
-  [ searchParser pprefs f p1
-  , searchParser pprefs f p2 ]
-searchParser pprefs f (BindP p k) = do
-  p' <- searchParser pprefs f p
-  case (evalParser False False (optDesc pprefs missingStyle) p') of
-    Left _ -> mzero
-    Right aa -> pure $ k aa
+searchParser f (AltP p1 p2) = msum
+  [ searchParser f p1
+  , searchParser f p2 ]
+searchParser f (BindP p k) = do
+  p' <- searchParser f p
+  case evalParser p' of
+    Nothing -> mzero
+    Just aa -> pure $ k aa
 
 searchOpt :: MonadP m => ParserPrefs -> OptWord -> Parser a
           -> NondetT (StateT Args m) (Parser a)
-searchOpt pprefs w = searchParser pprefs $ \opt -> do
+searchOpt pprefs w = searchParser $ \opt -> do
   let disambiguate = prefDisambiguate pprefs
                   && optVisibility opt > Internal
   case optMatches disambiguate (optMain opt) w of
     Just matcher -> lift matcher
     Nothing -> mzero
 
-searchArg :: MonadP m => ParserPrefs -> String -> Parser a
+searchArg :: MonadP m => String -> Parser a
           -> NondetT (StateT Args m) (Parser a)
-searchArg pprefs arg = searchParser pprefs $ \opt -> do
+searchArg arg = searchParser $ \opt -> do
   when (isArg (optMain opt)) cut
   case argMatches (optMain opt) arg of
     Just matcher -> lift matcher
@@ -197,9 +190,9 @@ stepParser :: MonadP m => ParserPrefs -> ArgPolicy -> String
            -> Parser a -> NondetT (StateT Args m) (Parser a)
 stepParser pprefs SkipOpts arg p = case parseWord arg of
   Just w -> searchOpt pprefs w p
-  Nothing -> searchArg pprefs arg p
+  Nothing -> searchArg arg p
 stepParser pprefs AllowOpts arg p = msum
-  [ searchArg pprefs arg p
+  [ searchArg arg p
   , do w <- hoistMaybe (parseWord arg)
        searchOpt pprefs w p ]
 
@@ -209,17 +202,15 @@ stepParser pprefs AllowOpts arg p = msum
 runParser :: MonadP m => ArgPolicy -> Parser a -> Args -> m (a, Args)
 runParser SkipOpts p ("--" : argt) = runParser AllowOpts p argt
 runParser policy p args = case args of
-  [] -> do
-    prefs <- getPrefs
-    exitP p $ MissingError `left` result prefs
+  [] -> exitP p result
   (arg : argt) -> do
     prefs <- getPrefs
     (mp', args') <- do_step prefs arg argt
     case mp' of
-      Nothing -> hoistEither (MissingError `left` (result prefs)) <|> parseError arg
+      Nothing -> hoistMaybe result <|> parseError arg
       Just p' -> runParser policy p' args'
   where
-    result (prefs') = (,) <$> evalParser False False (optDesc prefs' missingStyle) p <*> pure args
+    result = (,) <$> evalParser p <*> pure args
     do_step prefs arg argt = (`runStateT` argt)
                            . disamb (not (prefDisambiguate prefs))
                            $ stepParser prefs policy arg p
@@ -248,26 +239,12 @@ runParserFully policy p args = do
 
 -- | The default value of a 'Parser'.  This function returns an error if any of
 -- the options don't have a default value.
-evalParser :: Bool -> Bool
-        -> (forall x . OptHelpInfo -> Option x -> b)
-        -> Parser a
-        -> Either (OptTree b) a
-evalParser _ _ _ (NilP r) = maybeToEither (MultNode []) r
-evalParser m d f (OptP opt)
-      | optVisibility opt > Internal
-      = Left $ Leaf (f (OptHelpInfo m d) opt)
-      | otherwise
-      = Left $ MultNode []
-evalParser m d f (MultP p1 p2) = case (evalParser m d f p1, evalParser m d f p2) of
-  (Right a', Right b') -> Right $ a' b'
-  (Left a', Left b')   -> Left $ MultNode [a', b']
-  (Left a', _)         -> Left $ MultNode [a']
-  (_, Left b')         -> Left $ MultNode [b']
-evalParser m d f (AltP p1 p2) = case (evalParser m d f p1, evalParser m d f p2) of
-  (Right a', _)        -> Right a'
-  (_, Right b')        -> Right b'
-  (Left a', Left b')   -> Left $ AltNode [a', b']
-evalParser _ d f (BindP p k) = evalParser True d f p >>= (evalParser True d f) . k
+evalParser :: Parser a -> Maybe a
+evalParser (NilP r) = r
+evalParser (OptP _) = Nothing
+evalParser (MultP p1 p2) = evalParser p1 <*> evalParser p2
+evalParser (AltP p1 p2) = evalParser p1 <|> evalParser p2
+evalParser (BindP p k) = evalParser p >>= evalParser . k
 
 -- | Map a polymorphic function over all the options of a parser, and collect
 -- the results in a list.
@@ -286,7 +263,7 @@ treeMapParser :: (forall x . OptHelpInfo -> Option x -> b)
 treeMapParser g = simplify . go False False g
   where
     has_default :: Parser a -> Bool
-    has_default p = either (const False) (const True) (evalParser False False g p)
+    has_default p = isJust (evalParser p)
 
     go :: Bool -> Bool
        -> (forall x . OptHelpInfo -> Option x -> b)
@@ -321,49 +298,3 @@ simplify (AltNode xs) =
     remove_alt (AltNode ts) = ts
     remove_alt (MultNode []) = []
     remove_alt t = [t]
-
-
--- | Style for rendering an option.
-data OptDescStyle = OptDescStyle
-  { descSep :: Doc
-  , descHidden :: Bool
-  , descSurround :: Bool }
-
--- | Generate description for a single option.
-optDesc :: ParserPrefs -> OptDescStyle -> OptHelpInfo -> Option a -> Chunk Doc
-optDesc pprefs style info opt =
-  let ns = optionNames $ optMain opt
-      mv = stringChunk $ optMetaVar opt
-      descs = map (string . showOption) (sort ns)
-      desc' = listToChunk (intersperse (descSep style) descs) <<+>> mv
-      show_opt
-        | optVisibility opt == Hidden
-        = descHidden style
-        | otherwise
-        = optVisibility opt == Visible
-      suffix
-        | hinfoMulti info
-        = stringChunk . prefMultiSuffix $ pprefs
-        | otherwise
-        = mempty
-      render chunk
-        | not show_opt
-        = mempty
-        | isEmpty chunk || not (descSurround style)
-        = mappend chunk suffix
-        | hinfoDefault info
-        = mappend (fmap brackets chunk) suffix
-        | null (drop 1 descs)
-        = mappend chunk suffix
-        | otherwise
-        = mappend (fmap parens chunk) suffix
-  in render desc'
-
-missingStyle :: OptDescStyle
-missingStyle = OptDescStyle
-  { descSep = string "|"
-  , descHidden = False
-  , descSurround = True }
-
-maybeToEither :: b -> Maybe a -> Either b a
-maybeToEither = flip maybe Right . Left

@@ -166,11 +166,11 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
         , fmap (indent 2) . infoProgDesc $ i ]
 
     error_help = errorHelp $ case msg of
-      ShowHelpText   -> mempty
-      ErrorMsg m     -> stringChunk m
-      InfoMsg  m     -> stringChunk m
-      MissingError x -> stringChunk "Missing:" <<+>> fold_tree x
-      UnknownError   -> mempty
+      ShowHelpText                -> mempty
+      ErrorMsg m                  -> stringChunk m
+      InfoMsg  m                  -> stringChunk m
+      MissingError (SomeParser x) -> stringChunk "Missing:" <<+>> briefDesc pprefs x
+      UnknownError                -> mempty
 
     base_help :: ParserInfo a -> ParserHelp
     base_help i

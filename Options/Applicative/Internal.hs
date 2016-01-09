@@ -15,7 +15,6 @@ module Options.Applicative.Internal
 
   , Completion
   , runCompletion
-  , SomeParser(..)
   , ComplError(..)
   , contextNames
 
@@ -48,7 +47,7 @@ class (Alternative m, MonadPlus m) => MonadP m where
   missingArgP :: ParseError -> Completer -> m a
   tryP :: m a -> m (Either ParseError a)
   errorP :: ParseError -> m a
-  exitP :: Parser b -> Either ParseError a -> m a
+  exitP :: Parser b -> Maybe a -> m a
 
 newtype P a = P (ExceptT ParseError (StateT [Context] (Reader ParserPrefs)) a)
 
@@ -87,7 +86,7 @@ instance MonadP P where
 
   missingArgP e _ = errorP e
   tryP (P p) = P $ lift $ runExceptT p
-  exitP _ = P . (either throwE return)
+  exitP p = P . (maybe (throwE . MissingError . SomeParser $ p) return)
   errorP = P . throwE
 
 hoistMaybe :: MonadPlus m => Maybe a -> m a
@@ -111,8 +110,6 @@ withReadM f = ReadM . mapReaderT (withExcept f') . unReadM
   where
     f' (ErrorMsg err) = ErrorMsg (f err)
     f' e = e
-
-data SomeParser = forall a . SomeParser (Parser a)
 
 data ComplError
   = ComplParseError String
