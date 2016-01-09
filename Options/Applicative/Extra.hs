@@ -44,6 +44,9 @@ helper = abortOption ShowHelpText $ mconcat
   , help "Show this help text"
   , hidden ]
 
+-- | Builder for a command parser with a \"helper\" option attached.
+-- Used in the same way as `subparser`, but includes a \"--help|-h\" inside
+-- the subcommand.
 hsubparser :: Mod CommandFields a -> Parser a
 hsubparser m = mkParser d g rdr
   where
