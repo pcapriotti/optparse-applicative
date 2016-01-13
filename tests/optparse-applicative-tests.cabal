@@ -29,7 +29,7 @@ executable optparse-applicative-tests
   ghc-options:         -Wall -fno-warn-orphans
   build-depends:       base == 4.*,
                        HUnit == 1.2.*,
-                       QuickCheck >= 2.6 && < 2.8,
+                       QuickCheck >= 2.6 && < 2.9,
                        transformers >= 0.2 && < 0.5,
                        transformers-compat >= 0.3 && < 0.5,
                        process >= 1.0 && < 1.5,
