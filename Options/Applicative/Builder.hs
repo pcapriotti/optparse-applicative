@@ -58,6 +58,7 @@ module Options.Applicative.Builder (
   -- | A collection of basic 'Option' readers.
   auto,
   str,
+  enum,
   disabled,
   readerAbort,
   readerError,
@@ -95,12 +96,14 @@ module Options.Applicative.Builder (
   CommandFields
   ) where
 
-import Control.Applicative (pure, (<|>))
+import Control.Applicative (pure, (<$>), (<|>))
+import Data.Char (toLower)
 import Data.Monoid (Monoid (..)
 #if __GLASGOW_HASKELL__ > 702
   , (<>)
 #endif
   )
+import Data.List (find)
 
 import Options.Applicative.Builder.Completer
 import Options.Applicative.Builder.Internal
@@ -120,6 +123,20 @@ auto = eitherReader $ \arg -> case reads arg of
 -- | String 'Option' reader.
 str :: ReadM String
 str = readerAsk
+
+
+-- | 'Option' reader based on the `Enum` that accept lowercased values.
+enum :: (Show a, Enum a) => ReadM a
+enum = str >>= f where
+  f s = case find p all of
+          (Just a)  -> return a
+          Nothing   -> readerError $ concat
+            [ "cannot find value `", s, "' in "
+            , fmap toLower $ show all, "." ]
+    where
+      p x = (toLower <$> show x) == s
+      all = enumFrom ((toEnum 0))
+
 
 -- | Null 'Option' reader. All arguments will fail validation.
 disabled :: ReadM a
