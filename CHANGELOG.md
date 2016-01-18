@@ -1,3 +1,17 @@
+## Version 0.12.1.0 (18 Jan 2016)
+
+- Updated dependency bounds.
+
+- Improve subparser contexts to improve usage error texts
+
+- Doc
+
+- Fixed bugs
+    * \# 164 - Invalid options and invalid arguments after parser has succeeded
+               not displaying
+    * \# 146 - multi-word filename completion is broken
+
+
 ## Version 0.12.0.0 (17 Sep 2015)
 
 - Add "missing" error condition descriptions when required flags and arguments
