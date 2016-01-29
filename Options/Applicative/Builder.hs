@@ -19,6 +19,7 @@ module Options.Applicative.Builder (
   -- creates a parser for an option called \"output\".
   subparser,
   strArgument,
+  txtArgument,
   argument,
   flag,
   flag',
@@ -26,6 +27,7 @@ module Options.Applicative.Builder (
   abortOption,
   infoOption,
   strOption,
+  txtOption,
   option,
   nullOption,
 
@@ -58,6 +60,7 @@ module Options.Applicative.Builder (
   -- | A collection of basic 'Option' readers.
   auto,
   str,
+  txt,
   disabled,
   readerAbort,
   readerError,
@@ -101,6 +104,8 @@ import Data.Monoid (Monoid (..)
   , (<>)
 #endif
   )
+import Data.Text (Text)
+import qualified Data.Text as T
 
 import Options.Applicative.Builder.Completer
 import Options.Applicative.Builder.Internal
@@ -120,6 +125,10 @@ auto = eitherReader $ \arg -> case reads arg of
 -- | String 'Option' reader.
 str :: ReadM String
 str = readerAsk
+
+-- | Text 'Option' reader
+txt :: ReadM Text
+txt = fmap T.pack readerAsk
 
 -- | Null 'Option' reader. All arguments will fail validation.
 disabled :: ReadM a
@@ -225,6 +234,10 @@ argument p (Mod f d g) = mkParser d g (ArgReader rdr)
 strArgument :: Mod ArgumentFields String -> Parser String
 strArgument = argument str
 
+-- | Builder for a 'Text' argument.
+txtArgument :: Mod ArgumentFields Text -> Parser Text
+txtArgument = argument txt
+
 -- | Builder for a flag parser.
 --
 -- A flag that switches from a \"default value\" to an \"active value\" when
@@ -278,6 +291,10 @@ infoOption = abortOption . InfoMsg
 -- | Builder for an option taking a 'String' argument.
 strOption :: Mod OptionFields String -> Parser String
 strOption = option str
+
+-- | Builder for an option taking a 'Text' argument.
+txtOption :: Mod OptionFields Text -> Parser Text
+txtOption = option txt
 
 -- | Same as 'option'.
 {-# DEPRECATED nullOption "Use 'option' instead" #-}
