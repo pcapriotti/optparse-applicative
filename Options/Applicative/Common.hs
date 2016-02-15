@@ -168,9 +168,7 @@ searchParser f (BindP p k) = msum
        return $ BindP p' k
   , case evalParser p of
       Nothing -> mzero
-      Just aa -> do
-        k' <- searchParser f (k aa)
-        return k' ]
+      Just aa -> searchParser f (k aa) ]
 
 searchOpt :: MonadP m => ParserPrefs -> OptWord -> Parser a
           -> NondetT (StateT Args m) (Parser a)
