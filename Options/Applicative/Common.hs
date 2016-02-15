@@ -163,11 +163,14 @@ searchParser f (MultP p1 p2) = foldr1 (<!>)
 searchParser f (AltP p1 p2) = msum
   [ searchParser f p1
   , searchParser f p2 ]
-searchParser f (BindP p k) = do
-  p' <- searchParser f p
-  case evalParser p' of
-    Nothing -> mzero
-    Just aa -> pure $ k aa
+searchParser f (BindP p k) = msum
+  [ do p' <- searchParser f p
+       return $ BindP p' k
+  , case evalParser p of
+      Nothing -> mzero
+      Just aa -> do
+        k' <- searchParser f (k aa)
+        return k' ]
 
 searchOpt :: MonadP m => ParserPrefs -> OptWord -> Parser a
           -> NondetT (StateT Args m) (Parser a)
