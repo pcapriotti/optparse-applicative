@@ -1,7 +1,6 @@
 {-# LANGUAGE ExistentialQuantification #-}
 module Options.Applicative.Internal
   ( P
-  , Context(..)
   , MonadP(..)
   , ParseError(..)
 
@@ -69,10 +68,6 @@ instance Monad P where
 instance MonadPlus P where
   mzero = P mzero
   mplus (P x) (P y) = P $ mplus x y
-
-
-data Context
-  = forall a . Context String (ParserInfo a)
 
 contextNames :: [Context] -> [String]
 contextNames ns =

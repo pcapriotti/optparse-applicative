@@ -28,6 +28,7 @@ module Options.Applicative.Types (
   OptTree(..),
   ParserHelp(..),
   SomeParser(..),
+  Context(..),
 
   fromM,
   oneM,
@@ -120,6 +121,9 @@ data Option a = Option
   }
 
 data SomeParser = forall a . SomeParser (Parser a)
+
+data Context
+  = forall a . Context String (ParserInfo a)
 
 instance Show (Option a) where
     show opt = "Option {optProps = " ++ show (optProps opt) ++ "}"
