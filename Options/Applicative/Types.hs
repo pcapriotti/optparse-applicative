@@ -122,8 +122,9 @@ data Option a = Option
 
 data SomeParser = forall a . SomeParser (Parser a)
 
-data Context
-  = forall a . Context String (ParserInfo a)
+-- | Subparser context, containing the 'name' of the subparser, and it's parser info.
+--   Used by parserFailure to display relevant usage information when parsing inside a subparser fails.
+data Context = forall a . Context String (ParserInfo a)
 
 instance Show (Option a) where
     show opt = "Option {optProps = " ++ show (optProps opt) ++ "}"
