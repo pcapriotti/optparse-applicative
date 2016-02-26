@@ -27,6 +27,8 @@ module Options.Applicative.Types (
   OptHelpInfo(..),
   OptTree(..),
   ParserHelp(..),
+  SomeParser(..),
+  Context(..),
 
   fromM,
   oneM,
@@ -57,8 +59,7 @@ data ParseError
   | InfoMsg String
   | ShowHelpText
   | UnknownError
-  | MissingError (OptTree (Chunk Doc))
-  deriving Show
+  | MissingError SomeParser
 
 instance Monoid ParseError where
   mempty = UnknownError
@@ -118,6 +119,12 @@ data Option a = Option
   { optMain :: OptReader a               -- ^ reader for this option
   , optProps :: OptProperties            -- ^ properties of this option
   }
+
+data SomeParser = forall a . SomeParser (Parser a)
+
+-- | Subparser context, containing the 'name' of the subparser, and it's parser info.
+--   Used by parserFailure to display relevant usage information when parsing inside a subparser fails.
+data Context = forall a . Context String (ParserInfo a)
 
 instance Show (Option a) where
     show opt = "Option {optProps = " ++ show (optProps opt) ++ "}"

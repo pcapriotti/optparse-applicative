@@ -14,13 +14,50 @@ module Options.Applicative.Help.Core (
   ) where
 
 import Control.Monad (guard)
+import Data.List (sort, intersperse)
 import Data.Maybe (maybeToList, catMaybes)
-import Data.Monoid (mempty)
+import Data.Monoid (mempty, mappend)
 
 import Options.Applicative.Common
 import Options.Applicative.Types
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
+
+-- | Style for rendering an option.
+data OptDescStyle = OptDescStyle
+  { descSep :: Doc
+  , descHidden :: Bool
+  , descSurround :: Bool }
+
+-- | Generate description for a single option.
+optDesc :: ParserPrefs -> OptDescStyle -> OptHelpInfo -> Option a -> Chunk Doc
+optDesc pprefs style info opt =
+  let ns = optionNames $ optMain opt
+      mv = stringChunk $ optMetaVar opt
+      descs = map (string . showOption) (sort ns)
+      desc' = listToChunk (intersperse (descSep style) descs) <<+>> mv
+      show_opt
+        | optVisibility opt == Hidden
+        = descHidden style
+        | otherwise
+        = optVisibility opt == Visible
+      suffix
+        | hinfoMulti info
+        = stringChunk . prefMultiSuffix $ pprefs
+        | otherwise
+        = mempty
+      render chunk
+        | not show_opt
+        = mempty
+        | isEmpty chunk || not (descSurround style)
+        = mappend chunk suffix
+        | hinfoDefault info
+        = mappend (fmap brackets chunk) suffix
+        | null (drop 1 descs)
+        = mappend chunk suffix
+        | otherwise
+        = mappend (fmap parens chunk) suffix
+  in render desc'
 
 -- | Generate descriptions for commands.
 cmdDesc :: Parser a -> Chunk Doc
