@@ -519,6 +519,33 @@ case_alt_missing_flags_described = do
     let text = head . lines . fst $ renderFailure failure "test"
     "Missing: (-a ARG | -b ARG)" @=? text
 
+case_many_pairs_success :: Assertion
+case_many_pairs_success = do
+  let p = many $ (,) <$> argument str idm <*> argument str idm
+      i = info p idm
+      nargs = 10000
+      result = run i (replicate nargs "foo")
+  case result of
+    Success xs -> nargs `div` 2 @=? length xs
+    _ -> assertFailure "unexpected parse error"
+
+case_many_pairs_failure :: Assertion
+case_many_pairs_failure = do
+  let p = many $ (,) <$> argument str idm <*> argument str idm
+      i = info p idm
+      nargs = 9999
+      result = run i (replicate nargs "foo")
+  assertError result $ \_ -> return ()
+
+case_many_pairs_lazy_progress :: Assertion
+case_many_pairs_lazy_progress = do
+  let p = many $ (,) <$> optional (option str (short 'a')) <*> argument str idm
+      i = info p idm
+      result = run i ["foo", "-abar", "baz"]
+  case result of
+    Success xs -> [(Just "bar", "foo"), (Nothing, "baz")] @=? xs
+    _ -> assertFailure "unexpected parse error"
+
 ---
 
 deriving instance Arbitrary a => Arbitrary (Chunk a)
