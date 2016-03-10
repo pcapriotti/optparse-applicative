@@ -95,12 +95,9 @@ module Options.Applicative.Builder (
   CommandFields
   ) where
 
-import Control.Applicative (pure, (<|>))
-import Data.Monoid (Monoid (..)
-#if __GLASGOW_HASKELL__ > 702
-  , (<>)
-#endif
-  )
+import Control.Applicative
+import Data.Monoid
+import Prelude
 
 import Options.Applicative.Builder.Completer
 import Options.Applicative.Builder.Internal

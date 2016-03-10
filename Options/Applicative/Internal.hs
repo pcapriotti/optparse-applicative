@@ -27,7 +27,8 @@ module Options.Applicative.Internal
   , disamb
   ) where
 
-import Control.Applicative (Applicative(..), Alternative(..), (<$>))
+import Control.Applicative
+import Prelude
 import Control.Monad (MonadPlus(..), liftM, ap, guard)
 import Control.Monad.Trans.Class (MonadTrans, lift)
 import Control.Monad.Trans.Except

@@ -4,6 +4,7 @@ module Options.Applicative.Help.Types (
   ) where
 
 import Data.Monoid
+import Prelude
 
 import Options.Applicative.Help.Chunk
 import Options.Applicative.Help.Pretty

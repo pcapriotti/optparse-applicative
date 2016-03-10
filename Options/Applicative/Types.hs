@@ -42,17 +42,19 @@ module Options.Applicative.Types (
   ) where
 
 import Control.Applicative
-  (Applicative(..), Alternative(..), (<$>), optional)
 import Control.Monad (ap, liftM, MonadPlus, mzero, mplus)
 import Control.Monad.Trans.Except (Except, throwE)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, ask)
-import Data.Monoid (Monoid(..))
+import Data.Monoid
+import Prelude
+
 import System.Exit (ExitCode(..))
 
 import Options.Applicative.Help.Types
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
+
 
 data ParseError
   = ErrorMsg String

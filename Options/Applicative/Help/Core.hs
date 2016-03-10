@@ -16,7 +16,8 @@ module Options.Applicative.Help.Core (
 import Control.Monad (guard)
 import Data.List (sort, intersperse)
 import Data.Maybe (maybeToList, catMaybes)
-import Data.Monoid (mempty, mappend)
+import Data.Monoid
+import Prelude
 
 import Options.Applicative.Common
 import Options.Applicative.Types
