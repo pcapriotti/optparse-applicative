@@ -21,8 +21,9 @@ module Options.Applicative.Extra (
   CompletionResult(..),
   ) where
 
-import Control.Applicative (pure, (<$>), (<|>), (<**>))
-import Data.Monoid (mempty, mconcat)
+import Control.Applicative
+import Data.Monoid
+import Prelude
 import System.Environment (getArgs, getProgName)
 import System.Exit (exitSuccess, exitWith, ExitCode(..))
 import System.IO (hPutStrLn, stderr)

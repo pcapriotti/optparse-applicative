@@ -7,7 +7,8 @@ module Options.Applicative.BashCompletion
   ( bashCompletionParser
   ) where
 
-import Control.Applicative ((<$>), (<*>), many)
+import Control.Applicative
+import Prelude
 import Data.Foldable (asum)
 import Data.List (isPrefixOf)
 import Data.Maybe (fromMaybe, listToMaybe)

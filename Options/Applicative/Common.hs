@@ -50,13 +50,14 @@ module Options.Applicative.Common (
   optionNames
   ) where
 
-import Control.Applicative (pure, (<*>), (<*), (*>), (<$>), (<|>), (<$))
+import Control.Applicative
 import Control.Monad (guard, mzero, msum, when, liftM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), get, put, runStateT)
 import Data.List (isPrefixOf)
 import Data.Maybe (maybeToList, isJust)
-import Data.Monoid (Monoid(..))
+import Data.Monoid
+import Prelude
 
 import Options.Applicative.Internal
 import Options.Applicative.Types

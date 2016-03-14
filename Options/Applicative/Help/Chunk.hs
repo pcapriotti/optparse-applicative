@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 module Options.Applicative.Help.Chunk
   ( mappendWith
   , Chunk(..)
@@ -19,6 +18,7 @@ import Control.Applicative
 import Control.Monad
 import Data.Maybe
 import Data.Monoid
+import Prelude
 
 import Options.Applicative.Help.Pretty
 

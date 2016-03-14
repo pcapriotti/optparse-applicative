@@ -6,7 +6,8 @@ module Options.Applicative.Builder.Completer
   , bashCompleter
   ) where
 
-import Control.Applicative ((<$>), pure)
+import Control.Applicative
+import Prelude
 import Control.Exception (IOException, try)
 import Data.List (isPrefixOf)
 import System.Process (readProcess)
