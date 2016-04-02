@@ -43,6 +43,7 @@ module Options.Applicative.Types (
 
 import Control.Applicative
 import Control.Monad (ap, liftM, MonadPlus, mzero, mplus)
+import Control.Monad.Catch (MonadThrow(..))
 import Control.Monad.Trans.Except (Except, throwE)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, ask)
@@ -157,6 +158,9 @@ instance Monad ReadM where
 instance MonadPlus ReadM where
   mzero = ReadM mzero
   mplus (ReadM x) (ReadM y) = ReadM $ mplus x y
+
+instance MonadThrow ReadM where
+  throwM = readerError . show
 
 -- | Return the value being read.
 readerAsk :: ReadM String
