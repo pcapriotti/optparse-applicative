@@ -95,7 +95,7 @@ argMatches opt arg = case opt of
   ArgReader rdr -> Just $ do
     result <- lift $ runReadM (crReader rdr) arg
     return result
-  CmdReader _ f ->
+  CmdReader _ _ f ->
     flip fmap (f arg) $ \subp -> StateT $ \args -> do
       prefs <- getPrefs
       let runSubparser

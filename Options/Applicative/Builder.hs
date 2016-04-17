@@ -43,6 +43,7 @@ module Options.Applicative.Builder (
   hidden,
   internal,
   command,
+  commandGroup,
   completeWith,
   action,
   completer,
@@ -184,6 +185,11 @@ command :: String -> ParserInfo a -> Mod CommandFields a
 command cmd pinfo = fieldMod $ \p ->
   p { cmdCommands = (cmd, pinfo) : cmdCommands p }
 
+-- | Add a command to a subparser option.
+commandGroup :: String -> Mod CommandFields a
+commandGroup g = fieldMod $ \p ->
+  p { cmdGroup = Just g }
+
 -- | Add a list of possible completion values.
 completeWith :: HasCompleter f => [String] -> Mod f a
 completeWith xs = completer (listCompleter xs)
@@ -210,7 +216,8 @@ subparser :: Mod CommandFields a -> Parser a
 subparser m = mkParser d g rdr
   where
     Mod _ d g = metavar "COMMAND" `mappend` m
-    rdr = uncurry CmdReader (mkCommand m)
+    (groupName, cmds, subs) = mkCommand m
+    rdr = CmdReader groupName cmds subs
 
 -- | Builder for an argument parser.
 argument :: ReadM a -> Mod ArgumentFields a -> Parser a

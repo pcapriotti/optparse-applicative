@@ -13,11 +13,13 @@ module Options.Applicative.Help.Core (
   parserUsage,
   ) where
 
-import Control.Monad (guard)
-import Data.List (sort, intersperse)
-import Data.Maybe (maybeToList, catMaybes)
-import Data.Monoid
+import Control.Applicative
 import Prelude
+import Control.Monad (guard)
+import Data.Function (on)
+import Data.List (sort, intersperse, groupBy)
+import Data.Maybe (maybeToList, catMaybes, fromMaybe)
+import Data.Monoid (mempty, mappend)
 
 import Options.Applicative.Common
 import Options.Applicative.Types
@@ -61,12 +63,12 @@ optDesc pprefs style info opt =
   in render desc'
 
 -- | Generate descriptions for commands.
-cmdDesc :: Parser a -> Chunk Doc
-cmdDesc = vcatChunks . mapParser desc
+cmdDesc :: Parser a -> [(Maybe String, Chunk Doc)]
+cmdDesc = mapParser desc
   where
     desc _ opt =
       case optMain opt of
-        CmdReader cmds p ->
+        CmdReader gn cmds p -> (,) gn $
           tabulate [(string cmd, align (extractChunk d))
                    | cmd <- reverse cmds
                    , d <- maybeToList . fmap infoProgDesc $ p cmd ]
@@ -130,9 +132,18 @@ footerHelp chunk = ParserHelp mempty mempty mempty mempty chunk
 -- | Generate the help text for a program.
 parserHelp :: ParserPrefs -> Parser a -> ParserHelp
 parserHelp pprefs p = bodyHelp . vsepChunks $
-  [ with_title "Available options:" (fullDesc pprefs p)
-  , with_title "Available commands:" (cmdDesc p) ]
+  ( with_title "Available options:" (fullDesc pprefs p) )
+  : (group_title <$> cs)
   where
+    def = "Available commands:"
+
+    cs = groupBy ((==) `on` fst) $ cmdDesc p
+
+    group_title a@((n,_):_) = with_title (fromMaybe def n) $
+      vcatChunks (snd <$> a)
+    group_title _ = mempty
+
+
     with_title :: String -> Chunk Doc -> Chunk Doc
     with_title title = fmap (string title .$.)
 

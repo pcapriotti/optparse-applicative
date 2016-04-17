@@ -10,3 +10,7 @@ Available options:
 Available commands:
   hello                    Print greeting
   goodbye                  Say goodbye
+
+French commands:
+  bonjour                  Print greeting
+  au-revoir                Say goodbye
