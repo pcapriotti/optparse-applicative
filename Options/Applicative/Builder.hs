@@ -185,7 +185,7 @@ command :: String -> ParserInfo a -> Mod CommandFields a
 command cmd pinfo = fieldMod $ \p ->
   p { cmdCommands = (cmd, pinfo) : cmdCommands p }
 
--- | Add a command to a subparser option.
+-- | Add a description to a group of commands.
 commandGroup :: String -> Mod CommandFields a
 commandGroup g = fieldMod $ \p ->
   p { cmdGroup = Just g }
