@@ -37,4 +37,5 @@ executable optparse-applicative-tests
                        tasty >= 0.8 && < 0.12,
                        tasty-hunit >= 0.8 && < 0.10,
                        tasty-quickcheck == 0.8.*,
-                       tasty-th == 0.1.*
+                       tasty-th == 0.1.*,
+                       exceptions >= 0.4 && < 0.9
