@@ -14,12 +14,12 @@ module Options.Applicative.Help.Core (
   ) where
 
 import Control.Applicative
-import Prelude
 import Control.Monad (guard)
 import Data.Function (on)
 import Data.List (sort, intersperse, groupBy)
 import Data.Maybe (maybeToList, catMaybes, fromMaybe)
-import Data.Monoid (mempty, mappend)
+import Data.Monoid
+import Prelude
 
 import Options.Applicative.Common
 import Options.Applicative.Types
