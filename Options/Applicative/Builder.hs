@@ -38,7 +38,6 @@ module Options.Applicative.Builder (
   showDefaultWith,
   showDefault,
   metavar,
-  eitherReader,
   noArgError,
   ParseError(..),
   hidden,
@@ -58,6 +57,7 @@ module Options.Applicative.Builder (
   -- | A collection of basic 'Option' readers.
   auto,
   str,
+  eitherReader,
   disabled,
   readerAbort,
   readerError,
@@ -118,6 +118,10 @@ auto = eitherReader $ \arg -> case reads arg of
 str :: ReadM String
 str = readerAsk
 
+-- | Convert a function in the 'Either' monad to a reader.
+eitherReader :: (String -> Either String a) -> ReadM a
+eitherReader f = readerAsk >>= either readerError return . f
+
 -- | Null 'Option' reader. All arguments will fail validation.
 disabled :: ReadM a
 disabled = readerError "disabled option"
@@ -157,10 +161,6 @@ help s = optionMod $ \p -> p { propHelp = paragraph s }
 -- value.
 helpDoc :: Maybe Doc -> Mod f a
 helpDoc doc = optionMod $ \p -> p { propHelp = Chunk doc }
-
--- | Convert a function in the 'Either' monad to a reader.
-eitherReader :: (String -> Either String a) -> ReadM a
-eitherReader f = readerAsk >>= either readerError return . f
 
 -- | Specify the error to display when no argument is provided to this option.
 noArgError :: ParseError -> Mod OptionFields a
