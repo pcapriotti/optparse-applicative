@@ -14,7 +14,6 @@ module Options.Applicative.Internal
 
   , Completion
   , runCompletion
-  , ComplError(..)
   , contextNames
 
   , ListT
@@ -106,10 +105,6 @@ withReadM f = ReadM . mapReaderT (withExcept f') . unReadM
   where
     f' (ErrorMsg err) = ErrorMsg (f err)
     f' e = e
-
-data ComplError
-  = ComplParseError String
-  | ComplExit
 
 data ComplResult a
   = ComplParser SomeParser
