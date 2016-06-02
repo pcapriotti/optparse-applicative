@@ -187,7 +187,8 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
 
     show_full_help = case msg of
       ShowHelpText             -> True
-      MissingError CmdStart  _ -> prefShowHelpOnEmpty pprefs || prefShowHelpOnError pprefs
+      MissingError CmdStart  _ | prefShowHelpOnEmpty pprefs
+                               -> True
       _                        -> prefShowHelpOnError pprefs
 
 renderFailure :: ParserFailure ParserHelp -> String -> (String, ExitCode)
