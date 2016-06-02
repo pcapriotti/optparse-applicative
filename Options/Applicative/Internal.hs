@@ -46,7 +46,7 @@ class (Alternative m, MonadPlus m) => MonadP m where
   missingArgP :: ParseError -> Completer -> m a
   tryP :: m a -> m (Either ParseError a)
   errorP :: ParseError -> m a
-  exitP :: Parser b -> Maybe a -> m a
+  exitP :: IsCmdStart -> Parser b -> Maybe a -> m a
 
 newtype P a = P (ExceptT ParseError (StateT [Context] (Reader ParserPrefs)) a)
 
@@ -81,7 +81,7 @@ instance MonadP P where
 
   missingArgP e _ = errorP e
   tryP (P p) = P $ lift $ runExceptT p
-  exitP p = P . (maybe (throwE . MissingError . SomeParser $ p) return)
+  exitP i p = P . (maybe (throwE . MissingError i . SomeParser $ p) return)
   errorP = P . throwE
 
 hoistMaybe :: MonadPlus m => Maybe a -> m a
@@ -154,7 +154,7 @@ instance MonadP Completion where
 
   missingArgP _ = Completion . lift . lift . ComplOption
   tryP (Completion p) = Completion $ catchE (Right <$> p) (return . Left)
-  exitP p _ = Completion . lift . lift . ComplParser $ SomeParser p
+  exitP _ p _ = Completion . lift . lift . ComplParser $ SomeParser p
   errorP = Completion . throwE
 
 runCompletion :: Completion r -> ParserPrefs -> Maybe (Either SomeParser Completer)

@@ -29,6 +29,7 @@ module Options.Applicative.Types (
   ParserHelp(..),
   SomeParser(..),
   Context(..),
+  IsCmdStart(..),
 
   fromM,
   oneM,
@@ -61,7 +62,10 @@ data ParseError
   | InfoMsg String
   | ShowHelpText
   | UnknownError
-  | MissingError SomeParser
+  | MissingError IsCmdStart SomeParser
+
+data IsCmdStart = CmdStart | CmdCont
+  deriving Show
 
 instance Monoid ParseError where
   mempty = UnknownError
@@ -91,6 +95,8 @@ data ParserPrefs = ParserPrefs
                                  -- (default: False)
   , prefShowHelpOnError :: Bool  -- ^ always show help text on parse errors
                                  -- (default: False)
+  , prefShowHelpOnEmpty :: Bool  -- ^ show the help text for a command or subcommand
+                                 -- if it fails with no input (default: False)
   , prefBacktrack :: Bool        -- ^ backtrack to parent parser when a
                                  -- subcommand fails (default: True)
   , prefColumns :: Int           -- ^ number of columns in the terminal, used to

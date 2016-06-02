@@ -100,7 +100,7 @@ argMatches opt arg = case opt of
       prefs <- getPrefs
       let runSubparser
             | prefBacktrack prefs = \i a ->
-                runParser (getPolicy i) (infoParser i) a
+                runParser (getPolicy i) CmdStart (infoParser i) a
             | otherwise = \i a
             -> (,) <$> runParserInfo i a <*> pure []
       enterContext arg subp *> runSubparser subp args <* exitContext
@@ -201,16 +201,16 @@ stepParser pprefs AllowOpts arg p = msum
 -- | Apply a 'Parser' to a command line, and return a result and leftover
 -- arguments.  This function returns an error if any parsing error occurs, or
 -- if any options are missing and don't have a default value.
-runParser :: MonadP m => ArgPolicy -> Parser a -> Args -> m (a, Args)
-runParser SkipOpts p ("--" : argt) = runParser AllowOpts p argt
-runParser policy p args = case args of
-  [] -> exitP p result
+runParser :: MonadP m => ArgPolicy -> IsCmdStart -> Parser a -> Args -> m (a, Args)
+runParser SkipOpts _ p ("--" : argt) = runParser AllowOpts CmdCont p argt
+runParser policy touched p args = case args of
+  [] -> exitP touched p result
   (arg : argt) -> do
     prefs <- getPrefs
     (mp', args') <- do_step prefs arg argt
     case mp' of
       Nothing -> hoistMaybe result <|> parseError arg
-      Just p' -> runParser policy p' args'
+      Just p' -> runParser policy CmdCont p' args'
   where
     result = (,) <$> evalParser p <*> pure args
     do_step prefs arg argt = (`runStateT` argt)
@@ -234,7 +234,7 @@ runParserInfo i = runParserFully (getPolicy i) (infoParser i)
 
 runParserFully :: MonadP m => ArgPolicy -> Parser a -> Args -> m a
 runParserFully policy p args = do
-  (r, args') <- runParser policy p args
+  (r, args') <- runParser policy CmdStart p args
   case args' of
     []  -> return r
     a:_ -> parseError a
