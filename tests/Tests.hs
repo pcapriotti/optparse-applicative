@@ -511,9 +511,10 @@ case_reader_error_mplus = do
 
 case_missing_flags_described :: Assertion
 case_missing_flags_described = do
-  let p = (,)
+  let p = (,,)
         <$> option str (short 'a')
         <*> option str (short 'b')
+        <*> optional (option str (short 'c'))
       i = info p idm
   assertError (run i ["-b", "3"]) $ \failure -> do
     let text = head . lines . fst $ renderFailure failure "test"
