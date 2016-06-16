@@ -27,6 +27,16 @@ sample = subparser
          (info (pure Goodbye)
                (progDesc "Say goodbye"))
        )
+      <|> subparser
+       ( command "bonjour"
+         (info hello
+               (progDesc "Print greeting"))
+      <> command "au-revoir"
+         (info (pure Goodbye)
+               (progDesc "Say goodbye"))
+      <> commandGroup "French commands:"
+      <> hidden
+       )
 
 run :: Sample -> IO ()
 run (Hello targets) = putStrLn $ "Hello, " ++ intercalate ", " targets ++ "!"

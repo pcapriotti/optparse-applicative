@@ -49,7 +49,7 @@ bashCompletionQuery pinfo pprefs ws i _ = case runCompletion compl pprefs of
       OptReader ns _ _ -> return $ show_names ns
       FlagReader ns _  -> return $ show_names ns
       ArgReader rdr    -> run_completer (crCompleter rdr)
-      CmdReader ns _   -> return $ filter_names ns
+      CmdReader _ ns _ -> return $ filter_names ns
 
     show_name :: OptName -> String
     show_name (OptShort c) = '-':[c]

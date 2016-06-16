@@ -41,7 +41,8 @@ data FlagFields a = FlagFields
   , flagActive :: a }
 
 data CommandFields a = CommandFields
-  { cmdCommands :: [(String, ParserInfo a)] }
+  { cmdCommands :: [(String, ParserInfo a)]
+  , cmdGroup :: Maybe String }
 
 data ArgumentFields a = ArgumentFields
   { argCompleter :: Completer }
@@ -140,11 +141,11 @@ baseProps = OptProperties
   , propHelp = mempty
   , propShowDefault = Nothing }
 
-mkCommand :: Mod CommandFields a -> ([String], String -> Maybe (ParserInfo a))
-mkCommand m = (map fst cmds, (`lookup` cmds))
+mkCommand :: Mod CommandFields a -> (Maybe String, [String], String -> Maybe (ParserInfo a))
+mkCommand m = (group, map fst cmds, (`lookup` cmds))
   where
     Mod f _ _ = m
-    CommandFields cmds = f (CommandFields [])
+    CommandFields cmds group = f (CommandFields [] Nothing)
 
 mkParser :: DefaultProp a
          -> (OptProperties -> OptProperties)
