@@ -172,7 +172,7 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
       InfoMsg  m                    -> stringChunk m
       MissingError CmdStart _        | prefShowHelpOnEmpty pprefs
                                     -> mempty
-      MissingError _ (SomeParser x) -> stringChunk "Missing:" <<+>> briefDesc pprefs x
+      MissingError _ (SomeParser x) -> stringChunk "Missing:" <<+>> missingDesc pprefs x
       UnknownError                  -> mempty
 
     base_help :: ParserInfo a -> ParserHelp
