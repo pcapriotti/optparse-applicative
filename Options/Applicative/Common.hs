@@ -51,7 +51,7 @@ module Options.Applicative.Common (
   ) where
 
 import Control.Applicative
-import Control.Monad (guard, mzero, msum, when, liftM)
+import Control.Monad (guard, mzero, msum, when)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), get, put, runStateT)
 import Data.List (isPrefixOf)
@@ -78,22 +78,6 @@ isOptionPrefix _ _ = False
 -- | Create a parser composed of a single option.
 liftOpt :: Option a -> Parser a
 liftOpt = OptP
-
-argMatches :: MonadP m => OptReader a -> String
-           -> Maybe (StateT Args m a)
-argMatches opt arg = case opt of
-  ArgReader rdr -> Just . lift $
-    runReadM (crReader rdr) arg
-  CmdReader _ _ f ->
-    flip fmap (f arg) $ \subp -> StateT $ \args -> do
-      prefs <- getPrefs
-      let runSubparser
-            | prefBacktrack prefs = \i a ->
-                runParser (infoPolicy i) CmdStart (infoParser i) a
-            | otherwise = \i a
-            -> (,) <$> runParserInfo i a <*> pure []
-      enterContext arg subp *> runSubparser subp args <* exitContext
-  _ -> Nothing
 
 optMatches :: MonadP m => Bool -> OptReader a -> OptWord -> Maybe (StateT Args m a)
 optMatches disambiguate opt (OptWord arg1 val) = case opt of
@@ -150,10 +134,10 @@ parseWord ('-' : w) = case w of
 parseWord _ = Nothing
 
 searchParser :: Monad m
-             => (forall r . Option r -> NondetT m r)
+             => (forall r . Option r -> NondetT m (Parser r))
              -> Parser a -> NondetT m (Parser a)
 searchParser _ (NilP _) = mzero
-searchParser f (OptP opt) = liftM pure (f opt)
+searchParser f (OptP opt) = f opt
 searchParser f (MultP p1 p2) = foldr1 (<!>)
   [ do p1' <- searchParser f p1
        return (p1' <*> p2)
@@ -175,16 +159,23 @@ searchOpt pprefs w = searchParser $ \opt -> do
   let disambiguate = prefDisambiguate pprefs
                   && optVisibility opt > Internal
   case optMatches disambiguate (optMain opt) w of
-    Just matcher -> lift matcher
+    Just matcher -> lift $ fmap pure matcher
     Nothing -> mzero
 
 searchArg :: MonadP m => String -> Parser a
           -> NondetT (StateT Args m) (Parser a)
 searchArg arg = searchParser $ \opt -> do
   when (isArg (optMain opt)) cut
-  case argMatches (optMain opt) arg of
-    Just matcher -> lift matcher
-    Nothing -> mzero
+  case optMain opt of
+    CmdReader _ _ f ->
+      case f arg of
+        Just subp -> do
+          lift . lift $ enterContext arg subp
+          return $ infoParser subp
+        Nothing  -> mzero
+    ArgReader rdr ->
+      fmap pure . lift . lift $ runReadM (crReader rdr) arg
+    _ -> mzero
 
 stepParser :: MonadP m => ParserPrefs -> ArgPolicy -> String
            -> Parser a -> NondetT (StateT Args m) (Parser a)
