@@ -147,11 +147,11 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
   in (h, exit_code, prefColumns pprefs)
   where
     exit_code = case msg of
-      ErrorMsg _     -> ExitFailure (infoFailureCode pinfo)
-      UnknownError   -> ExitFailure (infoFailureCode pinfo)
-      MissingError _ -> ExitFailure (infoFailureCode pinfo)
-      ShowHelpText   -> ExitSuccess
-      InfoMsg  _     -> ExitSuccess
+      ErrorMsg _       -> ExitFailure (infoFailureCode pinfo)
+      UnknownError     -> ExitFailure (infoFailureCode pinfo)
+      MissingError _ _ -> ExitFailure (infoFailureCode pinfo)
+      ShowHelpText     -> ExitSuccess
+      InfoMsg  _       -> ExitSuccess
 
     with_context :: [Context]
                  -> ParserInfo a
@@ -167,11 +167,13 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
         , fmap (indent 2) . infoProgDesc $ i ]
 
     error_help = errorHelp $ case msg of
-      ShowHelpText                -> mempty
-      ErrorMsg m                  -> stringChunk m
-      InfoMsg  m                  -> stringChunk m
-      MissingError (SomeParser x) -> stringChunk "Missing:" <<+>> briefDesc pprefs x
-      UnknownError                -> mempty
+      ShowHelpText                  -> mempty
+      ErrorMsg m                    -> stringChunk m
+      InfoMsg  m                    -> stringChunk m
+      MissingError CmdStart _        | prefShowHelpOnEmpty pprefs
+                                    -> mempty
+      MissingError _ (SomeParser x) -> stringChunk "Missing:" <<+>> briefDesc pprefs x
+      UnknownError                  -> mempty
 
     base_help :: ParserInfo a -> ParserHelp
     base_help i
@@ -184,8 +186,10 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
         f = footerHelp (infoFooter i)
 
     show_full_help = case msg of
-      ShowHelpText -> True
-      _            -> prefShowHelpOnError pprefs
+      ShowHelpText             -> True
+      MissingError CmdStart  _ | prefShowHelpOnEmpty pprefs
+                               -> True
+      _                        -> prefShowHelpOnError pprefs
 
 renderFailure :: ParserFailure ParserHelp -> String -> (String, ExitCode)
 renderFailure failure progn =

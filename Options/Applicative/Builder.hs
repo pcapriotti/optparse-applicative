@@ -81,6 +81,7 @@ module Options.Applicative.Builder (
   multiSuffix,
   disambiguate,
   showHelpOnError,
+  showHelpOnEmpty,
   noBacktrack,
   columns,
   prefs,
@@ -370,6 +371,9 @@ disambiguate = PrefsMod $ \p -> p { prefDisambiguate = True }
 showHelpOnError :: PrefsMod
 showHelpOnError = PrefsMod $ \p -> p { prefShowHelpOnError = True }
 
+showHelpOnEmpty :: PrefsMod
+showHelpOnEmpty = PrefsMod $ \p -> p { prefShowHelpOnEmpty = True }
+
 noBacktrack :: PrefsMod
 noBacktrack = PrefsMod $ \p -> p { prefBacktrack = False }
 
@@ -383,6 +387,7 @@ prefs m = applyPrefsMod m base
       { prefMultiSuffix = ""
       , prefDisambiguate = False
       , prefShowHelpOnError = False
+      , prefShowHelpOnEmpty = False
       , prefBacktrack = True
       , prefColumns = 80 }
 

@@ -199,6 +199,24 @@ case_context_carry = do
       i = info (p0 <**> helper) idm
   checkHelpTextWith (ExitFailure 1) defaultPrefs "carry" i ["b", "-aA", "c"]
 
+case_help_on_empty :: Assertion
+case_help_on_empty = do
+  let p3 = strOption (short 'a' <> metavar "A")
+      p2 = subparser (command "b" (info p3 idm)  <> metavar "B")
+      p1 = subparser (command "c" (info p3 idm)  <> metavar "C")
+      p0 = (,) <$> p2 <*> p1
+      i = info (p0 <**> helper) idm
+  checkHelpTextWith (ExitFailure 1) (prefs showHelpOnEmpty) "helponempty" i []
+
+case_help_on_empty_sub :: Assertion
+case_help_on_empty_sub = do
+  let p3 = strOption (short 'a' <> metavar "A" <> help "both commands require this")
+      p2 = subparser (command "b" (info p3 idm)  <> metavar "B")
+      p1 = subparser (command "c" (info p3 idm)  <> metavar "C")
+      p0 = (,) <$> p2 <*> p1
+      i = info (p0 <**> helper) idm
+  checkHelpTextWith (ExitFailure 1) (prefs showHelpOnEmpty) "helponemptysub" i ["b", "-aA", "c"]
+
 case_many_args :: Assertion
 case_many_args = do
   let p = many (argument str idm)
