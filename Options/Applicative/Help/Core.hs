@@ -1,6 +1,7 @@
 module Options.Applicative.Help.Core (
   cmdDesc,
   briefDesc,
+  missingDesc,
   fold_tree,
   fullDesc,
   ParserHelp(..),
@@ -30,6 +31,7 @@ import Options.Applicative.Help.Chunk
 data OptDescStyle = OptDescStyle
   { descSep :: Doc
   , descHidden :: Bool
+  , descOptional :: Bool
   , descSurround :: Bool }
 
 -- | Generate description for a single option.
@@ -40,6 +42,8 @@ optDesc pprefs style info opt =
       descs = map (string . showOption) (sort ns)
       desc' = listToChunk (intersperse (descSep style) descs) <<+>> mv
       show_opt
+        | hinfoDefault info && not (descOptional style)
+        = False
         | optVisibility opt == Hidden
         = descHidden style
         | otherwise
@@ -76,11 +80,22 @@ cmdDesc = mapParser desc
 
 -- | Generate a brief help text for a parser.
 briefDesc :: ParserPrefs -> Parser a -> Chunk Doc
-briefDesc pprefs = fold_tree . treeMapParser (optDesc pprefs style)
+briefDesc = briefDesc' True
+
+-- | Generate a brief help text for a parser, only including mandatory
+--   options and arguments.
+missingDesc :: ParserPrefs -> Parser a -> Chunk Doc
+missingDesc = briefDesc' False
+
+-- | Generate a brief help text for a parser, allowing the specification
+--   of if optional arguments are show.
+briefDesc' :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
+briefDesc' showOptional pprefs = fold_tree . treeMapParser (optDesc pprefs style)
   where
     style = OptDescStyle
       { descSep = string "|"
       , descHidden = False
+      , descOptional = showOptional
       , descSurround = True }
 
 fold_tree :: OptTree (Chunk Doc) -> Chunk Doc
@@ -112,6 +127,7 @@ fullDesc pprefs = tabulate . catMaybes . mapParser doc
     style = OptDescStyle
       { descSep = string ","
       , descHidden = True
+      , descOptional = True
       , descSurround = False }
 
 errorHelp :: Chunk Doc -> ParserHelp

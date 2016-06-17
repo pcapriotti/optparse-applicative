@@ -203,8 +203,8 @@ stepParser pprefs AllowOpts arg p = msum
 -- if any options are missing and don't have a default value.
 runParser :: MonadP m => ArgPolicy -> IsCmdStart -> Parser a -> Args -> m (a, Args)
 runParser SkipOpts _ p ("--" : argt) = runParser AllowOpts CmdCont p argt
-runParser policy touched p args = case args of
-  [] -> exitP touched p result
+runParser policy isCmdStart p args = case args of
+  [] -> exitP isCmdStart p result
   (arg : argt) -> do
     prefs <- getPrefs
     (mp', args') <- do_step prefs arg argt
