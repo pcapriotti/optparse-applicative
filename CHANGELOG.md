@@ -1,3 +1,34 @@
+## Version 0.13.0.0 (20 Jun 2016)
+
+- Implement command groups, which allow subcommands to have their own
+  usage description.
+
+- Implement showHelpOnEmpty, which is similar to showHelpOnError, but only
+  fires when a command or subcommand is begun, and suppresses the "Missing:"
+  error text.
+
+- Fix ghc 8.0 warnings
+
+- Fix ghc 7.10 warnings
+
+- Bump dependency bounds
+
+- Add maybeReader function for convenient ReadM creation
+
+- Move eitherReader to Readers section (for better discoverability)
+
+- Fix hsubparser metavar override
+
+- Remove ComplError, which was dead code.
+
+- Reimplement Missing error generation, which overly complicated evalParser.
+
+- Export Semigroup instances for types which are also Monoids. Removes
+  mempty synonym `(<>)` export, as it clashes with Semigroup exports.
+  One may need to import Data.Monoid or Data.Semigroup when upgrading.
+
+- Use a Cabal test suite for tests, simplify test dependencies.
+
 ## Version 0.12.1.0 (18 Jan 2016)
 
 - Updated dependency bounds.
