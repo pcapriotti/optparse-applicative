@@ -58,6 +58,7 @@ module Options.Applicative.Builder (
   -- | A collection of basic 'Option' readers.
   auto,
   str,
+  maybeReader,
   eitherReader,
   disabled,
   readerAbort,
@@ -123,6 +124,11 @@ str = readerAsk
 -- | Convert a function in the 'Either' monad to a reader.
 eitherReader :: (String -> Either String a) -> ReadM a
 eitherReader f = readerAsk >>= either readerError return . f
+
+-- | Convert a function in the 'Maybe' monad to a reader.
+maybeReader :: (String -> Maybe a) -> ReadM a
+maybeReader f = eitherReader $ \arg ->
+  maybe (Left $ "cannot parse value `" ++ arg ++ "'") pure . f $ arg
 
 -- | Null 'Option' reader. All arguments will fail validation.
 disabled :: ReadM a
