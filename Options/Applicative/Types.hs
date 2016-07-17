@@ -47,7 +47,7 @@ import Control.Monad (ap, liftM, MonadPlus, mzero, mplus)
 import Control.Monad.Trans.Except (Except, throwE)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, ask)
-import Data.Monoid
+import Data.Semigroup hiding (Option)
 import Prelude
 
 import System.Exit (ExitCode(..))
@@ -69,8 +69,11 @@ data IsCmdStart = CmdStart | CmdCont
 
 instance Monoid ParseError where
   mempty = UnknownError
-  mappend m UnknownError = m
-  mappend _ m = m
+  mappend = (<>)
+
+instance Semigroup ParseError where
+  m <> UnknownError = m
+  _ <> m = m
 
 -- | A full description for a runnable 'Parser' for a program.
 data ParserInfo a = ParserInfo

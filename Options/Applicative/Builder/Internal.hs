@@ -25,7 +25,7 @@ module Options.Applicative.Builder.Internal (
 
 import Control.Applicative
 import Control.Monad (mplus)
-import Data.Monoid
+import Data.Semigroup hiding (Option)
 import Prelude
 
 import Options.Applicative.Common
@@ -90,7 +90,10 @@ data DefaultProp a = DefaultProp
 
 instance Monoid (DefaultProp a) where
   mempty = DefaultProp Nothing Nothing
-  mappend (DefaultProp d1 s1) (DefaultProp d2 s2) =
+  mappend = (<>)
+
+instance Semigroup (DefaultProp a) where
+  (DefaultProp d1 s1) <> (DefaultProp d2 s2) =
     DefaultProp (d1 `mplus` d2) (s1 `mplus` s2)
 
 -- | An option modifier.
