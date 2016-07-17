@@ -112,6 +112,7 @@ library
   ghc-options:         -Wall
 
   build-depends:       base                            == 4.*
+                     , semigroups                      >= 0.10 && < 0.19
                      , transformers                    >= 0.2 && < 0.6
                      , transformers-compat             >= 0.3 && < 0.6
                      , process                         >= 1.0 && < 1.5
@@ -131,6 +132,7 @@ test-suite optparse-applicative-tests
   build-depends:       base
                      , transformers
                      , transformers-compat
+                     , semigroups
                      , ansi-wl-pprint
                      , optparse-applicative
                      , QuickCheck                      == 2.8.*

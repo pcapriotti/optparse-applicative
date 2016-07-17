@@ -99,7 +99,7 @@ module Options.Applicative.Builder (
   ) where
 
 import Control.Applicative
-import Data.Monoid
+import Data.Semigroup hiding (option)
 import Prelude
 
 import Options.Applicative.Builder.Completer
@@ -310,7 +310,10 @@ newtype InfoMod a = InfoMod
 
 instance Monoid (InfoMod a) where
   mempty = InfoMod id
-  mappend m1 m2 = InfoMod $ applyInfoMod m2 . applyInfoMod m1
+  mappend = (<>)
+
+instance Semigroup (InfoMod a) where
+  m1 <> m2 = InfoMod $ applyInfoMod m2 . applyInfoMod m1
 
 -- | Show a full description in the help text of this parser.
 fullDesc :: InfoMod a
@@ -373,7 +376,10 @@ newtype PrefsMod = PrefsMod
 
 instance Monoid PrefsMod where
   mempty = PrefsMod id
-  mappend m1 m2 = PrefsMod $ applyPrefsMod m2 . applyPrefsMod m1
+  mappend = (<>)
+
+instance Semigroup PrefsMod where
+  m1 <> m2 = PrefsMod $ applyPrefsMod m2 . applyPrefsMod m1
 
 multiSuffix :: String -> PrefsMod
 multiSuffix s = PrefsMod $ \p -> p { prefMultiSuffix = s }

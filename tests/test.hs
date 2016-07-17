@@ -13,7 +13,7 @@ import qualified Examples.Formatting as Formatting
 import           Control.Applicative
 import           Control.Monad
 import           Data.List hiding (group)
-import           Data.Monoid
+import           Data.Semigroup hiding (option)
 
 import           System.Exit
 import           Test.QuickCheck hiding (Success, Failure)
