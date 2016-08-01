@@ -193,10 +193,8 @@ stepParser :: MonadP m => ParserPrefs -> ArgPolicy -> String
 stepParser pprefs SkipOpts arg p = case parseWord arg of
   Just w -> searchOpt pprefs w p
   Nothing -> searchArg arg p
-stepParser pprefs AllowOpts arg p = msum
-  [ searchArg arg p
-  , do w <- hoistMaybe (parseWord arg)
-       searchOpt pprefs w p ]
+stepParser _ AllowOpts arg p =
+  searchArg arg p
 
 -- | Apply a 'Parser' to a command line, and return a result and leftover
 -- arguments.  This function returns an error if any parsing error occurs, or

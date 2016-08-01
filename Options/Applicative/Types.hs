@@ -314,9 +314,13 @@ instance Monad ParserResult where
 
 type Args = [String]
 
+-- | Policy for how to handle options within the parse
 data ArgPolicy
-  = SkipOpts
-  | AllowOpts
+  = SkipOpts  -- ^ Inputs beginning with `-` or `--` are treated
+              --   as options or flags, and can be mixed with arguments.
+  | AllowOpts -- ^ All input is treated as positional arguments.
+              --   Used after a bare `--` input, and also with
+              --   `noIntersperse` policy.
   deriving (Eq, Show)
 
 data OptHelpInfo = OptHelpInfo
