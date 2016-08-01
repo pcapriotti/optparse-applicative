@@ -3,7 +3,7 @@ module Options.Applicative.Help.Types (
   renderHelp
   ) where
 
-import Data.Monoid
+import Data.Semigroup
 import Prelude
 
 import Options.Applicative.Help.Chunk
@@ -21,7 +21,10 @@ instance Show ParserHelp where
 
 instance Monoid ParserHelp where
   mempty = ParserHelp mempty mempty mempty mempty mempty
-  mappend (ParserHelp e1 h1 u1 b1 f1) (ParserHelp e2 h2 u2 b2 f2)
+  mappend = (<>)
+
+instance Semigroup ParserHelp where
+  (ParserHelp e1 h1 u1 b1 f1) <> (ParserHelp e2 h2 u2 b2 f2)
     = ParserHelp (mappend e1 e2) (mappend h1 h2)
                  (mappend u1 u2) (mappend b1 b2)
                  (mappend f1 f2)
