@@ -1,7 +1,8 @@
 module Examples.Formatting where
 
-import Data.Monoid
-import Options.Applicative
+import           Data.Monoid
+import           Options.Applicative
+import           Prelude
 
 opts :: Parser Int
 opts = option auto $ mconcat

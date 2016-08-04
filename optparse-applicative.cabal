@@ -108,9 +108,29 @@ library
                        Options.Applicative.Help.Types,
                        Options.Applicative.Types,
                        Options.Applicative.Internal
+
   ghc-options:         -Wall
-  build-depends:       base == 4.*,
-                       transformers >= 0.2 && < 0.6,
-                       transformers-compat >= 0.3 && < 0.6,
-                       process >= 1.0 && < 1.5,
-                       ansi-wl-pprint >= 0.6.6 && < 0.7
+
+  build-depends:       base                            == 4.*
+                     , transformers                    >= 0.2 && < 0.6
+                     , transformers-compat             >= 0.3 && < 0.6
+                     , process                         >= 1.0 && < 1.5
+                     , ansi-wl-pprint                  >= 0.6.6 && < 0.7
+
+
+test-suite optparse-applicative-tests
+  type:                exitcode-stdio-1.0
+
+  main-is:             test.hs
+
+  ghc-options:         -Wall -threaded -O2 -funbox-strict-fields
+
+  hs-source-dirs:
+                       tests
+
+  build-depends:       base
+                     , transformers
+                     , transformers-compat
+                     , ansi-wl-pprint
+                     , optparse-applicative
+                     , QuickCheck                      == 2.8.*
