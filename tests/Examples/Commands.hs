@@ -13,7 +13,7 @@ import Data.Monoid
 data Sample
   = Hello [String]
   | Goodbye
-  deriving Show
+  deriving (Eq, Show)
 
 hello :: Parser Sample
 hello = Hello <$> many (argument str (metavar "TARGET..."))

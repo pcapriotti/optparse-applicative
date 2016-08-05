@@ -24,10 +24,8 @@ install:
 script:
  - cabal update
  - export VERSION=$(cabal info . | awk 'NR==1 { n=split($2,x,"-"); print x[n]; }')
- - cabal install
- - cd tests
+ - cabal install --only-dependencies --enable-tests
  - |
-   if [ $GHCVER = "head" ] || [ ${GHCVER%.*} = "7.10" ] || [ ${GHCVER%.*} = "7.8" ] || [ ${GHCVER%.*} = "7.6" ] || [ ${GHCVER%.*} = "7.4" ] ; then
-      cabal install --constraint="optparse-applicative < $VERSION"
-      optparse-applicative-tests
+   if [ $GHCVER = "head" ] || [ ${GHCVER%.*} = "8.0" ] || [ ${GHCVER%.*} = "7.10" ] || [ ${GHCVER%.*} = "7.8" ] || [ ${GHCVER%.*} = "7.6" ] || [ ${GHCVER%.*} = "7.4" ] ; then
+      cabal test
    fi
