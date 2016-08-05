@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 module Options.Applicative.Builder (
   -- * Parser builders
   --
@@ -48,9 +47,6 @@ module Options.Applicative.Builder (
   action,
   completer,
   idm,
-#if __GLASGOW_HASKELL__ > 702
-  (<>),
-#endif
   mappend,
 
   -- * Readers
@@ -100,7 +96,6 @@ module Options.Applicative.Builder (
 
 import Control.Applicative
 import Data.Semigroup hiding (option)
-import Prelude
 
 import Options.Applicative.Builder.Completer
 import Options.Applicative.Builder.Internal
