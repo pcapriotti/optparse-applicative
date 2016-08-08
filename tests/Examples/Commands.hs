@@ -2,10 +2,10 @@
 module Examples.Commands where
 
 import Data.List
+import Data.Monoid
 import Options.Applicative
 
 #if __GLASGOW_HASKELL__ <= 702
-import Data.Monoid
 (<>) :: Monoid a => a -> a -> a
 (<>) = mappend
 #endif

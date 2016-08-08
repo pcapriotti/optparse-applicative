@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TemplateHaskell            #-}
@@ -14,6 +15,11 @@ import           Control.Applicative
 import           Control.Monad
 import           Data.List hiding (group)
 import           Data.Monoid
+
+#if __GLASGOW_HASKELL__ <= 702
+(<>) :: Monoid a => a -> a -> a
+(<>) = mappend
+#endif
 
 import           System.Exit
 import           Test.QuickCheck hiding (Success, Failure)

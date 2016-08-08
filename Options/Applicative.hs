@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 module Options.Applicative (
   -- * Applicative option parsers
   --

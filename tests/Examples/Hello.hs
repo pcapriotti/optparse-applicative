@@ -1,10 +1,10 @@
 {-# LANGUAGE CPP #-}
 module Examples.Hello where
 
+import Data.Monoid
 import Options.Applicative
 
 #if __GLASGOW_HASKELL__ <= 702
-import Data.Monoid
 (<>) :: Monoid a => a -> a -> a
 (<>) = mappend
 #endif

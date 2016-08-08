@@ -93,6 +93,11 @@ source-repository head
   location: https://github.com/pcapriotti/optparse-applicative.git
 
 library
+  if impl(ghc >= 8)
+    ghc-options:       -Wall -Wno-redundant-constraints
+  else
+    ghc-options:       -Wall
+
   exposed-modules:     Options.Applicative,
                        Options.Applicative.Arrows,
                        Options.Applicative.BashCompletion,
@@ -109,14 +114,15 @@ library
                        Options.Applicative.Types,
                        Options.Applicative.Internal
 
-  ghc-options:         -Wall
 
   build-depends:       base                            == 4.*
-                     , semigroups                      >= 0.10 && < 0.19
                      , transformers                    >= 0.2 && < 0.6
                      , transformers-compat             >= 0.3 && < 0.6
                      , process                         >= 1.0 && < 1.5
                      , ansi-wl-pprint                  >= 0.6.6 && < 0.7
+
+  if !impl(ghc >= 8)
+    build-depends:     semigroups                      >= 0.10 && < 0.19
 
 
 test-suite optparse-applicative-tests
@@ -130,9 +136,8 @@ test-suite optparse-applicative-tests
                        tests
 
   build-depends:       base
-                     , transformers
-                     , transformers-compat
-                     , semigroups
-                     , ansi-wl-pprint
                      , optparse-applicative
                      , QuickCheck                      == 2.8.*
+
+  if !impl(ghc >= 8)
+    build-depends:     semigroups
