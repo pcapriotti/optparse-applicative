@@ -4,8 +4,9 @@ module Examples.Cabal where
 import Options.Applicative
 import Options.Applicative.Arrows
 
-#if __GLASGOW_HASKELL__ <= 702
 import Data.Monoid
+
+#if __GLASGOW_HASKELL__ <= 702
 (<>) :: Monoid a => a -> a -> a
 (<>) = mappend
 #endif

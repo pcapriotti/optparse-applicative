@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 module Options.Applicative.Builder (
   -- * Parser builders
   --
@@ -48,9 +47,6 @@ module Options.Applicative.Builder (
   action,
   completer,
   idm,
-#if __GLASGOW_HASKELL__ > 702
-  (<>),
-#endif
   mappend,
 
   -- * Readers
@@ -99,8 +95,7 @@ module Options.Applicative.Builder (
   ) where
 
 import Control.Applicative
-import Data.Monoid
-import Prelude
+import Data.Semigroup hiding (option)
 
 import Options.Applicative.Builder.Completer
 import Options.Applicative.Builder.Internal
@@ -310,7 +305,10 @@ newtype InfoMod a = InfoMod
 
 instance Monoid (InfoMod a) where
   mempty = InfoMod id
-  mappend m1 m2 = InfoMod $ applyInfoMod m2 . applyInfoMod m1
+  mappend = (<>)
+
+instance Semigroup (InfoMod a) where
+  m1 <> m2 = InfoMod $ applyInfoMod m2 . applyInfoMod m1
 
 -- | Show a full description in the help text of this parser.
 fullDesc :: InfoMod a
@@ -373,7 +371,10 @@ newtype PrefsMod = PrefsMod
 
 instance Monoid PrefsMod where
   mempty = PrefsMod id
-  mappend m1 m2 = PrefsMod $ applyPrefsMod m2 . applyPrefsMod m1
+  mappend = (<>)
+
+instance Semigroup PrefsMod where
+  m1 <> m2 = PrefsMod $ applyPrefsMod m2 . applyPrefsMod m1
 
 multiSuffix :: String -> PrefsMod
 multiSuffix s = PrefsMod $ \p -> p { prefMultiSuffix = s }

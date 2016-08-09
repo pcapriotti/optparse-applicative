@@ -56,7 +56,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), get, put, runStateT)
 import Data.List (isPrefixOf)
 import Data.Maybe (maybeToList, isJust)
-import Data.Monoid
+import Data.Semigroup hiding (Option)
 import Prelude
 
 import Options.Applicative.Internal
@@ -86,8 +86,11 @@ data MatchResult
 
 instance Monoid MatchResult where
   mempty = NoMatch
-  mappend m@(Match _) _ = m
-  mappend _ m = m
+  mappend = (<>)
+
+instance Semigroup MatchResult where
+  m@(Match _) <> _ = m
+  _           <> m = m
 
 argMatches :: MonadP m => OptReader a -> String
            -> Maybe (StateT Args m a)
