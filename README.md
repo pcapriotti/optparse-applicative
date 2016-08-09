@@ -180,20 +180,23 @@ output type. There's usually no need to add type annotations, however, because
 the type will be normally inferred from the context in which the parser is
 used.
 
-You can also create a custom reader that doesn't use the `Read` typeclass, and
-use it to parse option arguments.  A custom reader is a value in the `ReadM`
-monad.
+One can also create a custom reader that doesn't use the `Read` typeclass, and
+use it to parse option arguments. A custom reader is a value in the `ReadM`
+monad. We provide `eitherReader :: (String -> Either String a) -> ReadM a`
+to help create these values, where a `Left` will be hold the error message
+for a failure.
 
 ```haskell
 data FluxCapacitor = ...
 
-parseFluxCapacitor :: Monad m => String -> m FluxCapacitor
+parseFluxCapacitor :: ReadM FluxCapacitor
+parseFluxCapacitor = eitherReader $ \s -> ...
 
-option (str >>= parseFluxCapacitor)
-  ( long "flux-capacitor" )
+option parseFluxCapacitor ( long "flux-capacitor" )
 ```
 
-Use `readerAbort` or `readerError` within the `ReadM` monad to exit with an
+One can also use `ReadM` directly, using `str` to obtain the command line string,
+and `readerAbort` or `readerError` within the `ReadM` monad to exit with an
 error message.
 
 ### Flags
