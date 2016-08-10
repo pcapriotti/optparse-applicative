@@ -183,7 +183,7 @@ used.
 One can also create a custom reader that doesn't use the `Read` typeclass, and
 use it to parse option arguments. A custom reader is a value in the `ReadM`
 monad. We provide `eitherReader :: (String -> Either String a) -> ReadM a`
-to help create these values, where a `Left` will be hold the error message
+to help create these values, where a `Left` will hold the error message
 for a failure.
 
 ```haskell
