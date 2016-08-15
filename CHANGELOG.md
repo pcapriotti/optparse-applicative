@@ -1,4 +1,4 @@
-## Version 0.13.0.0 (20 Jun 2016)
+## Version 0.13.0.0 (15 Aug 2016)
 
 - Implement command groups, which allow subcommands to have their own
   usage description.
