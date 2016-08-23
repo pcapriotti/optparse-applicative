@@ -67,8 +67,8 @@ showOption (OptLong n) = "--" ++ n
 showOption (OptShort n) = '-' : [n]
 
 optionNames :: OptReader a -> [OptName]
-optionNames (OptReader names _ _) = names
-optionNames (FlagReader names _) = names
+optionNames (OptReader _ names _ _) = names
+optionNames (FlagReader _ names _) = names
 optionNames _ = []
 
 isOptionPrefix :: OptName -> OptName -> Bool
@@ -95,7 +95,7 @@ instance Semigroup MatchResult where
 argMatches :: MonadP m => OptReader a -> String
            -> Maybe (StateT Args m a)
 argMatches opt arg = case opt of
-  ArgReader rdr -> Just $ do
+  ArgReader _ rdr -> Just $ do
     result <- lift $ runReadM (crReader rdr) arg
     return result
   CmdReader _ _ f ->
@@ -111,7 +111,7 @@ argMatches opt arg = case opt of
 
 optMatches :: MonadP m => Bool -> OptReader a -> OptWord -> Maybe (StateT Args m a)
 optMatches disambiguate opt (OptWord arg1 val) = case opt of
-  OptReader names rdr no_arg_err -> do
+  OptReader _ names rdr no_arg_err -> do
     guard $ has_name arg1 names
     Just $ do
       args <- get
@@ -120,7 +120,7 @@ optMatches disambiguate opt (OptWord arg1 val) = case opt of
       (arg', args') <- maybe missing_arg return mb_args
       put args'
       lift $ runReadM (withReadM (errorFor arg1) (crReader rdr)) arg'
-  FlagReader names x -> do
+  FlagReader _ names x -> do
     guard $ has_name arg1 names
     Just $ do
       args <- get
@@ -136,7 +136,7 @@ optMatches disambiguate opt (OptWord arg1 val) = case opt of
       | otherwise = elem a
 
 isArg :: OptReader a -> Bool
-isArg (ArgReader _) = True
+isArg (ArgReader _ _) = True
 isArg _ = False
 
 data OptWord = OptWord OptName (Maybe String)

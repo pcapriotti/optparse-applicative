@@ -46,9 +46,9 @@ bashCompletionQuery pinfo pprefs ws i _ = case runCompletion compl pprefs of
       . mapParser (const opt_completions)
 
     opt_completions opt = case optMain opt of
-      OptReader ns _ _ -> return $ show_names ns
-      FlagReader ns _  -> return $ show_names ns
-      ArgReader rdr    -> run_completer (crCompleter rdr)
+      OptReader _ ns _ _ -> return $ show_names ns
+      FlagReader _ ns _  -> return $ show_names ns
+      ArgReader _ rdr    -> run_completer (crCompleter rdr)
       CmdReader _ ns _ -> return $ filter_names ns
 
     show_name :: OptName -> String

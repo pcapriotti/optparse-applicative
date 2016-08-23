@@ -43,6 +43,7 @@ module Options.Applicative.Builder (
   internal,
   command,
   commandGroup,
+  group,
   completeWith,
   action,
   completer,
@@ -101,7 +102,7 @@ import Options.Applicative.Builder.Completer
 import Options.Applicative.Builder.Internal
 import Options.Applicative.Common
 import Options.Applicative.Types
-import Options.Applicative.Help.Pretty
+import Options.Applicative.Help.Pretty hiding (group)
 import Options.Applicative.Help.Chunk
 
 -- readers --
@@ -191,6 +192,10 @@ commandGroup :: String -> Mod CommandFields a
 commandGroup g = fieldMod $ \p ->
   p { cmdGroup = Just g }
 
+-- | Add a description to a group of options, arguments, flags, or commands
+group :: (HasGroup f) => String -> Mod f a
+group groupName = fieldMod $ setGroup groupName
+
 -- | Add a list of possible completion values.
 completeWith :: HasCompleter f => [String] -> Mod f a
 completeWith xs = completer (listCompleter xs)
@@ -222,9 +227,9 @@ subparser m = mkParser d g rdr
 
 -- | Builder for an argument parser.
 argument :: ReadM a -> Mod ArgumentFields a -> Parser a
-argument p (Mod f d g) = mkParser d g (ArgReader rdr)
+argument p (Mod f d g) = mkParser d g (ArgReader grp rdr)
   where
-    ArgumentFields compl = f (ArgumentFields mempty)
+    ArgumentFields compl grp = f (ArgumentFields mempty Nothing)
     rdr = CReader compl p
 
 -- | Builder for a 'String' argument.
@@ -256,8 +261,8 @@ flag' :: a                         -- ^ active value
       -> Parser a
 flag' actv (Mod f d g) = mkParser d g rdr
   where
-    rdr = let fields = f (FlagFields [] actv)
-          in FlagReader (flagNames fields)
+    rdr = let fields = f (FlagFields [] actv Nothing)
+          in FlagReader (flagGroup fields) (flagNames fields)
                         (flagActive fields)
 
 -- | Builder for a boolean flag.
@@ -295,9 +300,9 @@ option :: ReadM a -> Mod OptionFields a -> Parser a
 option r m = mkParser d g rdr
   where
     Mod f d g = metavar "ARG" `mappend` m
-    fields = f (OptionFields [] mempty (ErrorMsg ""))
+    fields = f (OptionFields [] mempty (ErrorMsg "") Nothing)
     crdr = CReader (optCompleter fields) r
-    rdr = OptReader (optNames fields) crdr (optNoArgError fields)
+    rdr = OptReader (optGroup fields) (optNames fields) crdr (optNoArgError fields)
 
 -- | Modifier for 'ParserInfo'.
 newtype InfoMod a = InfoMod

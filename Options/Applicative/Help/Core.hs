@@ -1,3 +1,5 @@
+{-# LANGUAGE TupleSections #-}
+
 module Options.Applicative.Help.Core (
   cmdDesc,
   briefDesc,
@@ -17,7 +19,7 @@ module Options.Applicative.Help.Core (
 import Control.Applicative
 import Control.Monad (guard)
 import Data.Function (on)
-import Data.List (sort, intersperse, groupBy)
+import Data.List (sort, intersperse, groupBy, sortBy)
 import Data.Maybe (maybeToList, catMaybes, fromMaybe)
 import Data.Monoid
 import Prelude
@@ -34,10 +36,17 @@ data OptDescStyle = OptDescStyle
   , descOptional :: Bool
   , descSurround :: Bool }
 
+optionGroup :: OptReader a -> Maybe String
+optionGroup (OptReader gn _ _ _) = gn
+optionGroup (ArgReader gn _) = gn
+optionGroup (FlagReader gn _ _) = gn
+optionGroup (CmdReader gn _ _) = gn
+
 -- | Generate description for a single option.
-optDesc :: ParserPrefs -> OptDescStyle -> OptHelpInfo -> Option a -> Chunk Doc
+optDesc :: ParserPrefs -> OptDescStyle -> OptHelpInfo -> Option a -> (Maybe String, Chunk Doc)
 optDesc pprefs style info opt =
   let ns = optionNames $ optMain opt
+      grp = optionGroup $ optMain opt
       mv = stringChunk $ optMetaVar opt
       descs = map (string . showOption) (sort ns)
       desc' = listToChunk (intersperse (descSep style) descs) <<+>> mv
@@ -64,7 +73,7 @@ optDesc pprefs style info opt =
         = mappend chunk suffix
         | otherwise
         = mappend (fmap parens chunk) suffix
-  in render desc'
+  in (grp , render desc')
 
 -- | Generate descriptions for commands.
 cmdDesc :: Parser a -> [(Maybe String, Chunk Doc)]
@@ -90,7 +99,7 @@ missingDesc = briefDesc' False
 -- | Generate a brief help text for a parser, allowing the specification
 --   of if optional arguments are show.
 briefDesc' :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
-briefDesc' showOptional pprefs = fold_tree . treeMapParser (optDesc pprefs style)
+briefDesc' showOptional pprefs = fold_tree . treeMapParser (\a -> snd . optDesc pprefs style a)
   where
     style = OptDescStyle
       { descSep = string "|"
@@ -113,17 +122,30 @@ fold_tree (AltNode xs) = alt_node
 
 -- | Generate a full help text for a parser.
 fullDesc :: ParserPrefs -> Parser a -> Chunk Doc
-fullDesc pprefs = tabulate . catMaybes . mapParser doc
+fullDesc pprefs p = vsepChunks
+    . fmap formatTitle
+    . fmap tabulateGroup
+    . groupByTitle
+    $ mapParser doc p
   where
+    groupByTitle = sortBy (compare `on` (fst . head)) . groupBy ((==) `on` fst) . catMaybes
+
+    tabulateGroup l@((title,_):_) = (title, tabulate (snd <$> l))
+    tabulateGroup [] = mempty
+
+    def_title = "Available options:"
+    formatTitle (title, opts) = (string (fromMaybe def_title title) .$.) <$> opts
+
     doc info opt = do
       guard . not . isEmpty $ n
       guard . not . isEmpty $ h
-      return (extractChunk n, align . extractChunk $ h <<+>> hdef)
+      return (grp, (extractChunk n, align . extractChunk $ h <<+>> hdef))
       where
-        n = optDesc pprefs style info opt
+        (grp, n) = optDesc pprefs style info opt
         h = optHelp opt
         hdef = Chunk . fmap show_def . optShowDefault $ opt
         show_def s = parens (string "default:" <+> string s)
+
     style = OptDescStyle
       { descSep = string ","
       , descHidden = True
@@ -148,17 +170,14 @@ footerHelp chunk = ParserHelp mempty mempty mempty mempty chunk
 -- | Generate the help text for a program.
 parserHelp :: ParserPrefs -> Parser a -> ParserHelp
 parserHelp pprefs p = bodyHelp . vsepChunks $
-  ( with_title "Available options:" (fullDesc pprefs p) )
-  : (group_title <$> cs)
+  fullDesc pprefs p : cmds
   where
-    def = "Available commands:"
+    cmd_def = "Available commands:"
+    cmds = cmd_with_title <$> (groupBy ((==) `on` fst) $ cmdDesc p)
 
-    cs = groupBy ((==) `on` fst) $ cmdDesc p
-
-    group_title a@((n,_):_) = with_title (fromMaybe def n) $
+    cmd_with_title a@((n,_):_) = with_title (fromMaybe cmd_def n) $
       vcatChunks (snd <$> a)
-    group_title _ = mempty
-
+    cmd_with_title _ = mempty
 
     with_title :: String -> Chunk Doc -> Chunk Doc
     with_title title = fmap (string title .$.)
