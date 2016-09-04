@@ -78,13 +78,18 @@ extra-source-files:  CHANGELOG.md
                      tests/Examples/Formatting.hs
                      tests/alt.err.txt
                      tests/cabal.err.txt
+                     tests/carry.err.txt
                      tests/commands.err.txt
                      tests/commands_header.err.txt
                      tests/commands_header_full.err.txt
+                     tests/dropback.err.txt
                      tests/hello.err.txt
+                     tests/helponempty.err.txt
+                     tests/helponemptysub.err.txt
                      tests/formatting.err.txt
                      tests/nested.err.txt
                      tests/subparsers.err.txt
+
 homepage:            https://github.com/pcapriotti/optparse-applicative
 bug-reports:         https://github.com/pcapriotti/optparse-applicative/issues
 
@@ -137,7 +142,7 @@ test-suite optparse-applicative-tests
 
   build-depends:       base
                      , optparse-applicative
-                     , QuickCheck                      == 2.8.*
+                     , QuickCheck                      >= 2.8 && < 2.11
 
   if !impl(ghc >= 8)
     build-depends:     semigroups
