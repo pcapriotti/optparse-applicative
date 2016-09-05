@@ -3,13 +3,15 @@
 [![Continuous Integration status][status-png]][status]
 [![Hackage page (downloads and API reference)][hackage-png]][hackage]
 
-optparse-applicative is a library for parsing command-line options.  It provides
-a collection of primitive parsers, which can be assembled using an [applicative]
-interface to build arbitrarily complex command-line option specifications.
+optparse-applicative is a haskell library for parsing options on the command line.
+
+Providing a powerful [applicative] interface to compose command line
+options and arguments, optparse-applicative provides all that is required for
+precise and consise CLI specifications for both simple and complex programs.
 
 optparse-applicative takes care of reading and validating the arguments passed
 to the command line, handling and reporting errors, generating a usage line, a
-help screen, and enabling context-sensitive bash completions.
+comprehensive help screen, and enabling context-sensitive bash completions.
 
 **Table of Contents**
 
@@ -31,13 +33,14 @@ help screen, and enabling context-sensitive bash completions.
     - [Option readers](#option-readers)
     - [Preferences](#preferences)
     - [Disambiguation](#disambiguation)
-    - [Displaying custom error messages](#displaying-custom-error-messages)
     - [Customising the help screen](#customising-the-help-screen)
+    - [Command Groups](#command-groups)
 - [Bash completion](#bash-completion)
     - [Actions and completers](#actions-and-completers)
     - [Internals](#internals)
 - [Arrow interface](#arrow-interface)
-- [FAQ](#faq)
+- [Applicative Do](#applicative-do)
+- [How it works](#how-it-works)
 
 ## Introduction
 
@@ -142,10 +145,10 @@ containing a detailed list of options with descriptions
 ## Basics
 ### Parsers
 
-optparse-applicative provides a number of primitive parsers, usually
-corresponding to single options, through its *Builder* interface.  Builders are
-detailed in their [own section](#builder) of the manual, but for now, let's
-just look at a few examples to get a feel for how parsers can be defined.
+optparse-applicative provides a number of primitive parsers, corresponding
+to single unix style options, through its *Builder* interface. These are
+detailed in their [own section](#builders) below, for now, here's a look at
+a few examples to get a feel for how parsers can be defined.
 
 Here is a parser for a mandatory option with an argument:
 
@@ -157,9 +160,10 @@ target = strOption
   <> help "Target for the greeting" )
 ```
 
-You can see that we are defining an option parser for a string argument, with
-*long* option name "hello", *metavariable* "TARGET", and the given help text.
-This means that the `target` parser defined above will require an option like
+One can see that we are defining an option parser for a `String` argument,
+with *long* option name "hello", *metavariable* "TARGET", and the given help
+text. This means that the `target` parser defined above will require an
+option like
 
     --target world
 
@@ -167,11 +171,11 @@ on the command line. The metavariable and the help text will appear in the
 generated help text, but don't otherwise affect the behaviour of the parser.
 
 The attributes passed to the option are called *modifiers*, and are composed
-using the [monoid] operation `(<>)`.
+using the [semigroup] operation `(<>)`.
 
 Options with an argument such as `target` are referred to as *regular options*,
-and are by far the most common.  Another example of option is a boolean
-*switch*:
+and are very common.  Another type of option is a *flag*, the simplest of
+which is a boolean *switch*, for example:
 
 ```haskell
 quiet :: Parser Bool
@@ -184,21 +188,17 @@ quiet = switch
 Here we used a `short` modifier to specify a one-letter name for the option.
 This means that this switch can be set either with `--quiet` or `-q`.
 
-Switches, unlike regular options, have no arguments. They simply return `True`
-when found on the command line, and `False` otherwise.
+Flags, unlike regular options, have no arguments. They simply return a
+predetermined value. For the simple switch above, this is `True` if the user
+types the flag, and `False` otherwise.
 
-Switches are special cases of *flags*, which can be created using `flag` (or
-`flag'` for flags without a default value), and can be used to choose between
-any two values of any type, rather than just `True` and `False`.
-
-There are other kinds of basic parsers, and several ways to configure them.  We
-will cover all of them in [Builders](#builders).
+There are other kinds of basic parsers, and several ways to configure them.
+These are covered in the [Builders](#builders) section.
 
 ### Applicative
 
-We now want to combine `target` and `quiet` into a single parser that accepts
-both options and returns a combined value.  So let's begin by defining the type
-of the result:
+Now we may combine the `target` and `quiet` into a single parser that accepts
+both options and returns a combined value. Given a type
 
 ```haskell
 data Options = Options
@@ -227,11 +227,13 @@ will give the same result as
     -q --target world
 
 Note, however, that the order of sequencing is still somewhat significant, in
-that it affects the generated help text.
+that it affects the generated help text. Customisation can be achieved easily
+through a lambda abstraction, with [Arrow notation](#arrow-interface), or by
+taking advantage of GHC 8's [ApplicativeDo](#applicative-do) extension.
 
 ### Alternative
 
-It is quite common to find programs that can be configured in different ways
+It is also common to find programs that can be configured in different ways
 through the command line.  A typical example is a program that can be given a
 text file as input, or alternatively read it directly from the standard input.
 
@@ -246,8 +248,7 @@ run :: Input -> IO ()
 run = ...
 ```
 
-However, we can't build a command line parser for the type `Input` using only
-`Applicative`, but we can certainly define the two basic parsers involved:
+We can now define two basic parsers for the components of the sum type:
 
 ```haskell
 fileInput :: Parser Input
@@ -263,10 +264,8 @@ stdInput = flag' StdInput
   <> help "Read from stdin" )
 ```
 
-but we want to combine them in such a way that only one of them is ever
-parsed. Fortunately, the `Parser` type constructor is also an instance of
-`Alternative`, which provides a *choice* operator `(<|>)` for exactly this
-purpose:
+As the `Parser` type constructor is an instance of `Alternative`, we can compose
+these parsers with a choice operator `(<|>)`
 
 ```haskell
 input :: Parser Input
@@ -279,6 +278,11 @@ be parsed as `StdInput`, but a command line containing both options, like
     --file "foo.txt" --stdin
 
 will be rejected.
+
+Having `Applicative` and `Alternative` instances, optparse-applicative `Parser`s
+are also able to be composed with standard combinators. For example:
+`optional :: Alternative f => f a -> f (Maybe a)` will mean the user is
+not required to provide input for the affected `Parser`.
 
 ### Running parsers
 
@@ -297,7 +301,7 @@ opts = info (sample <**> helper)
   <> header "hello - a test for optparse-applicative" )
 ```
 
-The `helper` parser that we added after `opts` just creates a dummy `--helper`
+The `helper` parser that we added after `opts` just creates a dummy `--help`
 option that displays the help text.  Besides that, we just set some of the
 fields of the `ParserInfo` structure with meaningful values.
 Now that we have a `ParserInfo`, we can finally run the parser.  The simplest
@@ -315,7 +319,7 @@ arguments from the command line, and displaying errors and help screens to the
 user.
 
 There are other ways to run a `ParserInfo`, in situations where you need finer
-control over the behavior of your parser, or if you want to use it in pure
+control over the behaviour of your parser, or if you want to use it in pure
 code. They will be covered in
 [Custom parsing and error handling](#custom-parsing-and-error-handling).
 
@@ -325,7 +329,7 @@ Builders allow you to define parsers using a convenient combinator-based
 syntax. We have already seen examples of builders in action, like `strOption`
 and `switch`, which we used to define the `opts` parser for our "hello" example.
 
-Builders always take a [modifier](#modifier) argument, which is essentially a
+Builders always take a [modifier](#modifiers) argument, which is essentially a
 composition of functions acting on the option, setting values for properties or
 adding features.
 
@@ -333,8 +337,8 @@ Builders work by building the option from scratch, and eventually lifting it to
 a single-option parser, ready to be combined with other parsers using normal
 `Applicative` and `Alternative` combinators.
 
-See the [haddock documentation][builder-documentation] for
-`Options.Applicative.Builder` for a full list of builders and modifiers.
+See the [haddock documentation][hackage] for `Options.Applicative.Builder` for
+a full list of builders and modifiers.
 
 There are four different kinds of options in `optparse-applicative`: regular
 options, flags, arguments and commands. In the following, we will go over each
@@ -342,7 +346,7 @@ one of these and describe the builders that can be used to create them.
 
 ### Regular options
 
-A **regular option** is an option which takes a single argument, parses it, and
+A *regular option* is an option which takes a single argument, parses it, and
 returns a value.
 
 A regular option can have a default value, which is used as the result if the
@@ -388,9 +392,9 @@ creates a regular option with a string argument (which can be referred to as
 `FILE` in the help text and documentation), default value "out.txt", a long
 name "output" and a short name "o".
 
-A regular option can return an object of any type, and takes a *reader*
+A regular `option` can return an object of any type, and takes a *reader*
 parameter which specifies how the argument should be parsed.  A common reader is
-`auto`, which assumes a `Read` instance for the return type and uses it to parse
+`auto`, which requires a `Read` instance for the return type and uses it to parse
 its argument. For example:
 
 ```haskell
@@ -408,31 +412,14 @@ output type. There's usually no need to add type annotations, however, because
 the type will be normally inferred from the context in which the parser is
 used.
 
-One can also create a custom reader that doesn't use the `Read` typeclass, and
-use it to parse option arguments. A custom reader is a value in the `ReadM`
-monad. We provide `eitherReader :: (String -> Either String a) -> ReadM a`
-to help create these values, where a `Left` will hold the error message
-for a failure.
-
-```haskell
-data FluxCapacitor = ...
-
-parseFluxCapacitor :: ReadM FluxCapacitor
-parseFluxCapacitor = eitherReader $ \s -> ...
-
-option parseFluxCapacitor ( long "flux-capacitor" )
-```
-
-One can also use `ReadM` directly, using `str` to obtain the command line string,
-and `readerAbort` or `readerError` within the `ReadM` monad to exit with an
-error message.
+Further information on *readers* is available [below](#option-readers).
 
 ### Flags
 
-A **flag** is just like a regular option, but it doesn't take any arguments: it is
+A *flag* is just like a regular option, but it doesn't take any arguments: it is
 either present in the command line or not.
 
-A flag has a default value and an **active value**. If the flag is found on the
+A flag has a default value and an *active value*. If the flag is found on the
 command line, the active value is returned, otherwise the default value is
 used. For example:
 
@@ -462,9 +449,21 @@ add a `--version` switch to a program, you could write:
 flag' Nothing (long "version" <> hidden) <|> (Just <$> normal_options)
 ```
 
+Another interesting use for the `flag'` builder is to count the number of
+instances on the command line, for example, verbosity settings could be
+specified on a scale; the following parser with count the number of of instances
+of `-v` on the command line.
+
+```haskell
+length <$> many (flag' () (short 'v'))
+```
+
+Flags can be used together after a single hyphen, so  `-vvv` and `-v -v -v` will
+both yield 3 for the above parser.
+
 ### Arguments
 
-An **argument** parser specifies a positional command line argument.
+An *argument* parser specifies a positional command line argument.
 
 The `argument` builder takes a reader parameter, and creates a parser which
 will return the parsed value every time it is passed a command line argument
@@ -482,10 +481,6 @@ combinator:
 some (argument str (metavar "FILES..."))
 ```
 
-Arguments are only displayed in the brief help text, so there's no need to
-attach a description to them. They should be manually documented in the program
-description.
-
 Note that arguments starting with `-` are considered options by default, and
 will not be considered by an `argument` parser.
 
@@ -493,9 +488,11 @@ However, parsers always accept a special argument: `--`. When a `--` is found on
 the command line, all the following words are considered by `argument` parsers,
 regardless of whether they start with `-` or not.
 
+Arguments use the same *readers* as regular options.
+
 ### Commands
 
-A **command** can be used to specify a sub-parser to be used when a certain
+A *command* can be used to specify a sub-parser to be used when a certain
 string is encountered in the command line.
 
 Commands are useful to implement command line programs with multiple functions,
@@ -503,16 +500,15 @@ each with its own set of options, and possibly some global options that apply
 to all of them. Typical examples are version control systems like `git`, or
 build tools like `cabal`.
 
-A command can be created using the `subparser` builder, and commands can be
-added with the `command` modifier. For example
+A command can be created using the `subparser` builder (or `hsubparser`, which
+is identical but for an additional '--help' option on each command), and
+commands can be added with the `command` modifier. For example
 
 ```haskell
 subparser
-  ( command "add" (info addOptions
-      ( progDesc "Add a file to the repository" ))
- <> command "commit" (info commitOptions
-      ( progDesc "Record changes to the repository" ))
-)
+  ( command "add" (info addOptions ( progDesc "Add a file to the repository" ))
+ <> command "commit" (info commitOptions ( progDesc "Record changes to the repository" ))
+  )
 ```
 
 Each command takes a full `ParserInfo` structure, which will be used to extract
@@ -554,10 +550,10 @@ main = join $ execParser pinfo(info opts idm)
 
 ### Modifiers
 
-**Modifiers** are instances of the `Monoid` typeclass, so they can be combined using
-the composition function `mappend` (or simply `(<>)`).  Since different builders
-accept different sets of modifiers, modifiers have a type parameter that
-specifies which builders support it.
+*Modifiers* are instances of the `Semigroup` and `Monoid` typeclasses, so they
+can be combined using the composition function `mappend` (or simply `(<>)`).
+Since different builders accept different sets of modifiers, modifiers have a type
+parameter that specifies which builders support it.
 
 For example,
 
@@ -575,8 +571,71 @@ be used with any builder.
 ## Custom parsing and error handling
 
 ### Parser runners
+Parsers are run with the `execParser` family of functions — from easiest to use
+to most flexible these are:
+
+```haskell
+execParser       :: ParserInfo a -> IO a
+customExecParser :: ParserPrefs -> ParserInfo a -> IO a
+execParserPure   :: ParserPrefs -> ParserInfo a -> [String] -> ParserResult a
+```
+
+When using the `IO` functions, retrieving command line arguments and handling
+exit codes and failure will be done automatically. When using `execParserPure`,
+the functions
+
+```haskell
+handleParseResult :: ParserResult a -> IO a
+overFailure :: (ParserHelp -> ParserHelp) -> ParserResult a -> ParserResult a
+```
+
+can be used to correctly set exit codes and display the help message; and modify
+the help message in the event of a failure (adding additional information for
+example).
+
 ### Option readers
+
+Options and Arguments require a way to interpret the string passed on the command
+line to the type desired. The `str` and `auto` *readers* are the most common way,
+but one can also create a custom reader that doesn't use the `Read` or `IsString`
+typeclasses these rely on, and use it to parse the option. A custom reader is a
+value in the `ReadM` monad.
+
+We provide the `eitherReader :: (String -> Either String a) -> ReadM a` convenience
+function to help create these values, where a `Left` will hold the error message
+for a parse failure.
+
+```haskell
+data FluxCapacitor = ...
+
+parseFluxCapacitor :: ReadM FluxCapacitor
+parseFluxCapacitor = eitherReader $ \s -> ...
+
+option parseFluxCapacitor ( long "flux-capacitor" )
+```
+
+One can also use `ReadM` directly, using `readerAsk` to obtain the command line
+string, and `readerAbort` or `readerError` within the `ReadM` monad to exit with an
+error message.
+
+One nice property of `eitherReader` is how well it composes with [attoparsec]
+parsers with
+
+```haskell
+import qualified Data.Attoparsec.Text as A
+attoparser :: A.Parser a => ReadM a
+attoparser = eitherReader . A.parseOnly
+```
+
 ### Preferences
+`PrefsMod`s can be used to customise the look of the usage text and control when
+it is displayed; turn off backtracking of subparsers; and turn on
+[disambiguation](#disambiguation).
+
+To use these modifications, provide them to the `prefs` builder, and pass the
+resulting preferences to one of the parser runners that take an `ParserPrefs`
+parameter, like `customExecParser`.
+
 ### Disambiguation
 
 It is possible to configure optparse-applicative to perform automatic
@@ -592,10 +651,8 @@ fails, whereas typing
 succeeds, and correctly identifies `"file"` as an unambiguous prefix of the
 `filename` option.
 
-Option disambiguation is *off* by default. To enable it, provide the
-`disambiguate` modifier to the `prefs` builder, and pass the resulting
-preferences to one of the parser runners that take an `ParserPrefs` parameter,
-like `customExecParser`.
+Option disambiguation is *off* by default. To enable it, use the
+`disambiguate` `PrefsMod` modifier as described above.
 
 Here is a minimal example:
 
@@ -615,8 +672,91 @@ main = customExecParser p opts
 
 ```
 
-### Displaying custom error messages
 ### Customising the help screen
+
+optparse-applicative has a number of combinators to help customise the usage
+text, and determine when it should be displayed.
+
+The `progDesc`, `header`, and `footer` functions can be used to specify a brief
+description or tagline for the program, and detailed information surrounding the
+generated option and command descriptions.
+
+Internally we actually use the [ansi-wl-pprint][ansi-wl-pprint] library,
+and one can use the `headerDoc` combinator and friends if additional customisation
+is required.
+
+To display the usage text, the user may type `--help` if the `helper` combinator
+has been applied to the `Parser`.
+
+Authors can also use the preferences `showHelpOnError` or `showHelpOnEmpty` to show
+the help text on any parser failure or when a command is not complete and at the
+beginning of the parse of the main program or one of its subcommands respectively.
+
+Even if the help text is not shown for an error, a specific error message will
+be, indicating what's missing, or what was unable to be parsed.
+
+```
+myParser :: Parser ()
+myParser = ...
+
+main :: IO ()
+main = customExecParser p opts
+  where
+    opts = info (myParser <**> helper) idm
+    p = prefs showHelpOnEmpty
+```
+
+### Command groups
+
+One experimental feature which may be useful for programs with many subcommands
+is command group separation.
+
+```haskell
+data Sample
+  = Hello [String]
+  | Goodbye
+  deriving (Eq, Show)
+
+hello :: Parser Sample
+hello = Hello <$> many (argument str (metavar "TARGET..."))
+
+sample :: Parser Sample
+sample = subparser
+       ( command "hello" (info hello (progDesc "Print greeting"))
+      <> command "goodbye" (info (pure Goodbye) (progDesc "Say goodbye"))
+       )
+      <|> subparser
+       ( command "bonjour" (info hello (progDesc "Print greeting"))
+      <> command "au-revoir" (info (pure Goodbye) (progDesc "Say goodbye"))
+      <> commandGroup "French commands:"
+      <> hidden
+       )
+```
+
+This will logically separate the usage text for the two subparsers (these would
+normally appear together if the `commandGroup` modifier was not used). The
+`hidden` modifier suppresses the metavariable for the second subparser being
+show in the brief usage line, which is desirable in some cases.
+
+In this example we have essentially created synonyms for our parser, but one
+could use this to separate common commands from rare ones, or safe from
+dangerous.
+
+The usage text for the preceding example is:
+```
+Usage: commands COMMAND
+
+Available options:
+  -h,--help                Show this help text
+
+Available commands:
+  hello                    Print greeting
+  goodbye                  Say goodbye
+
+French commands:
+  bonjour                  Print greeting
+  au-revoir                Say goodbye
+```
 
 ## Bash completion
 
@@ -707,9 +847,9 @@ data Options = Options
 
 opts :: Parser Options
 opts = runA $ proc () -> do
-  verbosity <- asA (option (short 'v' <> value 0)) -< ()
+  verbosity  <- asA (option auto (short 'v' <> value 0)) -< ()
   let verbose = verbosity > 0
-  args <- asA (many (argument str idm)) -< ()
+  args       <- asA (many (argument str idm)) -< ()
   returnA -< Options args verbose
 ```
 
@@ -723,16 +863,58 @@ Note that the `Arrow` interface is provided only for convenience. The API based
 on `Applicative` is just as expressive, although it might be cumbersome to use
 in certain cases.
 
-## FAQ
+## Applicative do
+
+Some may find using optparse-applicative easier using do notation. However, as
+`Parser` is not an instance of `Monad`, this can only be done in recent versions
+of GHC using the *ApplicativeDo* extension. For example, a parser specified in
+this manner might be
+
+```haskell
+{-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE ApplicativeDo              #-}
+
+data Options = Options
+  { optArgs :: [String]
+  , optVerbose :: Bool }
+
+opts :: Parser Options
+opts = do
+  optVerbose    <- switch (short 'v')
+  optArgs       <- many (argument str idm)
+  pure Options {..}
+```
+
+Here we've also used the *RecordWildCards* extension to make the parser
+specification cleaner. Compilation errors referring to `Monad` instances not
+being found are likely because the `Parser` specified can not be implemented
+entirely with `Applicative` (Note however, there were a few desugaring bugs
+regarding ApplicativeDo in GHC 8.0.1, function application with `($)` in
+particular may not work, and the `return` value instead be wrapped
+parenthetically).
+
+## How it works
+A `Parser a` is essentially a heterogeneous list of `Option`s, implemented with
+existential types.
+
+All options are therefore known statically (i.e. before parsing, not
+necessarily before runtime), and can, for example, be traversed to generate a
+help text.
+
+See [this blog post][blog] for a more detailed explanation based on a
+simplified implementation.
 
  [aeson]: http://hackage.haskell.org/package/aeson
  [applicative]: http://hackage.haskell.org/package/base/docs/Control-Applicative.html
  [arrows]: http://www.haskell.org/arrows/syntax.html
  [attoparsec]: http://hackage.haskell.org/package/attoparsec
  [bash documentation]: http://www.gnu.org/software/bash/manual/html_node/Programmable-Completion-Builtins.html
+ [blog]: http://paolocapriotti.com/blog/2012/04/27/applicative-option-parser/
  [hackage]: http://hackage.haskell.org/package/optparse-applicative
  [hackage-png]: http://img.shields.io/hackage/v/optparse-applicative.svg
  [monoid]: http://hackage.haskell.org/package/base/docs/Data-Monoid.html
+ [semigroup]: http://hackage.haskell.org/package/base/docs/Data-Semigroup.html
  [parsec]: http://hackage.haskell.org/package/parsec
  [status]: http://travis-ci.org/pcapriotti/optparse-applicative?branch=master
  [status-png]: https://api.travis-ci.org/pcapriotti/optparse-applicative.svg
+ [ansi-wl-pprint]: http://hackage.haskell.org/package/ansi-wl-pprint
