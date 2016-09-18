@@ -153,11 +153,12 @@ strOption
    ( long "output"
   <> short 'o'
   <> metavar "FILE"
+  <> value "out.txt"
   <> help "Write output to FILE" )
 ```
 
 creates a regular option with a string argument (which can be referred to as
-`FILE` in the help text and documentation), a long name "output" and a short
+`FILE` in the help text and documentation), default value "out.txt", a long name "output" and a short
 name "o". See below for more information on the builder syntax and modifiers.
 
 A regular option can return an object of any type, and takes a *reader*
