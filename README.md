@@ -32,8 +32,8 @@ Here is a simple example of an applicative option parser:
 import Options.Applicative
 
 data Sample = Sample
-  { hello :: String
-  , quiet :: Bool 
+  { hello  :: String
+  , quiet  :: Bool 
   , repeat :: Int }
 
 sample :: Parser Sample
