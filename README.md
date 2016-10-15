@@ -32,8 +32,9 @@ Here is a simple example of an applicative option parser:
 import Options.Applicative
 
 data Sample = Sample
-  { hello :: String
-  , quiet :: Bool }
+  { hello  :: String
+  , quiet  :: Bool 
+  , repeat :: Int }
 
 sample :: Parser Sample
 sample = Sample
@@ -43,18 +44,26 @@ sample = Sample
         <> help "Target for the greeting" )
      <*> switch
          ( long "quiet"
+        <> short 'q'
         <> help "Whether to be quiet" )
+     <*> option auto
+         ( long "repeat"
+        <> help "Repeats for greeting"
+        <> showDefault
+        <> value 1
+        <> metavar "INT" ) 
 ```
 
 The parser is built using [applicative style][applicative] starting from a set
 of basic combinators. In this example, `hello` is defined as an option with a
-`String` argument, while `quiet` is a boolean flag (called `switch`).
+`String` argument, while `quiet` is a boolean flag (called `switch`) and `repeat`
+gets parsed as an `Int` with help of the `Read` typeclass.
 
 A parser can be used like this:
 
 ```haskell
 greet :: Sample -> IO ()
-greet (Sample h False) = putStrLn $ "Hello, " ++ h
+greet (Sample h False repeat) = repeatM repeat $ putStrLn $ "Hello, " ++ h
 greet _ = return ()
 
 main :: IO ()
@@ -80,13 +89,15 @@ Running the program with the `--help` option will display the full help text:
 
     hello - a test for optparse-applicative
 
-    Usage: hello --hello TARGET [--quiet]
+    Usage: hello --hello TARGET [-q|--quiet] [--repeat INT]
       Print a greeting for TARGET
 
     Available options:
       -h,--help                Show this help text
       --hello TARGET           Target for the greeting
-      --quiet                  Whether to be quiet
+      -q|--quiet               Whether to be quiet
+      --repeat                 Repeats for greeting (default: 1)
+
 
 containing a detailed list of options with descriptions.
 
