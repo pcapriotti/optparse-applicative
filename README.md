@@ -48,7 +48,8 @@ sample = Sample
         <> help "Whether to be quiet" )
      <*> option auto
          ( long "repeat"
-        <> help "Repeats for greeting (defaults to 1)"
+        <> help "Repeats for greeting"
+        <> showDefault
         <> value 1
         <> metavar "INT" ) 
 ```
@@ -95,7 +96,7 @@ Running the program with the `--help` option will display the full help text:
       -h,--help                Show this help text
       --hello TARGET           Target for the greeting
       -q|--quiet               Whether to be quiet
-      --repeat                 Repeats for greeting (defaults to 1)
+      --repeat                 Repeats for greeting (default: 1)
 
 
 containing a detailed list of options with descriptions.
