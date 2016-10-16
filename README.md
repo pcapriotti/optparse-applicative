@@ -30,10 +30,11 @@ Here is a simple example of an applicative option parser:
 
 ```haskell
 import Options.Applicative
+import Data.Semigroup ((<>))
 
 data Sample = Sample
   { hello  :: String
-  , quiet  :: Bool 
+  , quiet  :: Bool
   , repeat :: Int }
 
 sample :: Parser Sample
@@ -51,7 +52,7 @@ sample = Sample
         <> help "Repeats for greeting"
         <> showDefault
         <> value 1
-        <> metavar "INT" ) 
+        <> metavar "INT" )
 ```
 
 The parser is built using [applicative style][applicative] starting from a set
@@ -63,7 +64,7 @@ A parser can be used like this:
 
 ```haskell
 greet :: Sample -> IO ()
-greet (Sample h False repeat) = repeatM repeat $ putStrLn $ "Hello, " ++ h
+greet (Sample h False n) = replicateM_ n $ putStrLn $ "Hello, " ++ h
 greet _ = return ()
 
 main :: IO ()
