@@ -30,6 +30,7 @@ Here is a simple example of an applicative option parser:
 
 ```haskell
 import Options.Applicative
+import Data.Semigroup ((<>))
 
 data Sample = Sample
   { hello  :: String
@@ -62,8 +63,15 @@ gets parsed as an `Int` with help of the `Read` typeclass.
 A parser can be used like this:
 
 ```haskell
+repeatN :: Monad m => Int -> m a -> m ()
+repeatN n action 
+    | n > 0 = do
+        action
+        repeatN (n - 1) action
+    | otherwise = return ()
+
 greet :: Sample -> IO ()
-greet (Sample h False repeat) = repeatM repeat $ putStrLn $ "Hello, " ++ h
+greet (Sample h False n) = repeatN n $ putStrLn $ "Hello, " ++ h
 greet _ = return ()
 
 main :: IO ()
