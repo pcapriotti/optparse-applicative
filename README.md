@@ -30,6 +30,8 @@ Here is a simple example of an applicative option parser:
 
 ```haskell
 import Options.Applicative
+import Data.Monoid -- will import <> (a.k.a. mappend)
+import Control.Applicative -- will import <*>, <$>
 
 data Sample = Sample
   { hello  :: String
