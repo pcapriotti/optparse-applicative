@@ -404,10 +404,32 @@ prop_intersperse_2 = once $
              ( info (many (argument str (metavar "ARGS")))
                     idm ) )
       i = info p idm
-      result1 = run i ["run", "-x", "foo"]
-      result2 = run i ["test", "-x", "bar"]
-  in conjoin [ assertResult result1 $ \args -> ["-x", "foo"] === args
+      result1 = run i ["run", "foo", "-x"]
+      result2 = run i ["test", "bar", "-x"]
+  in conjoin [ assertResult result1 $ \args -> ["foo", "-x"] === args
              , assertError result2 $ \_ -> property succeeded ]
+
+prop_intersperse_3 :: Property
+prop_intersperse_3 = once $
+  let p = (,,) <$> switch ( long "foo" )
+               <*> strArgument ( metavar "FILE" )
+               <*> many ( strArgument ( metavar "ARGS..." ) )
+      i = info p noIntersperse
+      result = run i ["--foo", "myfile", "-a", "-b", "-c"]
+  in assertResult result $ \(b,f,as) ->
+     conjoin [ ["-a", "-b", "-c"] === as
+             , True               === b
+             , "myfile"           === f ]
+
+prop_forward_options :: Property
+prop_forward_options = once $
+  let p = (,) <$> switch ( long "foo" )
+              <*> many ( strArgument ( metavar "ARGS..." ) )
+      i = info p forwardOptions
+      result = run i ["--fo", "--foo", "myfile"]
+  in assertResult result $ \(b,a) ->
+     conjoin [ True               === b
+             , ["--fo", "myfile"] === a ]
 
 prop_issue_52 :: Property
 prop_issue_52 = once $

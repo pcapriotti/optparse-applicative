@@ -89,7 +89,7 @@ argMatches opt arg = case opt of
       prefs <- getPrefs
       let runSubparser
             | prefBacktrack prefs = \i a ->
-                runParser (getPolicy i) CmdStart (infoParser i) a
+                runParser (infoPolicy i) CmdStart (infoParser i) a
             | otherwise = \i a
             -> (,) <$> runParserInfo i a <*> pure []
       enterContext arg subp *> runSubparser subp args <* exitContext
@@ -179,17 +179,22 @@ searchArg arg = searchParser $ \opt -> do
 
 stepParser :: MonadP m => ParserPrefs -> ArgPolicy -> String
            -> Parser a -> NondetT (StateT Args m) (Parser a)
-stepParser pprefs SkipOpts arg p = case parseWord arg of
+stepParser _ OnlyPositionalPolicy arg p =
+  searchArg arg p
+stepParser pprefs DefaultPositionalPolicy arg p = case parseWord arg of
+  Just w -> searchOpt pprefs w p <|> searchArg arg p
+  Nothing -> searchArg arg p
+stepParser pprefs _ arg p = case parseWord arg of
   Just w -> searchOpt pprefs w p
   Nothing -> searchArg arg p
-stepParser _ AllowOpts arg p =
-  searchArg arg p
+
 
 -- | Apply a 'Parser' to a command line, and return a result and leftover
 -- arguments.  This function returns an error if any parsing error occurs, or
 -- if any options are missing and don't have a default value.
 runParser :: MonadP m => ArgPolicy -> IsCmdStart -> Parser a -> Args -> m (a, Args)
-runParser SkipOpts _ p ("--" : argt) = runParser AllowOpts CmdCont p argt
+runParser policy _ p ("--" : argt) | policy /= OnlyPositionalPolicy
+                                   = runParser OnlyPositionalPolicy CmdCont p argt
 runParser policy isCmdStart p args = case args of
   [] -> exitP isCmdStart p result
   (arg : argt) -> do
@@ -197,12 +202,16 @@ runParser policy isCmdStart p args = case args of
     (mp', args') <- do_step prefs arg argt
     case mp' of
       Nothing -> hoistMaybe result <|> parseError arg
-      Just p' -> runParser policy CmdCont p' args'
+      Just p' -> runParser (newPolicy arg) CmdCont p' args'
   where
     result = (,) <$> evalParser p <*> pure args
     do_step prefs arg argt = (`runStateT` argt)
                            . disamb (not (prefDisambiguate prefs))
                            $ stepParser prefs policy arg p
+
+    newPolicy a = case policy of
+      NoInterspersePolicy -> if isJust (parseWord a) then NoInterspersePolicy else OnlyPositionalPolicy
+      x                   -> x
 
 parseError :: MonadP m => String -> m a
 parseError arg = errorP . ErrorMsg $ msg
@@ -211,13 +220,8 @@ parseError arg = errorP . ErrorMsg $ msg
       ('-':_) -> "Invalid option `" ++ arg ++ "'"
       _       -> "Invalid argument `" ++ arg ++ "'"
 
-getPolicy :: ParserInfo a -> ArgPolicy
-getPolicy i = if infoIntersperse i
-  then SkipOpts
-  else AllowOpts
-
 runParserInfo :: MonadP m => ParserInfo a -> Args -> m a
-runParserInfo i = runParserFully (getPolicy i) (infoParser i)
+runParserInfo i = runParserFully (infoPolicy i) (infoParser i)
 
 runParserFully :: MonadP m => ArgPolicy -> Parser a -> Args -> m a
 runParserFully policy p args = do
