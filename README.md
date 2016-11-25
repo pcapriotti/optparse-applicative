@@ -7,7 +7,7 @@ optparse-applicative is a haskell library for parsing options on the command lin
 
 Providing a powerful [applicative] interface to compose command line
 options and arguments, optparse-applicative provides all that is required for
-precise and consise CLI specifications for both simple and complex programs.
+precise and concise CLI specifications for both simple and complex programs.
 
 optparse-applicative takes care of reading and validating the arguments passed
 to the command line, handling and reporting errors, generating a usage line, a
@@ -40,6 +40,7 @@ comprehensive help screen, and enabling context-sensitive bash completions.
     - [Internals](#internals)
 - [Arrow interface](#arrow-interface)
 - [Applicative Do](#applicative-do)
+- [FAQ](#faq)
 - [How it works](#how-it-works)
 
 ## Introduction
@@ -79,34 +80,30 @@ data Sample = Sample
 
 sample :: Parser Sample
 sample = Sample
-     <$> strOption
-         ( long "hello"
-        <> metavar "TARGET"
-        <> help "Target for the greeting" )
-     <*> switch
-         ( long "quiet"
-        <> short 'q'
-        <> help "Whether to be quiet" )
-     <*> option auto
-         ( long "repeat"
-        <> help "Repeats for greeting"
-        <> showDefault
-        <> value 1
-        <> metavar "INT" )
+      <$> strOption
+          ( long "hello"
+         <> metavar "TARGET"
+         <> help "Target for the greeting" )
+      <*> switch
+          ( long "quiet"
+         <> short 'q'
+         <> help "Whether to be quiet" )
+      <*> option auto
+          ( long "repeat"
+         <> help "Repeats for greeting"
+         <> showDefault
+         <> value 1
+         <> metavar "INT" )
 ```
 
-The parser is built using applicative style starting from a set of
+The parser is built using [applicative] style starting from a set of
 basic combinators. In this example, hello is defined as an option
-with a String argument, while quiet is a boolean flag (called switch)
-and repeat gets parsed as an Int with help of the `Read` typeclass.
+with a `String` argument, while quiet is a boolean flag (called switch)
+and repeat gets parsed as an `Int` with help of the `Read` type class.
 
 The parser can be used like this:
 
 ```haskell
-greet :: Sample -> IO ()
-greet (Sample h False n) = replicateM_ n $ putStrLn $ "Hello, " ++ h
-greet _ = return ()
-
 main :: IO ()
 main = greet =<< execParser opts
   where
@@ -114,17 +111,24 @@ main = greet =<< execParser opts
       ( fullDesc
      <> progDesc "Print a greeting for TARGET"
      <> header "hello - a test for optparse-applicative" )
+
+greet :: Sample -> IO ()
+greet (Sample h False n) = replicateM_ n . putStrLn $ "Hello, " ++ h
+greet _ = return ()
 ```
 
 The `greet` function is the entry point of the program, while `opts` is a
 complete description of the program, used when generating a help text. The
 `helper` combinator takes any parser, and adds a `help` option to it.
 
-The `hello` option in this example is mandatory (since it doesn't have a
-default value), so running the program without any argument will display a
-short option summary:
+The `hello` option in this example is mandatory since it doesn't have a
+default value, so running the program without any argument will display an
+appropriate error message and a short option summary:
 
-    Usage: hello --hello TARGET [--quiet]
+    Missing: --hello TARGET
+
+    Usage: hello --hello TARGET [-q|--quiet] [--repeat INT]
+      Print a greeting for TARGET
 
 Running the program with the `--help` option will display the full help text
 containing a detailed list of options with descriptions
@@ -132,21 +136,21 @@ containing a detailed list of options with descriptions
 ```
     hello - a test for optparse-applicative
 
-    Usage: hello --hello TARGET [-q|--quiet] [--repeat INT]
+    Usage: <interactive> --hello TARGET [-q|--quiet] [--repeat INT]
       Print a greeting for TARGET
 
     Available options:
-      -h,--help                Show this help text
       --hello TARGET           Target for the greeting
-      -q|--quiet               Whether to be quiet
-      --repeat                 Repeats for greeting (default: 1)
+      -q,--quiet               Whether to be quiet
+      --repeat INT             Repeats for greeting (default: 1)
+      -h,--help                Show this help text
 ```
 
 ## Basics
 ### Parsers
 
 optparse-applicative provides a number of primitive parsers, corresponding
-to single unix style options, through its *Builder* interface. These are
+to different posix style options, through its *Builder* interface. These are
 detailed in their [own section](#builders) below, for now, here's a look at
 a few examples to get a feel for how parsers can be defined.
 
@@ -226,6 +230,10 @@ will give the same result as
 
     -q --target world
 
+It is this property which leads us to an Applicative interface instead of a
+Monadic one, as all option must be considered in parallel, and can not depend
+on the output of the previous option.
+
 Note, however, that the order of sequencing is still somewhat significant, in
 that it affects the generated help text. Customisation can be achieved easily
 through a lambda abstraction, with [Arrow notation](#arrow-interface), or by
@@ -295,6 +303,7 @@ The function `info` will help with this step.  In the [Quick Start](#quick-start
 we saw
 
 ```haskell
+opts :: ParserInfo Sample
 opts = info (sample <**> helper)
   ( fullDesc
   <> progDesc "Print a greeting for TARGET"
@@ -315,8 +324,8 @@ main = do
 ```
 
 The `execParser` function takes care of everything, including getting the
-arguments from the command line, and displaying errors and help screens to the
-user.
+arguments from the command line, displaying errors and help screens to the
+user, and exiting with an appropriate exit code.
 
 There are other ways to run a `ParserInfo`, in situations where you need finer
 control over the behaviour of your parser, or if you want to use it in pure
@@ -341,7 +350,7 @@ See the [haddock documentation][hackage] for `Options.Applicative.Builder` for
 a full list of builders and modifiers.
 
 There are four different kinds of options in `optparse-applicative`: regular
-options, flags, arguments and commands. In the following, we will go over each
+options, flags, arguments, and commands. In the following, we will go over each
 one of these and describe the builders that can be used to create them.
 
 ### Regular options
@@ -521,10 +530,8 @@ define a type like:
 
 ```haskell
 data Options = Options
-  { optGlobalOpt :: String
-  , optGlobalFlag :: Bool
-  ...
-  , optCommand :: Command }
+  { optCommand :: Command
+  , ... }
 
 data Command
   = Add AddOptions
@@ -597,9 +604,9 @@ example).
 
 Options and Arguments require a way to interpret the string passed on the command
 line to the type desired. The `str` and `auto` *readers* are the most common way,
-but one can also create a custom reader that doesn't use the `Read` or `IsString`
-typeclasses these rely on, and use it to parse the option. A custom reader is a
-value in the `ReadM` monad.
+but one can also create a custom reader that doesn't use the `Read` type class or
+return a `String`, and use it to parse the option. A custom reader is a value in
+the `ReadM` monad.
 
 We provide the `eitherReader :: (String -> Either String a) -> ReadM a` convenience
 function to help create these values, where a `Left` will hold the error message
@@ -623,8 +630,8 @@ parsers with
 
 ```haskell
 import qualified Data.Attoparsec.Text as A
-attoparser :: A.Parser a => ReadM a
-attoparser = eitherReader . A.parseOnly
+attoReadM :: A.Parser a => ReadM a
+attoReadM p = eitherReader (A.parseOnly p . T.pack)
 ```
 
 ### Preferences
@@ -893,13 +900,43 @@ regarding ApplicativeDo in GHC 8.0.1, function application with `($)` in
 particular may not work, and the `return` value instead be wrapped
 parenthetically).
 
+## FAQ
+
+* Monadic parsing?
+
+  If a Monadic style were to be used, there would be no possible way to traverse
+  the parser and generate a usage string, or for us to allow for options to be
+  parsed in any order. Therefore it is intentionally unsupported to write a
+  `Parser` in this manner with optparse-applicative, and the `Parser` type does
+  not have an instance for `Monad`.
+
+* Overlapping flags and options / options with optional arguments?
+
+  This is not supported as it can lead to an ambiguous parse.
+
+  For example, if we supported and had an optional value option "--foo" and a flag
+  "--bar", is "--foo --bar" the option with value "--bar", or the default value with
+  the flag switched on? What if instead of a switch we had many positional string
+  arguments, is the first string the option's value or the first positional?
+
+  It is suggested to instead use the `Alternative` instance of `Parser` and create
+  a flag', an option, and a pure value for the default (with different names for the
+  flag and option).
+
 ## How it works
-A `Parser a` is essentially a heterogeneous list of `Option`s, implemented with
-existential types.
+A Applicative `Parser` is essentially a heterogeneous list or tree of `Option`s,
+implemented with existential types.
 
 All options are therefore known statically (i.e. before parsing, not
 necessarily before runtime), and can, for example, be traversed to generate a
-help text.
+help text. Indeed, when displaying the usage text for a parser, we use an intermediate
+tree structure.
+
+When we examine the user's input, each argument is examined to determine if it's an
+option or flag, or a positional argument. The parse tree is then search for a matching
+term, and if it finds one, that leaf of the tree is replaced with a `pure` value. When
+all input has been processed, we see if we can generate the complete value, and if not
+issue a missing error.
 
 See [this blog post][blog] for a more detailed explanation based on a
 simplified implementation.
