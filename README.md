@@ -136,7 +136,7 @@ containing a detailed list of options with descriptions
 ```
     hello - a test for optparse-applicative
 
-    Usage: <interactive> --hello TARGET [-q|--quiet] [--repeat INT]
+    Usage: hello --hello TARGET [-q|--quiet] [--repeat INT]
       Print a greeting for TARGET
 
     Available options:
@@ -152,7 +152,7 @@ containing a detailed list of options with descriptions
 optparse-applicative provides a number of primitive parsers, corresponding
 to different posix style options, through its *Builder* interface. These are
 detailed in their [own section](#builders) below, for now, here's a look at
-a few examples to get a feel for how parsers can be defined.
+a few more examples to get a feel for how parsers can be defined.
 
 Here is a parser for a mandatory option with an argument:
 
@@ -183,10 +183,7 @@ which is a boolean *switch*, for example:
 
 ```haskell
 quiet :: Parser Bool
-quiet = switch
-  (  long "quiet"
-  <> short 'q'
-  <> help "Whether to be quiet" )
+quiet = switch ( long "quiet" <> short 'q' <> help "Whether to be quiet" )
 ```
 
 Here we used a `short` modifier to specify a one-letter name for the option.
@@ -211,7 +208,7 @@ data Options = Options
 ```
 
 and now it's just a matter of using `Applicative`'s apply operator `(<*>)`
-to combine the two previously defined parsers:
+to combine the two previously defined parsers
 
 ```haskell
 opts :: Parser Options
@@ -232,7 +229,7 @@ will give the same result as
 
 It is this property which leads us to an Applicative interface instead of a
 Monadic one, as all option must be considered in parallel, and can not depend
-on the output of the previous option.
+on the output of other options.
 
 Note, however, that the order of sequencing is still somewhat significant, in
 that it affects the generated help text. Customisation can be achieved easily
@@ -552,7 +549,7 @@ opts = subparser
  <> command "stop"  (info (pure stop) idm) )
 
 main :: IO ()
-main = join $ execParser pinfo(info opts idm)
+main = join $ execParser (info opts idm)
 ```
 
 ### Modifiers
@@ -933,10 +930,10 @@ help text. Indeed, when displaying the usage text for a parser, we use an interm
 tree structure.
 
 When we examine the user's input, each argument is examined to determine if it's an
-option or flag, or a positional argument. The parse tree is then search for a matching
-term, and if it finds one, that leaf of the tree is replaced with a `pure` value. When
+option or flag, or a positional argument. The parse tree is then searched for a matching
+term, and if it finds one, that leaf of the tree is replaced with the value itself. When
 all input has been processed, we see if we can generate the complete value, and if not
-issue a missing error.
+issue an error.
 
 See [this blog post][blog] for a more detailed explanation based on a
 simplified implementation.

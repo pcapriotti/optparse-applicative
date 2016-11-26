@@ -81,7 +81,7 @@ instance MonadP P where
 
   missingArgP e _ = errorP e
   tryP (P p) = P $ lift $ runExceptT p
-  exitP i p = P . (maybe (throwE . MissingError i . SomeParser $ p) return)
+  exitP i p = P . maybe (throwE . MissingError i . SomeParser $ p) return
   errorP = P . throwE
 
 hoistMaybe :: MonadPlus m => Maybe a -> m a
