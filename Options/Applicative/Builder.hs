@@ -145,6 +145,9 @@ long = fieldMod . name . OptLong
 -- do not use it with combinators such as 'some' or 'many', as
 -- these combinators continue until a failure occurs.
 -- Careless use will thus result in a hang.
+--
+-- To display the default value, combine with showDefault or
+-- showDefaultWith.
 value :: HasValue f => a -> Mod f a
 value x = Mod id (DefaultProp (Just x) Nothing) id
 
@@ -235,6 +238,10 @@ strArgument = argument str
 --
 -- A flag that switches from a \"default value\" to an \"active value\" when
 -- encountered. For a simple boolean value, use `switch` instead.
+--
+-- /Note/: Because this parser will never fail, it can not be used with
+-- combinators such as 'some' or 'many', as these combinators continue until
+-- a failure occurs. See @flag'@.
 flag :: a                         -- ^ default value
      -> a                         -- ^ active value
      -> Mod FlagFields a          -- ^ option modifier
@@ -250,7 +257,12 @@ flag defv actv m = flag' actv m <|> pure defv
 --
 -- > length <$> many (flag' () (short 't'))
 --
--- is a parser that counts the number of "-t" arguments on the command line.
+-- is a parser that counts the number of "-t" arguments on the command line,
+-- alternatively
+--
+-- > flag' True (long "on") <|> flag' False (long "off")
+--
+-- will require the user to enter '--on' or '--off' on the command line.
 flag' :: a                         -- ^ active value
       -> Mod FlagFields a          -- ^ option modifier
       -> Parser a
@@ -261,6 +273,10 @@ flag' actv (Mod f d g) = mkParser d g rdr
                         (flagActive fields)
 
 -- | Builder for a boolean flag.
+--
+-- /Note/: Because this parser will never fail, it can not be used with
+-- combinators such as 'some' or 'many', as these combinators continue until
+-- a failure occurs. See @flag'@.
 --
 -- > switch = flag False True
 switch :: Mod FlagFields Bool -> Parser Bool
@@ -291,6 +307,12 @@ nullOption :: ReadM a -> Mod OptionFields a -> Parser a
 nullOption = option
 
 -- | Builder for an option using the given reader.
+--
+-- This is a regular option, and should always have either a @long@ or
+-- @short@ name specified in the modifiers (or both).
+--
+-- > nameParser = option str ( long "name" <> short 'n' )
+--
 option :: ReadM a -> Mod OptionFields a -> Parser a
 option r m = mkParser d g rdr
   where
