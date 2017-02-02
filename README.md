@@ -530,7 +530,7 @@ global options that apply to all of them. Typical examples are
 version control systems like `git`, or build tools like `cabal`.
 
 A command can be created using the `subparser` builder (or `hsubparser`,
-which is identical but for an additional '--help' option on each
+which is identical but for an additional `--help` option on each
 command), and commands can be added with the `command` modifier.
 For example
 
