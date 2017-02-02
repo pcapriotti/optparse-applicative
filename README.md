@@ -920,6 +920,32 @@ parenthetically).
   a flag', an option, and a pure value for the default (with different names for the
   flag and option).
 
+* Backtracking on `ReadM` errors?
+
+  Parser structures are predetermined at parse time. This means
+  that if a `ReadM` fails, the whole parse must also fail, we can't
+  consider any alternatives, as there can be no guarantee that the
+  remaining structure will fit.  One occasionally confusing side
+  effect of this is that two positional arguments for different
+  constructors of a sum type can't be composed at the parser level;
+  rather, this must be done at the `ReadM` level. For example:
+
+  ```haskell
+  import Options.Applicative
+
+  data S3orFile = S3 BucketKey | File FilsePath
+
+  s3Read, fileRead :: ReadM S3orFile
+  s3Read = S3 <$> ...
+  fileRead = File <$> ...
+
+  correct :: Parser S3orFile
+  correct = argument (s3Read <|> fileRead) idm
+
+  incorrect :: Parser S3orFile
+  incorrect = argument s3Read idm <|> argument fileRead idm
+  ```
+
 ## How it works
 An applicative `Parser` is essentially a heterogeneous list or tree of `Option`s,
 implemented with existential types.
