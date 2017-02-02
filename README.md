@@ -5,9 +5,8 @@
 
 optparse-applicative is a haskell library for parsing options on the command line.
 
-Providing a powerful [applicative] interface to compose command line
-options and arguments, optparse-applicative provides all that is required for
-precise and concise CLI specifications for both simple and complex programs.
+optparse-applicative provides a powerful [applicative] interface for composing
+command line options.
 
 optparse-applicative takes care of reading and validating the arguments passed
 to the command line, handling and reporting errors, generating a usage line, a
@@ -56,13 +55,14 @@ instance Alternative Parser
 ```
 
 A value of type `Parser a` represents a specification for a set of options,
-which, if parsed correctly, will yield a value of type `a`.
+which will yield a value of type `a` when the command line arguments are
+successfully parsed.
 
 If you are familiar with parser combinator libraries like [parsec],
 [attoparsec], or the json parser [aeson] you will feel right at home with
 optparse-applicative.
 
-If not, don't worry: all you really need to learn are a few basic parsers, how
+If not, don't worry! All you really need to learn are a few basic parsers, how
 to compose them as instances of `Applicative` and `Alternative`.
 
 ## Quick Start
@@ -96,7 +96,7 @@ sample = Sample
          <> metavar "INT" )
 ```
 
-The parser is built using [applicative] style starting from a set of
+The parser is built using an [applicative] style starting from a set of
 basic combinators. In this example, hello is defined as an option
 with a `String` argument, while quiet is a boolean flag (called switch)
 and repeat gets parsed as an `Int` with help of the `Read` type class.
@@ -284,7 +284,7 @@ be parsed as `StdInput`, but a command line containing both options, like
 
 will be rejected.
 
-Having `Applicative` and `Alternative` instances, optparse-applicative `Parser`s
+Having `Applicative` and `Alternative` instances, optparse-applicative parsers
 are also able to be composed with standard combinators. For example:
 `optional :: Alternative f => f a -> f (Maybe a)` will mean the user is
 not required to provide input for the affected `Parser`.
@@ -422,7 +422,7 @@ Further information on *readers* is available [below](#option-readers).
 
 ### Flags
 
-A *flag* is just like a regular option, but it doesn't take any arguments: it is
+A *flag* is just like a regular option, but it doesn't take any arguments, it is
 either present in the command line or not.
 
 A flag has a default value and an *active value*. If the flag is found on the
@@ -699,7 +699,7 @@ beginning of the parse of the main program or one of its subcommands respectivel
 Even if the help text is not shown for an error, a specific error message will
 be, indicating what's missing, or what was unable to be parsed.
 
-```
+```haskell
 myParser :: Parser ()
 myParser = ...
 
@@ -894,7 +894,7 @@ specification cleaner. Compilation errors referring to `Monad` instances not
 being found are likely because the `Parser` specified can not be implemented
 entirely with `Applicative` (Note however, there were a few desugaring bugs
 regarding ApplicativeDo in GHC 8.0.1, function application with `($)` in
-particular may not work, and the `return` value instead be wrapped
+particular may not work, and the `pure` value should instead be wrapped
 parenthetically).
 
 ## FAQ
@@ -921,7 +921,7 @@ parenthetically).
   flag and option).
 
 ## How it works
-A Applicative `Parser` is essentially a heterogeneous list or tree of `Option`s,
+An applicative `Parser` is essentially a heterogeneous list or tree of `Option`s,
 implemented with existential types.
 
 All options are therefore known statically (i.e. before parsing, not
