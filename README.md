@@ -63,7 +63,7 @@ If you are familiar with parser combinator libraries like [parsec],
 home with optparse-applicative.
 
 If not, don't worry! All you really need to learn are a few basic
-parsers, how to compose them as instances of `Applicative` and
+parsers, and how to compose them as instances of `Applicative` and
 `Alternative`.
 
 ## Quick Start
