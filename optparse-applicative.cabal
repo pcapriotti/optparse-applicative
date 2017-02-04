@@ -1,5 +1,5 @@
 name:                optparse-applicative
-version:             0.13.0.0
+version:             0.13.1.0
 synopsis:            Utilities and combinators for parsing command line options
 description:
     Here is a simple example of an applicative option parser:
@@ -63,9 +63,9 @@ description:
     descriptions.
 license:             BSD3
 license-file:        LICENSE
-author:              Paolo Capriotti
+author:              Paolo Capriotti, Huw Campbell
 maintainer:          paolo@capriotti.io
-copyright:           (c) 2012-2014 Paolo Capriotti <paolo@capriotti.io>
+copyright:           (c) 2012-2017 Paolo Capriotti <paolo@capriotti.io>
 category:            System
 build-type:          Simple
 cabal-version:       >= 1.8
