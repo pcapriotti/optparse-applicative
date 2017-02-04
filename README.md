@@ -652,7 +652,7 @@ One nice property of `eitherReader` is how well it composes with
 
 ```haskell
 import qualified Data.Attoparsec.Text as A
-attoReadM :: A.Parser a => ReadM a
+attoReadM :: A.Parser a -> ReadM a
 attoReadM p = eitherReader (A.parseOnly p . T.pack)
 ```
 
