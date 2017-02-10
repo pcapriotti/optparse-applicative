@@ -1,3 +1,11 @@
+## Version 0.13.1.0 (10 Feb 2017)
+
+- Updated dependency bounds.
+
+- Add required test files to cabal package.
+
+- Doc
+
 ## Version 0.13.0.0 (15 Aug 2016)
 
 - Implement command groups, which allow subcommands to have their own

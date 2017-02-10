@@ -468,12 +468,9 @@ switch
  <> help "Retain all intermediate temporary files" )
 ```
 
-There is also a `flag'` builder, which has no default value. For example, to
-add a `--version` switch to a program, you could write:
-
-```haskell
-flag' Nothing (long "version" <> hidden) <|> (Just <$> normal_options)
-```
+There is also a `flag'` builder, which has no default value. This
+was demonstrated earlier for our `--stdin` flag example, and is
+usually used as one side of an alternative.
 
 Another interesting use for the `flag'` builder is to count the
 number of instances on the command line, for example, verbosity
@@ -1008,5 +1005,5 @@ simplified implementation.
  [semigroup]: http://hackage.haskell.org/package/base/docs/Data-Semigroup.html
  [parsec]: http://hackage.haskell.org/package/parsec
  [status]: http://travis-ci.org/pcapriotti/optparse-applicative?branch=master
- [status-png]: https://api.travis-ci.org/pcapriotti/optparse-applicative.svg
+ [status-png]: https://api.travis-ci.org/pcapriotti/optparse-applicative.svg?branch=master
  [ansi-wl-pprint]: http://hackage.haskell.org/package/ansi-wl-pprint
