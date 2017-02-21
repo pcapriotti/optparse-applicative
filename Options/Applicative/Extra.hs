@@ -144,6 +144,7 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
   let h = with_context ctx pinfo $ \names pinfo' -> mconcat
             [ base_help pinfo'
             , usage_help progn names pinfo'
+            , suggestion_help
             , error_help ]
   in (h, exit_code, prefColumns pprefs)
   where
@@ -185,6 +186,22 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
       MissingError _ (SomeParser x)
         -> stringChunk "Missing:" <<+>> missingDesc pprefs x
 
+      UnexpectedError arg _
+        -> stringChunk msg'
+          where
+            --
+            -- This gives us the same error we have always
+            -- reported
+            --
+            msg' = case arg of
+              ('-':_) -> "Invalid option `" ++ arg ++ "'"
+              _       -> "Invalid argument `" ++ arg ++ "'"
+
+      UnknownError
+        -> mempty
+
+
+    suggestion_help = suggestionsHelp $ case msg of
       UnexpectedError arg (SomeParser x)
         --
         -- We have an unexpected argument and the parser which
@@ -194,15 +211,8 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
         -- a levenstein distance between all possible suggestions
         -- and the supplied option or argument.
         --
-        -> vsepChunks [stringChunk msg', suggestions]
+        -> suggestions
           where
-            --
-            -- This gives us the same error we have always
-            -- reported
-            msg' = case arg of
-              ('-':_) -> "Invalid option `" ++ arg ++ "'"
-              _       -> "Invalid argument `" ++ arg ++ "'"
-
             --
             -- Not using chunked here, as we don't want to
             -- show "Did you mean" if there's nothing there
@@ -219,12 +229,12 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
             --
             -- Suggestions we will show, they're close enough
             -- to what the user wrote
-            good        = filter (isClose arg) possibles
+            good        = filter isClose possibles
 
             --
             -- Bit of an arbitrary decision here.
             -- Edit distances of 1 or 2 will give hints
-            isClose a b = editDistance a b < 3
+            isClose a   = editDistance a arg < 3
 
             --
             -- Similar to how bash completion works.
@@ -250,7 +260,7 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
             show_name (OptShort c) = '-':[c]
             show_name (OptLong l) = "--" ++ l
 
-      UnknownError
+      _
         -> mempty
 
     base_help :: ParserInfo a -> ParserHelp

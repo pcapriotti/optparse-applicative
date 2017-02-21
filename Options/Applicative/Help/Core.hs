@@ -7,6 +7,7 @@ module Options.Applicative.Help.Core (
   ParserHelp(..),
   errorHelp,
   headerHelp,
+  suggestionsHelp,
   usageHelp,
   bodyHelp,
   footerHelp,
@@ -131,19 +132,22 @@ fullDesc pprefs = tabulate . catMaybes . mapParser doc
       , descSurround = False }
 
 errorHelp :: Chunk Doc -> ParserHelp
-errorHelp chunk = ParserHelp chunk mempty mempty mempty mempty
+errorHelp chunk = mempty { helpError = chunk }
 
 headerHelp :: Chunk Doc -> ParserHelp
-headerHelp chunk = ParserHelp mempty chunk mempty mempty mempty
+headerHelp chunk = mempty { helpHeader = chunk }
+
+suggestionsHelp :: Chunk Doc -> ParserHelp
+suggestionsHelp chunk = mempty { helpSuggestions = chunk }
 
 usageHelp :: Chunk Doc -> ParserHelp
-usageHelp chunk = ParserHelp mempty mempty chunk mempty mempty
+usageHelp chunk = mempty { helpUsage = chunk }
 
 bodyHelp :: Chunk Doc -> ParserHelp
-bodyHelp chunk = ParserHelp mempty mempty mempty chunk mempty
+bodyHelp chunk = mempty { helpBody = chunk }
 
 footerHelp :: Chunk Doc -> ParserHelp
-footerHelp chunk = ParserHelp mempty mempty mempty mempty chunk
+footerHelp chunk = mempty { helpFooter = chunk }
 
 -- | Generate the help text for a program.
 parserHelp :: ParserPrefs -> Parser a -> ParserHelp

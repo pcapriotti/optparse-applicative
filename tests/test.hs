@@ -74,9 +74,9 @@ prop_cmd_header :: Property
 prop_cmd_header = once $
   let i  = info (helper <*> Commands.sample) (header "foo")
       r1 = checkHelpTextWith (ExitFailure 1) defaultPrefs
-                    "commands_header" i ["-zzz"]
+                    "commands_header" i ["-zello"]
       r2 = checkHelpTextWith (ExitFailure 1) (prefs showHelpOnError)
-                    "commands_header_full" i ["-zzz"]
+                    "commands_header_full" i ["-zello"]
   in  (r1 .&&. r2)
 
 prop_cabal_conf :: Property
@@ -549,7 +549,7 @@ prop_suggest = once $
   in assertError result $ \failure ->
     let (msg, _)  = renderFailure failure "prog"
     in  counterexample msg
-       $  isInfixOf "Did you mean this?\n    reachable\n" msg
+       $  isInfixOf "Did you mean this?\n    reachable" msg
       .&. not (isInfixOf "unreachable" msg)
 
 ---
