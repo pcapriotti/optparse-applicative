@@ -24,6 +24,7 @@ import           Options.Applicative.Types
 import           Options.Applicative.Help.Pretty (Doc, SimpleDoc(..))
 import qualified Options.Applicative.Help.Pretty as Doc
 import           Options.Applicative.Help.Chunk
+import           Options.Applicative.Help.Levenshtein
 
 import           Prelude
 
@@ -222,6 +223,20 @@ prop_completion = once . ioProperty $
     CompletionInvoked (CompletionResult err) -> do
       completions <- lines <$> err "test"
       return $ ["--foo", "--bar"] === completions
+    Failure _   -> return $ counterexample "unexpected failure" failed
+    Success val -> return $ counterexample ("unexpected result " ++ show val) failed
+
+prop_completion_only_reachable :: Property
+prop_completion_only_reachable = once . ioProperty $
+  let p = (,)
+        <$> strArgument (completeWith ["reachable"])
+        <*> strArgument (completeWith ["unreachable"])
+      i = info p idm
+      result = run i ["--bash-completion-index", "0"]
+  in case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      return $ ["reachable"] === completions
     Failure _   -> return $ counterexample "unexpected failure" failed
     Success val -> return $ counterexample ("unexpected result " ++ show val) failed
 
@@ -556,6 +571,38 @@ prop_stringChunk_2 s = isEmpty (stringChunk s) === null s
 
 prop_paragraph :: String -> Property
 prop_paragraph s = isEmpty (paragraph s) === null (words s)
+
+---
+
+--
+-- From
+-- https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance
+--
+-- In information theory and computer science, the Damerau–Levenshtein
+-- distance is a distance (string metric) between two strings, i.e.,
+-- finite sequence of symbols, given by counting the minimum number
+-- of operations needed to transform one string into the other, where
+-- an operation is defined as an insertion, deletion, or substitution
+-- of a single character, or a transposition of two adjacent characters.
+--
+prop_edit_distance_gezero :: String -> String -> Bool
+prop_edit_distance_gezero a b = editDistance a b >= 0
+
+prop_edit_insertion :: [Char] -> Char -> [Char] -> Property
+prop_edit_insertion as i bs =
+  editDistance (as ++ bs) (as ++ [i] ++ bs) === 1
+
+prop_edit_symmetric :: [Char] -> [Char] -> Property
+prop_edit_symmetric as bs =
+  editDistance as bs === editDistance bs as
+
+prop_edit_substitution :: [Char] -> [Char] -> Char -> Char -> Property
+prop_edit_substitution as bs a b = a /= b ==>
+  editDistance (as ++ [a] ++ bs) (as ++ [b] ++ bs) === 1
+
+prop_edit_transposition :: [Char] -> [Char] -> Char -> Char -> Property
+prop_edit_transposition as bs a b = a /= b ==>
+  editDistance (as ++ [a] ++ [b] ++ bs) (as ++ [b] ++ [a] ++ bs) === 1
 
 ---
 

@@ -201,7 +201,7 @@ runParser policy isCmdStart p args = case args of
     prefs <- getPrefs
     (mp', args') <- do_step prefs arg argt
     case mp' of
-      Nothing -> hoistMaybe result <|> parseError arg
+      Nothing -> hoistMaybe result <|> parseError arg p
       Just p' -> runParser (newPolicy arg) CmdCont p' args'
   where
     result = (,) <$> evalParser p <*> pure args
@@ -213,12 +213,8 @@ runParser policy isCmdStart p args = case args of
       NoIntersperse -> if isJust (parseWord a) then NoIntersperse else AllPositionals
       x             -> x
 
-parseError :: MonadP m => String -> m a
-parseError arg = errorP . ErrorMsg $ msg
-  where
-    msg = case arg of
-      ('-':_) -> "Invalid option `" ++ arg ++ "'"
-      _       -> "Invalid argument `" ++ arg ++ "'"
+parseError :: MonadP m => String -> Parser x -> m a
+parseError arg = errorP . UnexpectedError arg . SomeParser
 
 runParserInfo :: MonadP m => ParserInfo a -> Args -> m a
 runParserInfo i = runParserFully (infoPolicy i) (infoParser i)
@@ -228,7 +224,7 @@ runParserFully policy p args = do
   (r, args') <- runParser policy CmdStart p args
   case args' of
     []  -> return r
-    a:_ -> parseError a
+    a:_ -> parseError a (pure ())
 
 -- | The default value of a 'Parser'.  This function returns an error if any of
 -- the options don't have a default value.
@@ -242,7 +238,7 @@ evalParser (BindP p k) = evalParser p >>= evalParser . k
 -- | Map a polymorphic function over all the options of a parser, and collect
 -- the results in a list.
 mapParser :: (forall x. OptHelpInfo -> Option x -> b)
-              -> Parser a -> [b]
+          -> Parser a -> [b]
 mapParser f = flatten . treeMapParser f
   where
     flatten (Leaf x) = [x]
@@ -253,25 +249,40 @@ mapParser f = flatten . treeMapParser f
 treeMapParser :: (forall x . OptHelpInfo -> Option x -> b)
           -> Parser a
           -> OptTree b
-treeMapParser g = simplify . go False False g
+treeMapParser g = simplify . go False False False g
   where
     has_default :: Parser a -> Bool
     has_default p = isJust (evalParser p)
 
-    go :: Bool -> Bool
+    go :: Bool -> Bool -> Bool
        -> (forall x . OptHelpInfo -> Option x -> b)
        -> Parser a
        -> OptTree b
-    go _ _ _ (NilP _) = MultNode []
-    go m d f (OptP opt)
+    go _ _ _ _ (NilP _) = MultNode []
+    go m d r f (OptP opt)
       | optVisibility opt > Internal
-      = Leaf (f (OptHelpInfo m d) opt)
+      = Leaf (f (OptHelpInfo m d r) opt)
       | otherwise
       = MultNode []
-    go m d f (MultP p1 p2) = MultNode [go m d f p1, go m d f p2]
-    go m d f (AltP p1 p2) = AltNode [go m d' f p1, go m d' f p2]
+    go m d r f (MultP p1 p2) = MultNode [go m d r f p1, go m d r' f p2]
+      where r' = r || has_positional p1
+    go m d r f (AltP p1 p2) = AltNode [go m d' r f p1, go m d' r f p2]
       where d' = d || has_default p1 || has_default p2
-    go _ d f (BindP p _) = go True d f p
+    go _ d r f (BindP p _) = go True d r f p
+
+    has_positional :: Parser a -> Bool
+    has_positional (NilP _) = False
+    has_positional (OptP p) = (is_positional . optMain) p
+    has_positional (MultP p1 p2) = has_positional p1 || has_positional p2
+    has_positional (AltP p1 p2) = has_positional p1 || has_positional p2
+    has_positional (BindP p _) = has_positional p
+
+    is_positional :: OptReader a -> Bool
+    is_positional (OptReader {})  = False
+    is_positional (FlagReader {}) = False
+    is_positional (ArgReader {})  = True
+    is_positional (CmdReader {})  = True
+
 
 simplify :: OptTree a -> OptTree a
 simplify (Leaf x) = Leaf x

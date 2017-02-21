@@ -112,9 +112,10 @@ library
                        Options.Applicative.Common,
                        Options.Applicative.Extra,
                        Options.Applicative.Help,
-                       Options.Applicative.Help.Pretty,
                        Options.Applicative.Help.Chunk,
                        Options.Applicative.Help.Core,
+                       Options.Applicative.Help.Levenshtein,
+                       Options.Applicative.Help.Pretty,
                        Options.Applicative.Help.Types,
                        Options.Applicative.Types,
                        Options.Applicative.Internal
