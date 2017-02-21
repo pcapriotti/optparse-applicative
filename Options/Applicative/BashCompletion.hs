@@ -92,8 +92,8 @@ bashCompletionScript :: String -> String -> IO [String]
 bashCompletionScript prog progn = return
   [ "_" ++ progn ++ "()"
   , "{"
-  , "    local cmdline"
-  , "    local IFS=$'\n'"
+  , "    local CMDLINE"
+  , "    local IFS=$'\\n'"
   , "    CMDLINE=(--bash-completion-index $COMP_CWORD)"
   , ""
   , "    for arg in ${COMP_WORDS[@]}; do"
