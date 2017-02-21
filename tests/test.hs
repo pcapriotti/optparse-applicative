@@ -240,6 +240,22 @@ prop_completion_only_reachable = once . ioProperty $
     Failure _   -> return $ counterexample "unexpected failure" failed
     Success val -> return $ counterexample ("unexpected result " ++ show val) failed
 
+prop_completion_only_reachable_deep :: Property
+prop_completion_only_reachable_deep = once . ioProperty $
+  let p = (,)
+        <$> strArgument (completeWith ["seen"])
+        <*> strArgument (completeWith ["now-reachable"])
+      i = info p idm
+      result = run i [ "--bash-completion-index", "2"
+                     , "--bash-completion-word", "test-prog"
+                     , "--bash-completion-word", "seen" ]
+  in case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      return $ ["now-reachable"] === completions
+    Failure _   -> return $ counterexample "unexpected failure" failed
+    Success val -> return $ counterexample ("unexpected result " ++ show val) failed
+
 prop_bind_usage :: Property
 prop_bind_usage = once $
   let p = many (argument str (metavar "ARGS..."))
