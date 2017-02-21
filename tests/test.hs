@@ -539,6 +539,19 @@ prop_many_pairs_lazy_progress = once $
       result = run i ["foo", "-abar", "baz"]
   in assertResult result $ \xs -> [(Just "bar", "foo"), (Nothing, "baz")] === xs
 
+prop_suggest :: Property
+prop_suggest = once $
+  let p2 = subparser (command "reachable"   (info (pure ()) idm))
+      p1 = subparser (command "unreachable" (info (pure ()) idm))
+      p  = (,) <$> p2 <*> p1
+      i  = info p idm
+      result = run i ["ureachable"]
+  in assertError result $ \failure ->
+    let (msg, _)  = renderFailure failure "prog"
+    in  counterexample msg
+       $  isInfixOf "Did you mean this?\n    reachable\n" msg
+      .&. not (isInfixOf "unreachable" msg)
+
 ---
 
 deriving instance Arbitrary a => Arbitrary (Chunk a)
