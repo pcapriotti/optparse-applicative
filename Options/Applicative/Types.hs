@@ -326,20 +326,20 @@ data ArgPolicy
   --   commands are treated as arguments.
   | NoInterspersePolicy
   -- ^ Options must all come before arguments, once a
-  --   single option is parsed, all remaining arguments
-  --   are treated as positionals.
+  --   single positional argument or subcommand is parsed,
+  --   all remaining arguments are treated as positionals.
   --   A `--` option can be passed if the first positional
   --   one needs starts with `-`.
   | OnlyPositionalPolicy
   -- ^ No options are parsed at all, all arguments are
   --   treated as positionals.
-  --   Is the policy after `--` is used.
+  --   Is the policy used after `--` is encountered.
   | DefaultPositionalPolicy
   -- ^ Options and arguments can be interspersed, but if
   --   a given option is not found, it is treated as a
   --   positional argument. This is sometimes useful if
   --   one is passing through most options to another tool,
-  --   but are supplying one or of their own modifiers.
+  --   but are supplying just a few of their own options.
   deriving (Eq, Ord, Show)
 
 data OptHelpInfo = OptHelpInfo
