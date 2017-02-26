@@ -179,9 +179,9 @@ searchArg arg = searchParser $ \opt -> do
 
 stepParser :: MonadP m => ParserPrefs -> ArgPolicy -> String
            -> Parser a -> NondetT (StateT Args m) (Parser a)
-stepParser _ OnlyPositionalPolicy arg p =
+stepParser _ AllPositionals arg p =
   searchArg arg p
-stepParser pprefs DefaultPositionalPolicy arg p = case parseWord arg of
+stepParser pprefs ForwardOptions arg p = case parseWord arg of
   Just w -> searchOpt pprefs w p <|> searchArg arg p
   Nothing -> searchArg arg p
 stepParser pprefs _ arg p = case parseWord arg of
@@ -193,8 +193,8 @@ stepParser pprefs _ arg p = case parseWord arg of
 -- arguments.  This function returns an error if any parsing error occurs, or
 -- if any options are missing and don't have a default value.
 runParser :: MonadP m => ArgPolicy -> IsCmdStart -> Parser a -> Args -> m (a, Args)
-runParser policy _ p ("--" : argt) | policy /= OnlyPositionalPolicy
-                                   = runParser OnlyPositionalPolicy CmdCont p argt
+runParser policy _ p ("--" : argt) | policy /= AllPositionals
+                                   = runParser AllPositionals CmdCont p argt
 runParser policy isCmdStart p args = case args of
   [] -> exitP isCmdStart p result
   (arg : argt) -> do
@@ -210,8 +210,8 @@ runParser policy isCmdStart p args = case args of
                            $ stepParser prefs policy arg p
 
     newPolicy a = case policy of
-      NoInterspersePolicy -> if isJust (parseWord a) then NoInterspersePolicy else OnlyPositionalPolicy
-      x                   -> x
+      NoIntersperse -> if isJust (parseWord a) then NoIntersperse else AllPositionals
+      x             -> x
 
 parseError :: MonadP m => String -> m a
 parseError arg = errorP . ErrorMsg $ msg

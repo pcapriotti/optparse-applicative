@@ -319,22 +319,22 @@ type Args = [String]
 
 -- | Policy for how to handle options within the parse
 data ArgPolicy
-  = InterspersePolicy
+  = Intersperse
   -- ^ The default policy, options and arguments can
   --   be interspersed.
   --   A `--` option can be passed to ensure all following
   --   commands are treated as arguments.
-  | NoInterspersePolicy
+  | NoIntersperse
   -- ^ Options must all come before arguments, once a
   --   single positional argument or subcommand is parsed,
   --   all remaining arguments are treated as positionals.
   --   A `--` option can be passed if the first positional
   --   one needs starts with `-`.
-  | OnlyPositionalPolicy
+  | AllPositionals
   -- ^ No options are parsed at all, all arguments are
   --   treated as positionals.
   --   Is the policy used after `--` is encountered.
-  | DefaultPositionalPolicy
+  | ForwardOptions
   -- ^ Options and arguments can be interspersed, but if
   --   a given option is not found, it is treated as a
   --   positional argument. This is sometimes useful if

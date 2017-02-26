@@ -378,7 +378,7 @@ failureCode n = InfoMod $ \i -> i { infoFailureCode = n }
 --   expect to be able to freely intersperse regular options and flags within
 --   command line options.
 noIntersperse :: InfoMod a
-noIntersperse = InfoMod $ \p -> p { infoPolicy = NoInterspersePolicy }
+noIntersperse = InfoMod $ \p -> p { infoPolicy = NoIntersperse }
 
 -- | Intersperse matched options and arguments normally, but allow unmatched
 --   options to be treated as positional arguments.
@@ -387,7 +387,7 @@ noIntersperse = InfoMod $ \p -> p { infoPolicy = NoInterspersePolicy }
 --   own options. Not recommended in general as typos by the user may not
 --   yield a parse error and cause confusion.
 forwardOptions :: InfoMod a
-forwardOptions = InfoMod $ \p -> p { infoPolicy = DefaultPositionalPolicy }
+forwardOptions = InfoMod $ \p -> p { infoPolicy = ForwardOptions }
 
 -- | Create a 'ParserInfo' given a 'Parser' and a modifier.
 info :: Parser a -> InfoMod a -> ParserInfo a
@@ -400,7 +400,7 @@ info parser m = applyInfoMod m base
       , infoHeader = mempty
       , infoFooter = mempty
       , infoFailureCode = 1
-      , infoPolicy = InterspersePolicy }
+      , infoPolicy = Intersperse }
 
 newtype PrefsMod = PrefsMod
   { applyPrefsMod :: ParserPrefs -> ParserPrefs }
