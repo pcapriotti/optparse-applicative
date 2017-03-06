@@ -164,10 +164,12 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
     with_context c@(Context _ i:_) _ f = f (contextNames c) i
 
     usage_help progn names i = case msg of
-      InfoMsg _ -> mempty
-      _         -> usageHelp $ vcatChunks
-        [ pure . parserUsage pprefs (infoParser i) . unwords $ progn : names
-        , fmap (indent 2) . infoProgDesc $ i ]
+      InfoMsg _
+        -> mempty
+      _
+        -> usageHelp $ vcatChunks
+          [ pure . parserUsage pprefs (infoParser i) . unwords $ progn : names
+          , fmap (indent 2) . infoProgDesc $ i ]
 
     error_help = errorHelp $ case msg of
       ShowHelpText
@@ -192,7 +194,6 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
             --
             -- This gives us the same error we have always
             -- reported
-            --
             msg' = case arg of
               ('-':_) -> "Invalid option `" ++ arg ++ "'"
               _       -> "Invalid argument `" ++ arg ++ "'"
@@ -210,7 +211,6 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
         -- We can make a good help suggestion here if we do
         -- a levenstein distance between all possible suggestions
         -- and the supplied option or argument.
-        --
         -> suggestions
           where
             --
