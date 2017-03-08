@@ -84,8 +84,8 @@ data ParserInfo a = ParserInfo
   , infoHeader :: Chunk Doc   -- ^ header of the full parser description
   , infoFooter :: Chunk Doc   -- ^ footer of the full parser description
   , infoFailureCode :: Int    -- ^ exit code for a parser failure
-  , infoIntersperse :: Bool   -- ^ allow regular options and flags to occur
-                              -- after arguments (default: True)
+  , infoPolicy :: ArgPolicy   -- ^ allow regular options and flags to occur
+                              -- after arguments (default: InterspersePolicy)
   }
 
 instance Functor ParserInfo where
@@ -319,12 +319,28 @@ type Args = [String]
 
 -- | Policy for how to handle options within the parse
 data ArgPolicy
-  = SkipOpts  -- ^ Inputs beginning with `-` or `--` are treated
-              --   as options or flags, and can be mixed with arguments.
-  | AllowOpts -- ^ All input is treated as positional arguments.
-              --   Used after a bare `--` input, and also with
-              --   `noIntersperse` policy.
-  deriving (Eq, Show)
+  = Intersperse
+  -- ^ The default policy, options and arguments can
+  --   be interspersed.
+  --   A `--` option can be passed to ensure all following
+  --   commands are treated as arguments.
+  | NoIntersperse
+  -- ^ Options must all come before arguments, once a
+  --   single positional argument or subcommand is parsed,
+  --   all remaining arguments are treated as positionals.
+  --   A `--` option can be passed if the first positional
+  --   one needs starts with `-`.
+  | AllPositionals
+  -- ^ No options are parsed at all, all arguments are
+  --   treated as positionals.
+  --   Is the policy used after `--` is encountered.
+  | ForwardOptions
+  -- ^ Options and arguments can be interspersed, but if
+  --   a given option is not found, it is treated as a
+  --   positional argument. This is sometimes useful if
+  --   one is passing through most options to another tool,
+  --   but are supplying just a few of their own options.
+  deriving (Eq, Ord, Show)
 
 data OptHelpInfo = OptHelpInfo
   { hinfoMulti :: Bool

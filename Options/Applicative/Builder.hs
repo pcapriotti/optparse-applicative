@@ -72,6 +72,7 @@ module Options.Applicative.Builder (
   progDescDoc,
   failureCode,
   noIntersperse,
+  forwardOptions,
   info,
 
   -- * Builder for 'ParserPrefs'
@@ -371,9 +372,22 @@ progDescDoc doc = InfoMod $ \i -> i { infoProgDesc = Chunk doc }
 failureCode :: Int -> InfoMod a
 failureCode n = InfoMod $ \i -> i { infoFailureCode = n }
 
--- | Disable parsing of regular options after arguments
+-- | Disable parsing of regular options after arguments. After a positional
+--   argument is parsed, all remaining options and arguments will be treated
+--   as a positional arguments. Not recommended in general as users often
+--   expect to be able to freely intersperse regular options and flags within
+--   command line options.
 noIntersperse :: InfoMod a
-noIntersperse = InfoMod $ \p -> p { infoIntersperse = False }
+noIntersperse = InfoMod $ \p -> p { infoPolicy = NoIntersperse }
+
+-- | Intersperse matched options and arguments normally, but allow unmatched
+--   options to be treated as positional arguments.
+--   This is sometimes useful if one is wrapping a third party cli tool and
+--   needs to pass options through, while also providing a handful of their
+--   own options. Not recommended in general as typos by the user may not
+--   yield a parse error and cause confusion.
+forwardOptions :: InfoMod a
+forwardOptions = InfoMod $ \p -> p { infoPolicy = ForwardOptions }
 
 -- | Create a 'ParserInfo' given a 'Parser' and a modifier.
 info :: Parser a -> InfoMod a -> ParserInfo a
@@ -386,7 +400,7 @@ info parser m = applyInfoMod m base
       , infoHeader = mempty
       , infoFooter = mempty
       , infoFailureCode = 1
-      , infoIntersperse = True }
+      , infoPolicy = Intersperse }
 
 newtype PrefsMod = PrefsMod
   { applyPrefsMod :: ParserPrefs -> ParserPrefs }
