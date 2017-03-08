@@ -55,7 +55,7 @@ import Control.Monad (guard, mzero, msum, when, liftM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), get, put, runStateT)
 import Data.List (isPrefixOf)
-import Data.Maybe (maybeToList, isJust)
+import Data.Maybe (maybeToList, isJust, isNothing)
 import Prelude
 
 import Options.Applicative.Internal
@@ -106,8 +106,14 @@ optMatches disambiguate opt (OptWord arg1 val) = case opt of
       (arg', args') <- maybe missing_arg return mb_args
       put args'
       lift $ runReadM (withReadM (errorFor arg1) (crReader rdr)) arg'
+
   FlagReader names x -> do
     guard $ has_name arg1 names
+    -- #242 Flags/switches succeed incorrectly when given an argument.
+    -- We'll not match a long option for a flag if there's a word attached.
+    -- This was revealing an implementation detail as
+    -- `--foo=val` was being parsed as `--foo -val`, which is gibberish.
+    guard $ is_short arg1 || isNothing val
     Just $ do
       args <- get
       let val' = (\s -> '-' : s) <$> val
@@ -116,6 +122,9 @@ optMatches disambiguate opt (OptWord arg1 val) = case opt of
   _ -> Nothing
   where
     errorFor name msg = "option " ++ showOption name ++ ": " ++ msg
+
+    is_short (OptShort _) = True
+    is_short (OptLong _)  = False
 
     has_name a
       | disambiguate = any (isOptionPrefix a)
