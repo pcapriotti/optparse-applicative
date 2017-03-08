@@ -24,6 +24,7 @@ import           Options.Applicative.Types
 import           Options.Applicative.Help.Pretty (Doc, SimpleDoc(..))
 import qualified Options.Applicative.Help.Pretty as Doc
 import           Options.Applicative.Help.Chunk
+import           Options.Applicative.Help.Levenshtein
 
 import           Prelude
 
@@ -73,9 +74,9 @@ prop_cmd_header :: Property
 prop_cmd_header = once $
   let i  = info (helper <*> Commands.sample) (header "foo")
       r1 = checkHelpTextWith (ExitFailure 1) defaultPrefs
-                    "commands_header" i ["-zzz"]
+                    "commands_header" i ["-zello"]
       r2 = checkHelpTextWith (ExitFailure 1) (prefs showHelpOnError)
-                    "commands_header_full" i ["-zzz"]
+                    "commands_header_full" i ["-zello"]
   in  (r1 .&&. r2)
 
 prop_cabal_conf :: Property
@@ -222,6 +223,36 @@ prop_completion = once . ioProperty $
     CompletionInvoked (CompletionResult err) -> do
       completions <- lines <$> err "test"
       return $ ["--foo", "--bar"] === completions
+    Failure _   -> return $ counterexample "unexpected failure" failed
+    Success val -> return $ counterexample ("unexpected result " ++ show val) failed
+
+prop_completion_only_reachable :: Property
+prop_completion_only_reachable = once . ioProperty $
+  let p = (,)
+        <$> strArgument (completeWith ["reachable"])
+        <*> strArgument (completeWith ["unreachable"])
+      i = info p idm
+      result = run i ["--bash-completion-index", "0"]
+  in case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      return $ ["reachable"] === completions
+    Failure _   -> return $ counterexample "unexpected failure" failed
+    Success val -> return $ counterexample ("unexpected result " ++ show val) failed
+
+prop_completion_only_reachable_deep :: Property
+prop_completion_only_reachable_deep = once . ioProperty $
+  let p = (,)
+        <$> strArgument (completeWith ["seen"])
+        <*> strArgument (completeWith ["now-reachable"])
+      i = info p idm
+      result = run i [ "--bash-completion-index", "2"
+                     , "--bash-completion-word", "test-prog"
+                     , "--bash-completion-word", "seen" ]
+  in case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      return $ ["now-reachable"] === completions
     Failure _   -> return $ counterexample "unexpected failure" failed
     Success val -> return $ counterexample ("unexpected result " ++ show val) failed
 
@@ -524,6 +555,19 @@ prop_many_pairs_lazy_progress = once $
       result = run i ["foo", "-abar", "baz"]
   in assertResult result $ \xs -> [(Just "bar", "foo"), (Nothing, "baz")] === xs
 
+prop_suggest :: Property
+prop_suggest = once $
+  let p2 = subparser (command "reachable"   (info (pure ()) idm))
+      p1 = subparser (command "unreachable" (info (pure ()) idm))
+      p  = (,) <$> p2 <*> p1
+      i  = info p idm
+      result = run i ["ureachable"]
+  in assertError result $ \failure ->
+    let (msg, _)  = renderFailure failure "prog"
+    in  counterexample msg
+       $  isInfixOf "Did you mean this?\n    reachable" msg
+      .&. not (isInfixOf "unreachable" msg)
+
 ---
 
 deriving instance Arbitrary a => Arbitrary (Chunk a)
@@ -556,6 +600,38 @@ prop_stringChunk_2 s = isEmpty (stringChunk s) === null s
 
 prop_paragraph :: String -> Property
 prop_paragraph s = isEmpty (paragraph s) === null (words s)
+
+---
+
+--
+-- From
+-- https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance
+--
+-- In information theory and computer science, the Damerau–Levenshtein
+-- distance is a distance (string metric) between two strings, i.e.,
+-- finite sequence of symbols, given by counting the minimum number
+-- of operations needed to transform one string into the other, where
+-- an operation is defined as an insertion, deletion, or substitution
+-- of a single character, or a transposition of two adjacent characters.
+--
+prop_edit_distance_gezero :: String -> String -> Bool
+prop_edit_distance_gezero a b = editDistance a b >= 0
+
+prop_edit_insertion :: [Char] -> Char -> [Char] -> Property
+prop_edit_insertion as i bs =
+  editDistance (as ++ bs) (as ++ [i] ++ bs) === 1
+
+prop_edit_symmetric :: [Char] -> [Char] -> Property
+prop_edit_symmetric as bs =
+  editDistance as bs === editDistance bs as
+
+prop_edit_substitution :: [Char] -> [Char] -> Char -> Char -> Property
+prop_edit_substitution as bs a b = a /= b ==>
+  editDistance (as ++ [a] ++ bs) (as ++ [b] ++ bs) === 1
+
+prop_edit_transposition :: [Char] -> [Char] -> Char -> Char -> Property
+prop_edit_transposition as bs a b = a /= b ==>
+  editDistance (as ++ [a] ++ [b] ++ bs) (as ++ [b] ++ [a] ++ bs) === 1
 
 ---
 

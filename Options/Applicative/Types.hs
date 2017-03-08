@@ -63,6 +63,7 @@ data ParseError
   | ShowHelpText
   | UnknownError
   | MissingError IsCmdStart SomeParser
+  | UnexpectedError String SomeParser
 
 data IsCmdStart = CmdStart | CmdCont
   deriving Show
@@ -343,8 +344,10 @@ data ArgPolicy
   deriving (Eq, Ord, Show)
 
 data OptHelpInfo = OptHelpInfo
-  { hinfoMulti :: Bool
-  , hinfoDefault :: Bool
+  { hinfoMulti :: Bool    -- ^ Whether this is part of a many or some (approximately)
+  , hinfoDefault :: Bool  -- ^ Whether this option has a default value
+  , hinfoUnreachableArgs :: Bool -- ^ If the result is a positional, if it can't be
+                                 --   accessed in the current parser position ( first arg )
   } deriving (Eq, Show)
 
 data OptTree a

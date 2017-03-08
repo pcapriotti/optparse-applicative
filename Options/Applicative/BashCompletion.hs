@@ -40,16 +40,30 @@ bashCompletionQuery pinfo pprefs ws i _ = case runCompletion compl pprefs of
   Just (Right c)             -> run_completer c
   _                          -> return []
   where
-    list_options =
-        fmap concat
+    list_options
+      = fmap concat
       . sequence
-      . mapParser (const opt_completions)
+      . mapParser opt_completions
 
-    opt_completions opt = case optMain opt of
+    --
+    -- Prior to 0.14 there was a subtle bug which would
+    -- mean that completions from positional arguments
+    -- further into the parse would be shown.
+    --
+    -- We therefore now check to see that
+    -- hinfoUnreachableArgs is off before running the
+    -- completion for position arguments.
+    opt_completions hinfo opt = case optMain opt of
       OptReader ns _ _ -> return $ show_names ns
       FlagReader ns _  -> return $ show_names ns
-      ArgReader rdr    -> run_completer (crCompleter rdr)
-      CmdReader _ ns _ -> return $ filter_names ns
+      ArgReader rdr     | hinfoUnreachableArgs hinfo
+                       -> return []
+                        | otherwise
+                       -> run_completer (crCompleter rdr)
+      CmdReader _ ns _  | hinfoUnreachableArgs hinfo
+                       -> return []
+                        | otherwise
+                       -> return $ filter_names ns
 
     show_name :: OptName -> String
     show_name (OptShort c) = '-':[c]
@@ -78,8 +92,8 @@ bashCompletionScript :: String -> String -> IO [String]
 bashCompletionScript prog progn = return
   [ "_" ++ progn ++ "()"
   , "{"
-  , "    local cmdline"
-  , "    local IFS=$'\n'"
+  , "    local CMDLINE"
+  , "    local IFS=$'\\n'"
   , "    CMDLINE=(--bash-completion-index $COMP_CWORD)"
   , ""
   , "    for arg in ${COMP_WORDS[@]}; do"
