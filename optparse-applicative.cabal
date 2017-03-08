@@ -2,65 +2,8 @@ name:                optparse-applicative
 version:             0.13.1.0
 synopsis:            Utilities and combinators for parsing command line options
 description:
-    Here is a simple example of an applicative option parser:
-    .
-    @
-    data Sample = Sample
-    &#x20; &#x7b; hello :: String
-    &#x20; , quiet :: Bool &#x7d;
-    .
-    sample :: Parser Sample
-    sample = Sample
-    &#x20; \<$\> strOption
-    &#x20;     ( long \"hello\"
-    &#x20;    \<\> metavar \"TARGET\"
-    &#x20;    \<\> help \"Target for the greeting\" )
-    &#x20; \<*\> switch
-    &#x20;     ( long \"quiet\"
-    &#x20;    \<\> help \"Whether to be quiet\" )
-    @
-    .
-    The parser is built using applicative style starting from a set of basic
-    combinators. In this example, @hello@ is defined as an 'option' with a
-    @String@ argument, while @quiet@ is a boolean 'flag' (called 'switch').
-    .
-    A parser can be used like this:
-    .
-    @
-    greet :: Sample -> IO ()
-    greet (Sample h False) = putStrLn $ \"Hello, \" ++ h
-    greet _ = return ()
-    .
-    main :: IO ()
-    main = execParser opts \>\>= greet
-    &#x20; where
-    &#x20;   opts = info (helper \<*\> sample)
-    &#x20;     ( fullDesc
-    &#x20;    \<\> progDesc \"Print a greeting for TARGET\"
-    &#x20;    \<\> header \"hello - a test for optparse-applicative\" )
-    @
-    .
-    The @greet@ function is the entry point of the program, while @opts@ is a
-    complete description of the program, used when generating a help text. The
-    'helper' combinator takes any parser, and adds a @help@ option to it (which
-    always fails).
-    .
-    The @hello@ option in this example is mandatory (since it doesn't have a
-    default value), so running the program without any argument will display a
-    help text:
-    .
- >hello - a test for optparse-applicative
- >
- >Usage: hello --hello TARGET [--quiet]
- >  Print a greeting for TARGET
- >
- >Available options:
- >  -h,--help                Show this help text
- >  --hello TARGET           Target for the greeting
- >  --quiet                  Whether to be quiet
-    .
-    containing a short usage summary, and a detailed list of options with
-    descriptions.
+    See README for a detailed usage example. It displays below on Hackage, and
+    is also available on GitHub: <https://github.com/pcapriotti/optparse-applicative>.
 license:             BSD3
 license-file:        LICENSE
 author:              Paolo Capriotti, Huw Campbell
