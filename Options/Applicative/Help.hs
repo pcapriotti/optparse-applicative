@@ -1,8 +1,24 @@
 module Options.Applicative.Help (
-  module X
+  -- | This is an empty module which re-exports
+  --   the help text system for optparse.
+
+  -- | Pretty printer. Reexports most combinators
+  --   from Text.PrettyPrint.ANSI.Leijen
+  module Options.Applicative.Help.Pretty,
+
+  -- | A free monoid over Doc with helpers for
+  --   composing help text components.
+  module Options.Applicative.Help.Chunk,
+
+  -- | Types required by the help system.
+  module Options.Applicative.Help.Types,
+
+  -- | Core implementation of the help text
+  --   generator.
+  module Options.Applicative.Help.Core,
   ) where
 
-import Options.Applicative.Help.Pretty as X
-import Options.Applicative.Help.Chunk as X
-import Options.Applicative.Help.Types as X
-import Options.Applicative.Help.Core as X
+import Options.Applicative.Help.Pretty
+import Options.Applicative.Help.Chunk
+import Options.Applicative.Help.Types
+import Options.Applicative.Help.Core

@@ -1,3 +1,9 @@
+## Version 0.13.2.0 (9 Mar 2017)
+
+- Updated dependency bounds.
+
+- Doc
+
 ## Version 0.13.1.0 (10 Feb 2017)
 
 - Updated dependency bounds.
