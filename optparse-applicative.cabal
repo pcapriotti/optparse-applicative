@@ -76,7 +76,7 @@ library
   build-depends:       base                            == 4.*
                      , transformers                    >= 0.2 && < 0.6
                      , transformers-compat             >= 0.3 && < 0.6
-                     , process                         >= 1.0 && < 1.6
+                     , process                         >= 1.0 && < 1.7
                      , ansi-wl-pprint                  >= 0.6.6 && < 0.7
 
   if !impl(ghc >= 8)
