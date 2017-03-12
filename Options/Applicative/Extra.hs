@@ -29,11 +29,10 @@ import System.Exit (exitSuccess, exitWith, ExitCode(..))
 import System.IO (hPutStrLn, stderr)
 
 import Options.Applicative.BashCompletion
-import Options.Applicative.Builder hiding (briefDesc)
+import Options.Applicative.Builder
 import Options.Applicative.Builder.Internal
 import Options.Applicative.Common
 import Options.Applicative.Help
-import Options.Applicative.Help.Levenshtein ( editDistance )
 
 import Options.Applicative.Internal
 import Options.Applicative.Types
