@@ -208,6 +208,7 @@ data Parser a
   | forall x . MultP (Parser (x -> a)) (Parser x)
   | AltP (Parser a) (Parser a)
   | forall x . BindP (Parser x) (x -> Parser a)
+  | HelpP [(Maybe Doc, Doc, Doc)] (Parser a)
 
 instance Functor Parser where
   fmap f (NilP x) = NilP (fmap f x)
@@ -215,6 +216,7 @@ instance Functor Parser where
   fmap f (MultP p1 p2) = MultP (fmap (f.) p1) p2
   fmap f (AltP p1 p2) = AltP (fmap f p1) (fmap f p2)
   fmap f (BindP p k) = BindP p (fmap f . k)
+  fmap f (HelpP hs p) = HelpP hs (fmap f p)
 
 instance Applicative Parser where
   pure = NilP . Just
@@ -354,6 +356,7 @@ data OptTree a
   = Leaf a
   | MultNode [OptTree a]
   | AltNode [OptTree a]
+  | HelpOverrideNode [(Maybe Doc, Doc, Doc)] (OptTree a)
   deriving Show
 
 optVisibility :: Option a -> OptVisibility

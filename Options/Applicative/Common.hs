@@ -168,6 +168,9 @@ searchParser f (BindP p k) = msum
   , case evalParser p of
       Nothing -> mzero
       Just aa -> searchParser f (k aa) ]
+searchParser f (HelpP hs p) = do
+  p' <- searchParser f p
+  return (HelpP hs p')
 
 searchOpt :: MonadP m => ParserPrefs -> OptWord -> Parser a
           -> NondetT (StateT Args m) (Parser a)
@@ -243,6 +246,7 @@ evalParser (OptP _) = Nothing
 evalParser (MultP p1 p2) = evalParser p1 <*> evalParser p2
 evalParser (AltP p1 p2) = evalParser p1 <|> evalParser p2
 evalParser (BindP p k) = evalParser p >>= evalParser . k
+evalParser (HelpP _ p) = evalParser p
 
 -- | Map a polymorphic function over all the options of a parser, and collect
 -- the results in a list.
@@ -253,6 +257,7 @@ mapParser f = flatten . treeMapParser f
     flatten (Leaf x) = [x]
     flatten (MultNode xs) = xs >>= flatten
     flatten (AltNode xs) = xs >>= flatten
+    flatten (HelpOverrideNode _ x) = flatten x
 
 -- | Like 'mapParser', but collect the results in a tree structure.
 treeMapParser :: (forall x . OptHelpInfo -> Option x -> b)
@@ -278,6 +283,7 @@ treeMapParser g = simplify . go False False False g
     go m d r f (AltP p1 p2) = AltNode [go m d' r f p1, go m d' r f p2]
       where d' = d || has_default p1 || has_default p2
     go _ d r f (BindP p _) = go True d r f p
+    go m d r f (HelpP hs p) = HelpOverrideNode hs (go m d r f p)
 
     has_positional :: Parser a -> Bool
     has_positional (NilP _) = False
@@ -285,6 +291,7 @@ treeMapParser g = simplify . go False False False g
     has_positional (MultP p1 p2) = has_positional p1 || has_positional p2
     has_positional (AltP p1 p2) = has_positional p1 || has_positional p2
     has_positional (BindP p _) = has_positional p
+    has_positional (HelpP _ p) = has_positional p
 
     is_positional :: OptReader a -> Bool
     is_positional (OptReader {})  = False
@@ -311,3 +318,5 @@ simplify (AltNode xs) =
     remove_alt (AltNode ts) = ts
     remove_alt (MultNode []) = []
     remove_alt t = [t]
+simplify (HelpOverrideNode hs p) =
+  HelpOverrideNode hs (simplify p)

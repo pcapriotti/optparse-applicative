@@ -19,7 +19,7 @@ import Control.Applicative
 import Control.Monad (guard)
 import Data.Function (on)
 import Data.List (sort, intersperse, groupBy)
-import Data.Maybe (maybeToList, catMaybes, fromMaybe)
+import Data.Maybe (maybeToList, catMaybes, fromMaybe, mapMaybe)
 import Data.Monoid
 import Prelude
 
@@ -111,10 +111,12 @@ fold_tree (AltNode xs) = alt_node
     alt_node ns = fmap parens
                 . foldr (chunked (\x y -> x </> char '|' </> y)) mempty
                 $ ns
+fold_tree (HelpOverrideNode hs _) = foldr (<</>>) mempty
+                                  $ map (\(b, _, _) -> Chunk b) hs
 
 -- | Generate a full help text for a parser.
 fullDesc :: ParserPrefs -> Parser a -> Chunk Doc
-fullDesc pprefs = tabulate . catMaybes . mapParser doc
+fullDesc pprefs = tabulate . catMaybes . flatten . treeMapParser doc
   where
     doc info opt = do
       guard . not . isEmpty $ n
@@ -130,6 +132,11 @@ fullDesc pprefs = tabulate . catMaybes . mapParser doc
       , descHidden = True
       , descOptional = True
       , descSurround = False }
+    flatten (Leaf x) = [x]
+    flatten (MultNode xs) = xs >>= flatten
+    flatten (AltNode xs) = xs >>= flatten
+    flatten (HelpOverrideNode hs _) =
+      map (\(_, fl, fr) -> Just (fl, align fr)) hs
 
 errorHelp :: Chunk Doc -> ParserHelp
 errorHelp chunk = mempty { helpError = chunk }
