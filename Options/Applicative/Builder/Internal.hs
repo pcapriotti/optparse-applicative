@@ -145,7 +145,9 @@ baseProps = OptProperties
   { propMetaVar = ""
   , propVisibility = Visible
   , propHelp = mempty
-  , propShowDefault = Nothing }
+  , propShowDefault = Nothing
+  , propDescMod = Nothing
+  }
 
 mkCommand :: Mod CommandFields a -> (Maybe String, [String], String -> Maybe (ParserInfo a))
 mkCommand m = (group, map fst cmds, (`lookup` cmds))

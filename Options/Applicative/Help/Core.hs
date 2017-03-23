@@ -65,7 +65,7 @@ optDesc pprefs style info opt =
         = mappend chunk suffix
         | otherwise
         = mappend (fmap parens chunk) suffix
-  in render desc'
+  in maybe id fmap (optDescMod opt) (render desc')
 
 -- | Generate descriptions for commands.
 cmdDesc :: Parser a -> [(Maybe String, Chunk Doc)]

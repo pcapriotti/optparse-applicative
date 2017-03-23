@@ -39,7 +39,8 @@ module Options.Applicative.Types (
   optVisibility,
   optMetaVar,
   optHelp,
-  optShowDefault
+  optShowDefault,
+  optDescMod
   ) where
 
 import Control.Applicative
@@ -125,7 +126,17 @@ data OptProperties = OptProperties
   , propHelp :: Chunk Doc                 -- ^ help text for this option
   , propMetaVar :: String                 -- ^ metavariable for this option
   , propShowDefault :: Maybe String       -- ^ what to show in the help text as the default
-  } deriving Show
+  , propDescMod :: Maybe ( Doc -> Doc )   -- ^ a function to run over the brief description
+  }
+
+instance Show OptProperties where
+  showsPrec p (OptProperties pV pH pMV pSD _)
+    = showParen (p >= 11)
+    $ showString "OptProperties { propVisibility = " . showsPrec 0 pV
+    . showString ", propHelp = " . showsPrec 0 pH
+    . showString ", propMetaVar = " . showsPrec 0 pMV
+    . showString ", propShowDefault = " . showsPrec 0 pSD
+    . showString ", propDescMod = _ }"
 
 -- | A single option of a parser.
 data Option a = Option
@@ -371,3 +382,6 @@ optMetaVar = propMetaVar . optProps
 
 optShowDefault :: Option a -> Maybe String
 optShowDefault = propShowDefault . optProps
+
+optDescMod :: Option a -> Maybe ( Doc -> Doc )
+optDescMod = propDescMod . optProps

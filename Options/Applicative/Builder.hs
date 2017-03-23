@@ -41,6 +41,7 @@ module Options.Applicative.Builder (
   ParseError(..),
   hidden,
   internal,
+  style,
   command,
   commandGroup,
   completeWith,
@@ -184,6 +185,18 @@ metavar var = optionMod $ \p -> p { propMetaVar = var }
 hidden :: Mod f a
 hidden = optionMod $ \p ->
   p { propVisibility = min Hidden (propVisibility p) }
+
+-- | Apply a function to the option description in the usage text.
+--
+-- > import Options.Applicative.Help
+-- > flag' () (short 't' <> style bold)
+--
+-- /NOTE/: This builder is more flexible than its name and example
+-- allude. One of the motivating examples for its addition was to
+-- used `const` to completely replace the usage text of an option.
+style :: ( Doc -> Doc ) -> Mod f a
+style x = optionMod $ \p ->
+  p { propDescMod = Just x }
 
 -- | Add a command to a subparser option.
 command :: String -> ParserInfo a -> Mod CommandFields a
