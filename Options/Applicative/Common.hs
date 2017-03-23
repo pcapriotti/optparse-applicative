@@ -102,8 +102,8 @@ optMatches disambiguate opt (OptWord arg1 val) = case opt of
     Just $ do
       args <- get
       let mb_args = uncons $ maybeToList val ++ args
-      let missing_arg = lift $ missingArgP no_arg_err (crCompleter rdr)
-      (arg', args') <- maybe missing_arg return mb_args
+      let missing_arg = missingArgP (no_arg_err $ showOption arg1) (crCompleter rdr)
+      (arg', args') <- maybe (lift missing_arg) return mb_args
       put args'
       lift $ runReadM (withReadM (errorFor arg1) (crReader rdr)) arg'
 

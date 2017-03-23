@@ -171,7 +171,7 @@ helpDoc doc = optionMod $ \p -> p { propHelp = Chunk doc }
 
 -- | Specify the error to display when no argument is provided to this option.
 noArgError :: ParseError -> Mod OptionFields a
-noArgError e = fieldMod $ \p -> p { optNoArgError = e }
+noArgError e = fieldMod $ \p -> p { optNoArgError = const e }
 
 -- | Specify a metavariable for the argument.
 --
@@ -318,7 +318,7 @@ option :: ReadM a -> Mod OptionFields a -> Parser a
 option r m = mkParser d g rdr
   where
     Mod f d g = metavar "ARG" `mappend` m
-    fields = f (OptionFields [] mempty (ErrorMsg ""))
+    fields = f (OptionFields [] mempty ExpectsArgError)
     crdr = CReader (optCompleter fields) r
     rdr = OptReader (optNames fields) crdr (optNoArgError fields)
 

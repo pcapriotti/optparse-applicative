@@ -532,6 +532,14 @@ prop_alt_missing_flags_described = once $
     let text = head . lines . fst $ renderFailure failure "test"
     in  "Missing: (-a ARG | -b ARG)" === text
 
+prop_missing_option_parameter_err :: Property
+prop_missing_option_parameter_err = once $
+  let p = option str (short 'a')
+      i = info p idm
+  in assertError (run i ["-a"]) $ \failure ->
+    let text = head . lines . fst $ renderFailure failure "test"
+    in  "The option `-a` expects an argument." === text
+
 prop_many_pairs_success :: Property
 prop_many_pairs_success = once $
   let p = many $ (,) <$> argument str idm <*> argument str idm

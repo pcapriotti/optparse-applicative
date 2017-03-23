@@ -63,6 +63,7 @@ data ParseError
   | ShowHelpText
   | UnknownError
   | MissingError IsCmdStart SomeParser
+  | ExpectsArgError String
   | UnexpectedError String SomeParser
 
 data IsCmdStart = CmdStart | CmdCont
@@ -189,11 +190,14 @@ instance Functor CReader where
 
 -- | An 'OptReader' defines whether an option matches an command line argument.
 data OptReader a
-  = OptReader [OptName] (CReader a) ParseError          -- ^ option reader
-  | FlagReader [OptName] !a                             -- ^ flag reader
-  | ArgReader (CReader a)                               -- ^ argument reader
-  | CmdReader (Maybe String)
-              [String] (String -> Maybe (ParserInfo a)) -- ^ command reader
+  = OptReader [OptName] (CReader a) (String -> ParseError)
+  -- ^ option reader
+  | FlagReader [OptName] !a
+  -- ^ flag reader
+  | ArgReader (CReader a)
+  -- ^ argument reader
+  | CmdReader (Maybe String) [String] (String -> Maybe (ParserInfo a))
+  -- ^ command reader
 
 instance Functor OptReader where
   fmap f (OptReader ns cr e) = OptReader ns (fmap f cr) e
