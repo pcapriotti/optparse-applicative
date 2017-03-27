@@ -98,6 +98,7 @@ module Options.Applicative.Builder (
 
 import Control.Applicative
 import Data.Semigroup hiding (option)
+import Data.String (fromString, IsString)
 
 import Options.Applicative.Builder.Completer
 import Options.Applicative.Builder.Internal
@@ -106,7 +107,7 @@ import Options.Applicative.Types
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
 
--- readers --
+-- Readers --
 
 -- | 'Option' reader based on the 'Read' type class.
 auto :: Read a => ReadM a
@@ -115,17 +116,31 @@ auto = eitherReader $ \arg -> case reads arg of
   _         -> Left $ "cannot parse value `" ++ arg ++ "'"
 
 -- | String 'Option' reader.
-str :: ReadM String
-str = readerAsk
+--
+--   Polymorphic over the `IsString` type class since 0.14.
+--
+--   For a non-polymorphic version returning 'String', use
+--   `readerAsk`.
+str :: IsString s => ReadM s
+str = fromString <$> readerAsk
 
--- | Convert a function in the 'Either' monad to a reader.
-eitherReader :: (String -> Either String a) -> ReadM a
-eitherReader f = readerAsk >>= either readerError return . f
+-- | Convert a function producing an 'Either' into a reader.
+--
+-- As an example, one can create a ReadM from an attoparsec Parser
+-- easily with
+-- @
+-- import qualified Data.Attoparsec.Text as A
+-- attoparsecReader :: A.Parser a => ReadM a
+-- attoparsecReader = eitherReader . A.parseOnly
+-- @
+eitherReader :: IsString s => (s -> Either String a) -> ReadM a
+eitherReader f = str >>= either readerError return . f
 
--- | Convert a function in the 'Maybe' monad to a reader.
-maybeReader :: (String -> Maybe a) -> ReadM a
-maybeReader f = eitherReader $ \arg ->
-  maybe (Left $ "cannot parse value `" ++ arg ++ "'") pure . f $ arg
+-- | Convert a function producing a 'Maybe' into a reader.
+maybeReader :: IsString s => (s -> Maybe a) -> ReadM a
+maybeReader f = do
+  arg  <- readerAsk
+  maybe (readerError $ "cannot parse value `" ++ arg ++ "'") return . f . fromString $ arg
 
 -- | Null 'Option' reader. All arguments will fail validation.
 disabled :: ReadM a
@@ -199,11 +214,27 @@ style x = optionMod $ \p ->
   p { propDescMod = Just x }
 
 -- | Add a command to a subparser option.
+--
+-- Suggested usage for multiple commands is to add them to a single subparser. e.g.
+-- @
+-- sample :: Parser Sample
+-- sample = subparser
+--        ( command "hello"
+--          (info hello (progDesc "Print greeting"))
+--       <> command "goodbye"
+--          (info goodbye (progDesc "Say goodbye"))
+--        )
+-- @
 command :: String -> ParserInfo a -> Mod CommandFields a
 command cmd pinfo = fieldMod $ \p ->
   p { cmdCommands = (cmd, pinfo) : cmdCommands p }
 
 -- | Add a description to a group of commands.
+--
+-- Advanced feature for separating logical groups of commands on the parse line.
+--
+-- If using the same `metavar` for each group of commands, it may yield a more
+-- attractive usage text combined with `hidden` for some groups.
 commandGroup :: String -> Mod CommandFields a
 commandGroup g = fieldMod $ \p ->
   p { cmdGroup = Just g }
@@ -245,7 +276,7 @@ argument p (Mod f d g) = mkParser d g (ArgReader rdr)
     rdr = CReader compl p
 
 -- | Builder for a 'String' argument.
-strArgument :: Mod ArgumentFields String -> Parser String
+strArgument :: IsString s => Mod ArgumentFields s -> Parser s
 strArgument = argument str
 
 -- | Builder for a flag parser.
@@ -312,7 +343,7 @@ infoOption :: String -> Mod OptionFields (a -> a) -> Parser (a -> a)
 infoOption = abortOption . InfoMsg
 
 -- | Builder for an option taking a 'String' argument.
-strOption :: Mod OptionFields String -> Parser String
+strOption :: IsString s => Mod OptionFields s -> Parser s
 strOption = option str
 
 -- | Same as 'option'.
@@ -425,24 +456,39 @@ instance Monoid PrefsMod where
 instance Semigroup PrefsMod where
   m1 <> m2 = PrefsMod $ applyPrefsMod m2 . applyPrefsMod m1
 
+-- | Include a suffix to attach to the metavar when multiple values
+--   can be entered.
 multiSuffix :: String -> PrefsMod
 multiSuffix s = PrefsMod $ \p -> p { prefMultiSuffix = s }
 
+-- | Turn on disambiguation.
+--
+--   See
+--   https://github.com/pcapriotti/optparse-applicative#disambiguation
 disambiguate :: PrefsMod
 disambiguate = PrefsMod $ \p -> p { prefDisambiguate = True }
 
+-- | Show full help text on any error.
 showHelpOnError :: PrefsMod
 showHelpOnError = PrefsMod $ \p -> p { prefShowHelpOnError = True }
 
+-- | Show the help text if the user enters only the program name or
+--   subcommand.
+--
+--   This will suppress a "Missing:" error and show the full usage
+--   instead if a user just types the name of the program.
 showHelpOnEmpty :: PrefsMod
 showHelpOnEmpty = PrefsMod $ \p -> p { prefShowHelpOnEmpty = True }
 
+-- | Turn off backtracking after subcommand is parsed.
 noBacktrack :: PrefsMod
 noBacktrack = PrefsMod $ \p -> p { prefBacktrack = False }
 
+-- | Set the maximum width of the generated help text.
 columns :: Int -> PrefsMod
 columns cols = PrefsMod $ \p -> p { prefColumns = cols }
 
+-- | Create a `ParserPrefs` given a modifier
 prefs :: PrefsMod -> ParserPrefs
 prefs m = applyPrefsMod m base
   where
@@ -454,7 +500,7 @@ prefs m = applyPrefsMod m base
       , prefBacktrack = True
       , prefColumns = 80 }
 
--- convenience shortcuts
+-- Convenience shortcuts
 
 -- | Trivial option modifier.
 idm :: Monoid m => m
