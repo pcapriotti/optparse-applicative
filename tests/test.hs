@@ -552,7 +552,8 @@ prop_alt_missing_flags_described = once $
 
 prop_missing_option_parameter_err :: Property
 prop_missing_option_parameter_err = once $
-  let p = option str (short 'a')
+  let p :: Parser String
+      p = option str (short 'a')
       i = info p idm
   in assertError (run i ["-a"]) $ \failure ->
     let text = head . lines . fst $ renderFailure failure "test"
