@@ -151,6 +151,7 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
       ErrorMsg {}        -> ExitFailure (infoFailureCode pinfo)
       UnknownError       -> ExitFailure (infoFailureCode pinfo)
       MissingError {}    -> ExitFailure (infoFailureCode pinfo)
+      ExpectsArgError {} -> ExitFailure (infoFailureCode pinfo)
       UnexpectedError {} -> ExitFailure (infoFailureCode pinfo)
       ShowHelpText       -> ExitSuccess
       InfoMsg {}         -> ExitSuccess
@@ -186,6 +187,9 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
 
       MissingError _ (SomeParser x)
         -> stringChunk "Missing:" <<+>> missingDesc pprefs x
+
+      ExpectsArgError x
+        -> stringChunk $ "The option `" ++ x ++ "` expects an argument."
 
       UnexpectedError arg _
         -> stringChunk msg'
