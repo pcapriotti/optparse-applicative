@@ -75,9 +75,9 @@ import Options.Applicative
 import Data.Semigroup ((<>))
 
 data Sample = Sample
-  { hello  :: String
-  , quiet  :: Bool
-  , repeat :: Int }
+  { hello      :: String
+  , quiet      :: Bool
+  , enthusiasm :: Int }
 
 sample :: Parser Sample
 sample = Sample
@@ -90,8 +90,8 @@ sample = Sample
          <> short 'q'
          <> help "Whether to be quiet" )
       <*> option auto
-          ( long "repeat"
-         <> help "Repeats for greeting"
+          ( long "enthusiasm"
+         <> help "How enthusiastically to greet"
          <> showDefault
          <> value 1
          <> metavar "INT" )
@@ -100,8 +100,8 @@ sample = Sample
 The parser is built using an [applicative] style starting from a
 set of basic combinators. In this example, hello is defined as an
 option with a `String` argument, while quiet is a boolean flag
-(called switch) and repeat gets parsed as an `Int` with help of the
-`Read` type class.
+(called a switch) and enthusiasm gets parsed as an `Int` with help
+of the `Read` type class.
 
 
 The parser can be used like this:
@@ -116,7 +116,7 @@ main = greet =<< execParser opts
      <> header "hello - a test for optparse-applicative" )
 
 greet :: Sample -> IO ()
-greet (Sample h False n) = replicateM_ n . putStrLn $ "Hello, " ++ h
+greet (Sample h False n) = putStrLn $ "Hello, " ++ h ++ replicate n '!'
 greet _ = return ()
 ```
 
@@ -131,7 +131,7 @@ will display an appropriate error message and a short option summary:
 
     Missing: --hello TARGET
 
-    Usage: hello --hello TARGET [-q|--quiet] [--repeat INT]
+    Usage: hello --hello TARGET [-q|--quiet] [--enthusiasm INT]
       Print a greeting for TARGET
 
 Running the program with the `--help` option will display the full help text
@@ -140,13 +140,13 @@ containing a detailed list of options with descriptions
 ```
     hello - a test for optparse-applicative
 
-    Usage: hello --hello TARGET [-q|--quiet] [--repeat INT]
+    Usage: hello --hello TARGET [-q|--quiet] [--enthusiasm INT]
       Print a greeting for TARGET
 
     Available options:
       --hello TARGET           Target for the greeting
       -q,--quiet               Whether to be quiet
-      --repeat INT             Repeats for greeting (default: 1)
+      --enthusiasm INT         How enthusiastically to greet (default: 1)
       -h,--help                Show this help text
 ```
 
