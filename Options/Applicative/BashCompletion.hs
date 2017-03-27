@@ -65,12 +65,8 @@ bashCompletionQuery pinfo pprefs ws i _ = case runCompletion compl pprefs of
                         | otherwise
                        -> return $ filter_names ns
 
-    show_name :: OptName -> String
-    show_name (OptShort c) = '-':[c]
-    show_name (OptLong name) = "--" ++ name
-
     show_names :: [OptName] -> [String]
-    show_names = filter_names . map show_name
+    show_names = filter_names . map showOption
 
     filter_names :: [String] -> [String]
     filter_names = filter is_completion

@@ -251,18 +251,13 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
             -- reader also ensure that it can be immediately
             -- reachable from where the error was given.
             opt_completions hinfo opt = case optMain opt of
-              OptReader ns _ _ -> fmap show_name ns
-              FlagReader ns _  -> fmap show_name ns
+              OptReader ns _ _ -> fmap showOption ns
+              FlagReader ns _  -> fmap showOption ns
               ArgReader _      -> []
               CmdReader _ ns _  | hinfoUnreachableArgs hinfo
                                -> []
                                 | otherwise
                                -> ns
-
-            show_name :: OptName -> String
-            show_name (OptShort c) = '-':[c]
-            show_name (OptLong l) = "--" ++ l
-
       _
         -> mempty
 
