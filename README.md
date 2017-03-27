@@ -71,6 +71,7 @@ parsers, and how to compose them as instances of `Applicative` and
 Here's a simple example of a parser.
 
 ```haskell
+import Control.Monad
 import Options.Applicative
 import Data.Semigroup ((<>))
 
@@ -116,7 +117,7 @@ main = greet =<< execParser opts
      <> header "hello - a test for optparse-applicative" )
 
 greet :: Sample -> IO ()
-greet (Sample h False n) = replicateM_ n . putStrLn $ "Hello, " ++ h
+greet (Sample h False n) = Control.Monad.replicateM_ n . putStrLn $ "Hello, " ++ h
 greet _ = return ()
 ```
 
