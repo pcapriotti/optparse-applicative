@@ -9,7 +9,7 @@ module Options.Applicative.Builder.Completer
 import Control.Applicative
 import Prelude
 import Control.Exception (IOException, try)
-import Data.List (isPrefixOf, isSuffixOf)
+import Data.List (isPrefixOf)
 import System.Process (readProcess)
 
 import Options.Applicative.Types
@@ -43,10 +43,7 @@ requote s =
     -- ensure it's closed off at the end and
     -- there's no single quotes in the
     -- middle which might confuse bash.
-    ('\'' : rs) | isSuffixOf "'" rs
-               -> '\'' : foldr go [] rs
-                | otherwise
-               -> '\'' : foldr go "'" rs
+    ('\'': rs) -> '\'' : foldr go "'" (unescapeN rs)
 
     -- We're weakly quoted. Transform to strongly
     -- quoted by unquoting the weakly quoted string
@@ -64,6 +61,20 @@ requote s =
     -- emit it the quote escaped, then resume.
     go '\'' t = "'\\''" ++ t
     go h t    = h : t
+
+    -- Unescape a strongly quoted string
+    -- We have two recursive functions, as we
+    -- can enter and exit the strong escaping.
+    unescapeN = goX
+      where
+        goX ('\'' : xs) = goN xs
+        goX (x : xs) = x : goX xs
+        goX [] = []
+
+        goN ('\\' : '\'' : xs) = '\'' : goN xs
+        goN ('\'' : xs) = goX xs
+        goN (x : xs) = x : goN xs
+        goN [] = []
 
     -- Unescape an unquoted string
     unescapeU = goX
