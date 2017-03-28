@@ -241,14 +241,14 @@ commandGroup g = fieldMod $ \p ->
 
 -- | Add a list of possible completion values.
 completeWith :: HasCompleter f => [String] -> Mod f a
-completeWith xs = completer (listCompleter xs)
+completeWith = completer . listCompleter
 
 -- | Add a bash completion action. Common actions include @file@ and
 -- @directory@. See
 -- <http://www.gnu.org/software/bash/manual/html_node/Programmable-Completion-Builtins.html#Programmable-Completion-Builtins>
 -- for a complete list.
 action :: HasCompleter f => String -> Mod f a
-action act = completer (bashCompleter act)
+action = completer . bashCompleter
 
 -- | Add a completer to an argument.
 --
