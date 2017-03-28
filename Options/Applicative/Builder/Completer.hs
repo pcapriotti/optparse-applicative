@@ -37,30 +37,38 @@ tryIO = try
 -- when seeking the close to the quote.
 requote :: String -> String
 requote s =
-  case s of
-    -- It's already strongly quoted, so we
-    -- can use it mostly as is, but we must
-    -- ensure it's closed off at the end and
-    -- there's no single quotes in the
-    -- middle which might confuse bash.
-    ('\'': rs) -> '\'' : foldr go "'" (unescapeN rs)
+  let
+    -- Bash doesn't appear to allow "mixed" escaping
+    -- in bash completions. So we don't have to really
+    -- worry about people swapping between strong and
+    -- weak quotes.
+    unescaped =
+      case s of
+        -- It's already strongly quoted, so we
+        -- can use it mostly as is, but we must
+        -- ensure it's closed off at the end and
+        -- there's no single quotes in the
+        -- middle which might confuse bash.
+        ('\'': rs) -> unescapeN rs
 
-    -- We're weakly quoted. Transform to strongly
-    -- quoted by unquoting the weakly quoted string
-    -- and adding ' to each end.
-    ('"': rs)  -> '\'' : foldr go "'" (unescapeD rs)
+        -- We're weakly quoted.
+        ('"': rs)  -> unescapeD rs
 
-    -- We're not quoted at all, So make it so.
-    -- We need to escape some characters like
-    -- spaces and quotations.
-    elsewise   -> '\'' : foldr go "'" (unescapeU elsewise)
+        -- We're not quoted at all.
+        -- We need to unescape some characters like
+        -- spaces and quotation marks.
+        elsewise   -> unescapeU elsewise
+  in
+    strong unescaped
 
   where
-    -- If there's a single quote inside the
-    -- command: exit from the strong quote and
-    -- emit it the quote escaped, then resume.
-    go '\'' t = "'\\''" ++ t
-    go h t    = h : t
+    strong ss = '\'' : foldr go "'" ss
+      where
+        -- If there's a single quote inside the
+        -- command: exit from the strong quote and
+        -- emit it the quote escaped, then resume.
+        go '\'' t = "'\\''" ++ t
+        go h t    = h : t
 
     -- Unescape a strongly quoted string
     -- We have two recursive functions, as we
