@@ -1,3 +1,7 @@
+## Unreleased
+
+- Adds `overrideHelp` and `overrideHelpDoc`, to allow custom help documentation.
+
 ## Version 0.13.2.0 (9 Mar 2017)
 
 - Updated dependency bounds.

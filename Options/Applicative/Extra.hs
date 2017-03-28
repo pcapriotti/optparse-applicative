@@ -5,6 +5,8 @@ module Options.Applicative.Extra (
   -- | This module contains high-level functions to run parsers.
   helper,
   hsubparser,
+  overrideHelp,
+  overrideHelpDoc,
   execParser,
   execParserMaybe,
   customExecParser,
@@ -56,6 +58,21 @@ hsubparser m = mkParser d g rdr
     rdr = CmdReader groupName cmds (fmap add_helper . subs)
     add_helper pinfo = pinfo
       { infoParser = infoParser pinfo <**> helper }
+
+-- | Overrides the help info of a 'Parser' - instead of using the help
+-- info from the 'Parser', it will use the provided list. The @Maybe
+-- String@ is used for the brief help text - use 'Nothing' to omit it
+-- from the brief help. The other two 'String's are used to specify the
+-- left hand and right hand side of the full help table.
+overrideHelp :: [(Maybe String, String, String)] -> Parser a -> Parser a
+overrideHelp hs = overrideHelpDoc (map stringsToDoc hs)
+  where
+    stringsToDoc (b, fl, fr) = (string <$> b, string fl, extractChunk (paragraph fr))
+
+-- | Like 'overrideHelp', but specified with
+-- 'Text.PrettyPrint.ANSI.Leijen.Doc' values.
+overrideHelpDoc :: [(Maybe Doc, Doc, Doc)] -> Parser a -> Parser a
+overrideHelpDoc = HelpP
 
 -- | Run a program description.
 --
