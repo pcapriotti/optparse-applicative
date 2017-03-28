@@ -23,7 +23,7 @@ listCompleter = listIOCompleter . pure
 
 bashCompleter :: String -> Completer
 bashCompleter action = Completer $ \word -> do
-  let cmd = unwords ["compgen", "-A", action, "--", quote word]
+  let cmd = unwords ["compgen", "-A", action, "--", requote word]
   result <- tryIO $ readProcess "bash" ["-c", cmd] ""
   return . lines . either (const []) id $ result
 
@@ -35,8 +35,8 @@ tryIO = try
 -- We need to do this so bash doesn't expand out any ~ or other
 -- chars we want to complete on, or emit an end of line error
 -- when seeking the close to the quote.
-quote :: String -> String
-quote s =
+requote :: String -> String
+requote s =
   case s of
     -- It's already strongly quoted, so we
     -- can use it mostly as is, but we must
@@ -48,11 +48,15 @@ quote s =
                 | otherwise
                -> '\'' : foldr go "'" rs
 
-    -- We're not strongly quoted. Make it so.
-    -- We could be either weakly quoted or not
-    -- quoted at all, but it looks like this
-    -- actually works well for us either way.
-    elsewise   -> '\'' : foldr go "'" elsewise
+    -- We're weakly quoted. Transform to strongly
+    -- quoted by unquoting the weakly quoted string
+    -- and adding ' to each end.
+    ('"': rs)  -> '\'' : foldr go "'" (unescapeD rs)
+
+    -- We're not quoted at all, So make it so.
+    -- We need to escape some characters like
+    -- spaces and quotations.
+    elsewise   -> '\'' : foldr go "'" (unescapeU elsewise)
 
   where
     -- If there's a single quote inside the
@@ -60,3 +64,31 @@ quote s =
     -- emit it the quote escaped, then resume.
     go '\'' t = "'\\''" ++ t
     go h t    = h : t
+
+    -- Unescape an unquoted string
+    unescapeU = goX
+      where
+        goX [] = []
+        goX ('\\' : x : xs) = x : goX xs
+        goX (x : xs) = x : goX xs
+
+    -- Unescape a weakly quoted string
+    unescapeD = goX
+      where
+        -- Reached an escape character
+        goX ('\\' : x : xs)
+          -- If it's true escapable, strip the
+          -- slashes, as we're going to strong
+          -- escape instead.
+          | x `elem` "$`\"\\\n" = x : goX xs
+          | otherwise = '\\' : x : goX xs
+        -- We've ended quoted section, so we
+        -- don't recurse on goX, it's done.
+        goX ('"' : xs)
+          = xs
+        -- Not done, but not a special character
+        -- just continue the fold.
+        goX (x : xs)
+          = x : goX xs
+        goX []
+          = []
