@@ -32,7 +32,11 @@ bashCompletionParser pinfo pprefs = complParser
         <*> option auto (long "bash-completion-index" `mappend` internal) )
       , failure <$>
           (bashCompletionScript <$>
-            strOption (long "bash-completion-script" `mappend` internal)) ]
+            strOption (long "bash-completion-script" `mappend` internal))
+      , failure <$>
+          (fishCompletionScript <$>
+            strOption (long "fish-completion-script" `mappend` internal))
+      ]
 
 bashCompletionQuery :: ParserInfo a -> ParserPrefs -> [String] -> Int -> String -> IO [String]
 bashCompletionQuery pinfo pprefs ws i _ = case runCompletion compl pprefs of
@@ -100,3 +104,42 @@ bashCompletionScript prog progn = return
   , "}"
   , ""
   , "complete -o filenames -F _" ++ progn ++ " " ++ progn ]
+
+{-
+/Note/: Fish Shell
+
+Derived from Drezil's post in #169.
+
+Fish shell's completions are quite simple, and although they do allow
+descriptions I can't see a way to apply them programatically (only one
+is allowed per call to complete, which in our case would apply the
+same description to all arguments).
+
+From fish manuals
+@
+commandline
+-c or --cut-at-cursor only print selection up until the current cursor position
+-o or --tokenize tokenize the selection and print one string-type token per line
+@
+
+We tokenize so that the call to count (and hence --bash-completion-index)
+gets the right number use cut-at-curstor to not bother sending anything
+after the cursor position, which allows for completion of the middle of
+words.
+-}
+fishCompletionScript :: String -> String -> IO [String]
+fishCompletionScript prog progn = return
+  [ " function _" ++ progn
+  , "    set -l cl (commandline --cut-at-cursor --tokenize)"
+  , "    set -l cn (count $cl)"
+  , "    set -l tmpline --bash-completion-index $cn"
+  , "    for arg in $cl"
+  , "      set tmpline $tmpline --bash-completion-word $arg"
+  , "    end"
+  , "    for opt in (" ++ prog ++ " $tmpline)"
+  , "      echo -e \"$opt\""
+  , "    end"
+  , "end"
+  , ""
+  , "complete --no-files --command " ++ progn ++ " --arguments '(_"  ++ progn ++  ")'"
+  ]
