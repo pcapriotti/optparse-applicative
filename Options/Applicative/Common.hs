@@ -277,7 +277,11 @@ treeMapParser g = simplify . go False False False g
       where r' = r || has_positional p1
     go m d r f (AltP p1 p2) = AltNode [go m d' r f p1, go m d' r f p2]
       where d' = d || has_default p1 || has_default p2
-    go _ d r f (BindP p _) = go True d r f p
+    go _ d r f (BindP p k) =
+      let go' = go True d r f p
+      in case evalParser p of
+        Nothing -> go'
+        Just aa -> MultNode [ go', go True d r f (k aa) ]
 
     has_positional :: Parser a -> Bool
     has_positional (NilP _) = False
