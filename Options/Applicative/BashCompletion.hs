@@ -166,14 +166,20 @@ Tab characters separate items from descriptions.
 fishCompletionScript :: String -> String -> IO [String]
 fishCompletionScript prog progn = return
   [ " function _" ++ progn
-  , "    set -l cl (commandline --cut-at-cursor --tokenize)"
-  , "    set -l cn (count $cl)"
+  , "    set -l cl (commandline --tokenize --current-process)"
+  , "    # Hack around fish issue #3934"
+  , "    set -l cn (commandline --tokenize --cut-at-cursor --current-process)"
+  , "    set -l cn (count $cn)"
   , "    set -l tmpline --bash-completion-enriched --bash-completion-index $cn"
   , "    for arg in $cl"
   , "      set tmpline $tmpline --bash-completion-word $arg"
   , "    end"
   , "    for opt in (" ++ prog ++ " $tmpline)"
-  , "      echo -e \"$opt\""
+  , "      if test -d $opt"
+  , "        echo -e \"$opt/\""
+  , "      else"
+  , "        echo -e \"$opt\""
+  , "      end"
   , "    end"
   , "end"
   , ""

@@ -5,9 +5,6 @@ module Options.Applicative.Help.Levenshtein (
 -- | Calculate the Damerau-Levenshtein edit distance
 --   between two lists (strings).
 --
---   Optparse can't really take on any dependencies
---   so we're bringing it in here.
---
 --   This is modified from
 --   https://wiki.haskell.org/Edit_distance
 --   and is originally from Lloyd Allison's paper
@@ -17,14 +14,6 @@ module Options.Applicative.Help.Levenshtein (
 --   Damerau-Levenshtein, which treats transposition
 --   of adjacent characters as one change instead of
 --   two.
---
---   The significant difference is an extra case to
---   doDiag, which checks if it's actually a
---   transposition.
---
---   As there are a few ugly partial function calls
---   there's property tests to ensure it doesn't
---   crash :/ and obeys the laws.
 editDistance :: Eq a => [a] -> [a] -> Int
 editDistance a b = last $
   case () of
