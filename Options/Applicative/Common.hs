@@ -162,31 +162,39 @@ searchOpt pprefs w = searchParser $ \opt -> do
     Just matcher -> lift $ fmap pure matcher
     Nothing -> mzero
 
-searchArg :: MonadP m => String -> Parser a
+searchArg :: MonadP m => ParserPrefs -> String -> Parser a
           -> NondetT (StateT Args m) (Parser a)
-searchArg arg = searchParser $ \opt -> do
+searchArg prefs arg = searchParser $ \opt -> do
   when (isArg (optMain opt)) cut
   case optMain opt of
     CmdReader _ _ f ->
-      case f arg of
-        Just subp -> do
-          lift . lift $ enterContext arg subp
+      case (f arg, prefBacktrack prefs) of
+        (Just subp, NoBacktrack) -> lift $ do
+          args <- get <* put []
+          fmap pure . lift $ enterContext arg subp *> runParserInfo subp args <* exitContext
+
+        (Just subp, Backtrack) -> fmap pure . lift . StateT $ \args -> do
+          enterContext arg subp *> runParser (infoPolicy subp) CmdStart (infoParser subp) args <* exitContext
+
+        (Just subp, SubparserInline) -> lift $ do
+          lift $ enterContext arg subp
           return $ infoParser subp
-        Nothing  -> mzero
+
+        (Nothing, _)  -> mzero
     ArgReader rdr ->
       fmap pure . lift . lift $ runReadM (crReader rdr) arg
     _ -> mzero
 
 stepParser :: MonadP m => ParserPrefs -> ArgPolicy -> String
            -> Parser a -> NondetT (StateT Args m) (Parser a)
-stepParser _ AllPositionals arg p =
-  searchArg arg p
+stepParser pprefs AllPositionals arg p =
+  searchArg pprefs arg p
 stepParser pprefs ForwardOptions arg p = case parseWord arg of
-  Just w -> searchOpt pprefs w p <|> searchArg arg p
-  Nothing -> searchArg arg p
+  Just w -> searchOpt pprefs w p <|> searchArg pprefs arg p
+  Nothing -> searchArg pprefs arg p
 stepParser pprefs _ arg p = case parseWord arg of
   Just w -> searchOpt pprefs w p
-  Nothing -> searchArg arg p
+  Nothing -> searchArg pprefs arg p
 
 
 -- | Apply a 'Parser' to a command line, and return a result and leftover

@@ -9,6 +9,7 @@ module Options.Applicative.Types (
   OptReader(..),
   OptProperties(..),
   OptVisibility(..),
+  Backtracking(..),
   ReadM(..),
   readerAsk,
   readerAbort,
@@ -95,19 +96,25 @@ data ParserInfo a = ParserInfo
 instance Functor ParserInfo where
   fmap f i = i { infoParser = fmap f (infoParser i) }
 
+data Backtracking
+  = Backtrack
+  | NoBacktrack
+  | SubparserInline
+  deriving (Eq, Show)
+
 -- | Global preferences for a top-level 'Parser'.
 data ParserPrefs = ParserPrefs
-  { prefMultiSuffix :: String    -- ^ metavar suffix for multiple options
-  , prefDisambiguate :: Bool     -- ^ automatically disambiguate abbreviations
-                                 -- (default: False)
-  , prefShowHelpOnError :: Bool  -- ^ always show help text on parse errors
-                                 -- (default: False)
-  , prefShowHelpOnEmpty :: Bool  -- ^ show the help text for a command or subcommand
-                                 -- if it fails with no input (default: False)
-  , prefBacktrack :: Bool        -- ^ backtrack to parent parser when a
-                                 -- subcommand fails (default: True)
-  , prefColumns :: Int           -- ^ number of columns in the terminal, used to
-                                 -- format the help page (default: 80)
+  { prefMultiSuffix :: String     -- ^ metavar suffix for multiple options
+  , prefDisambiguate :: Bool      -- ^ automatically disambiguate abbreviations
+                                  -- (default: False)
+  , prefShowHelpOnError :: Bool   -- ^ always show help text on parse errors
+                                  -- (default: False)
+  , prefShowHelpOnEmpty :: Bool   -- ^ show the help text for a command or subcommand
+                                  -- if it fails with no input (default: False)
+  , prefBacktrack :: Backtracking -- ^ backtrack to parent parser when a
+                                  -- subcommand fails (default: Backtrack)
+  , prefColumns :: Int            -- ^ number of columns in the terminal, used to
+                                  -- format the help page (default: 80)
   } deriving (Eq, Show)
 
 data OptName = OptShort !Char
