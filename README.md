@@ -16,7 +16,7 @@ context-sensitive bash completions.
 
 - [Introduction](#introduction)
 - [Quick Start](#quick-start)
-- [Basics](#Basics)
+- [Basics](#basics)
     - [Parsers](#parsers)
     - [Applicative](#applicative)
     - [Alternative](#alternative)
