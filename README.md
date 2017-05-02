@@ -165,7 +165,7 @@ Here is a parser for a mandatory option with an argument:
 ```haskell
 target :: Parser String
 target = strOption
-  (  long "target"
+  (  long "hello"
   <> metavar "TARGET"
   <> help "Target for the greeting" )
 ```
@@ -175,7 +175,7 @@ argument, with *long* option name "hello", *metavariable* "TARGET",
 and the given help text. This means that the `target` parser defined
 above will require an option like
 
-    --target world
+    --hello world
 
 on the command line. The metavariable and the help text will appear
 in the generated help text, but don't otherwise affect the behaviour
