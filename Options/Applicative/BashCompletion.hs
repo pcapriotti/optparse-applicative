@@ -121,7 +121,7 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
     show_names = filter_names . map showOption
 
     -- We only want to show a single line in the completion results description.
-    -- If there's a line break, it will come across as a different completion
+    -- If there was a line break, it would come across as a different completion
     -- possibility.
     render_line :: Int -> Doc -> String
     render_line len doc = case lines (displayS (renderPretty 1 len doc) "") of

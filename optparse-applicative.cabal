@@ -52,7 +52,7 @@ source-repository head
 
 library
   if impl(ghc >= 8)
-    ghc-options:       -Wall -Wno-redundant-constraints
+    ghc-options:       -Wall -Wno-redundant-constraints -Wcompat
   else
     ghc-options:       -Wall
 
