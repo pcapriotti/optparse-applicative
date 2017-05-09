@@ -1,3 +1,58 @@
+## Version 0.14.0.0 (09 Jun 2017)
+
+- Upgrade `str` and related builders to be polymorphic over
+  `IsString`. This allows `Text` and `Bytestring` to be used
+  naturally with `strOption` and `strArgument` and friends.
+
+  *Note:* This change may require additional type signatures
+          in cases where the reader was necessary for type
+          inference.
+
+- Export public API explicitly from `Options.Applicative`
+  instead of re-exporting other modules.
+
+  *Note:* Minor changes to exports were made in conjunction
+          to this change. `ParserHelp` no longer requires an
+          an extra import, and some internally used functions
+          from `Options.Applicative.Common` are no longer
+          exported from the main module.
+
+- Add Zsh and Fish completions with rich descriptions for
+  options and commands.
+
+  Use "--zsh-completion-script" and "fish-completion-script"
+  to generate scripts for these shells.
+
+- Fix bash completions with quoted sections, tilde expansions
+  and completions after "--".
+
+- Add suggestions to error message when a user mistypes a
+  command or option.
+
+- Add `style` builder, for styling option descriptions.
+
+- Improve error message for options when a required argument
+  is not supplied.
+
+- Fix #242 regarding flags with long options, where a flag given
+  a long option could be interpreted incorrectly.
+
+- Fix `noIntersperse` to be more like its namesakes in other
+  libraries. When on, options will be accepted until an argument
+  is passed, after which all options will be treated as positional
+  arguments.
+
+- Add `forwardOptions` builder, which will allow unknown options
+  and flags to be passed to an argument builder.
+  This is useful to mixed parsing environments, or wrappers to
+  other commands.
+
+- Add `Semigroup` instances for `Completer` and `Chunk`.
+
+- Forwards compatibility with `MonadFail` proposal.
+
+- Doc
+
 ## Version 0.13.2.0 (9 Mar 2017)
 
 - Updated dependency bounds.

@@ -2,6 +2,7 @@
 
 [![Continuous Integration status][status-png]][status]
 [![Hackage page (downloads and API reference)][hackage-png]][hackage]
+[![Hackage-Deps][hackage-deps-png]][hackage-deps]
 
 optparse-applicative is a haskell library for parsing options on
 the command line, providing a powerful [applicative] interface
@@ -1001,6 +1002,8 @@ simplified implementation.
  [blog]: http://paolocapriotti.com/blog/2012/04/27/applicative-option-parser/
  [hackage]: http://hackage.haskell.org/package/optparse-applicative
  [hackage-png]: http://img.shields.io/hackage/v/optparse-applicative.svg
+ [hackage-deps]: http://packdeps.haskellers.com/reverse/optparse-applicative
+ [hackage-deps-png]: https://img.shields.io/hackage-deps/v/optparse-applicative.svg
  [monoid]: http://hackage.haskell.org/package/base/docs/Data-Monoid.html
  [semigroup]: http://hackage.haskell.org/package/base/docs/Data-Semigroup.html
  [parsec]: http://hackage.haskell.org/package/parsec
