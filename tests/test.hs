@@ -282,6 +282,37 @@ prop_completion_multi = once . ioProperty $
     Failure _   -> return $ counterexample "unexpected failure" failed
     Success val -> return $ counterexample ("unexpected result " ++ show val) failed
 
+prop_completion_rich :: Property
+prop_completion_rich = once . ioProperty $
+  let p = (,)
+        <$> option readerAsk (long "foo" <> help "Fo?")
+        <*> option readerAsk (long "bar" <> help "Ba?")
+      i = info p idm
+      result = run i ["--bash-completion-enriched", "--bash-completion-index", "0"]
+  in case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      return $ ["--foo\tFo?", "--bar\tBa?"] === completions
+    Failure _   -> return $ counterexample "unexpected failure" failed
+    Success val -> return $ counterexample ("unexpected result " ++ show val) failed
+
+prop_completion_rich_lengths :: Property
+prop_completion_rich_lengths = once . ioProperty $
+  let p = (,)
+        <$> option readerAsk (long "foo" <> help "Foo hide this")
+        <*> option readerAsk (long "bar" <> help "Bar hide this")
+      i = info p idm
+      result = run i [ "--bash-completion-enriched"
+                     , "--bash-completion-index=0"
+                     , "--bash-completion-option-desc-length=3"
+                     , "--bash-completion-command-desc-length=30"]
+  in case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      return $ ["--foo\tFoo...", "--bar\tBar..."] === completions
+    Failure _   -> return $ counterexample "unexpected failure" failed
+    Success val -> return $ counterexample ("unexpected result " ++ show val) failed
+
 prop_bind_usage :: Property
 prop_bind_usage = once $
   let p :: Parser [String]
