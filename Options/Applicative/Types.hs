@@ -277,10 +277,13 @@ newtype Completer = Completer
 mkCompleter :: (String -> IO [String]) -> Completer
 mkCompleter = Completer
 
+instance Semigroup Completer where
+  (Completer c1) <> (Completer c2) =
+    Completer $ \s -> (++) <$> c1 s <*> c2 s
+
 instance Monoid Completer where
   mempty = Completer $ \_ -> return []
-  mappend (Completer c1) (Completer c2) =
-    Completer $ \s -> (++) <$> c1 s <*> c2 s
+  mappend = (<>)
 
 newtype CompletionResult = CompletionResult
   { execCompletion :: String -> IO String }
