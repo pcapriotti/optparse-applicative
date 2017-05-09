@@ -20,9 +20,15 @@ import Options.Applicative.Types
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
 
+-- | Provide basic or rich command completions
 data Richness
   = Standard
-  | Enriched
+  -- ^ Add no help descriptions to the completions
+  | Enriched Int Int
+  -- ^ Include tab separated description for options
+  --   and commands when available.
+  --   Takes option description length and command
+  --   description length.
   deriving (Eq, Ord, Show)
 
 bashCompletionParser :: ParserInfo a -> ParserPrefs -> Parser CompletionResult
@@ -33,8 +39,17 @@ bashCompletionParser pinfo pprefs = complParser
 
     complParser = asum
       [ failure <$>
-        (   bashCompletionQuery pinfo pprefs
-        <$> flag Standard Enriched (long "bash-completion-enriched" `mappend` internal)
+        (  bashCompletionQuery pinfo pprefs
+        -- To get rich completions, one just needs the first
+        -- command. To customise the lengths, use either of
+        -- the `desc-length` options.
+        -- zsh commands can go on a single line, so they might
+        -- want to be longer.
+        <$> ( flag' Enriched (long "bash-completion-enriched" `mappend` internal)
+                <*> option auto (long "bash-completion-option-desc-length" `mappend` internal `mappend` value 40)
+                <*> option auto (long "bash-completion-command-desc-length" `mappend` internal `mappend` value 40)
+          <|> pure Standard
+          )
         <*> (many . strOption) (long "bash-completion-word"
                                   `mappend` internal)
         <*> option auto (long "bash-completion-index" `mappend` internal) )
@@ -88,9 +103,9 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
     add_opt_help opt = case richness of
       Standard
         -> id
-      Enriched
+      Enriched len _
         -> fmap (\o -> let h = unChunk $ optHelp opt
-                       in  maybe o (\h' -> o ++ "\t" ++ render_line h') h)
+                       in  maybe o (\h' -> o ++ "\t" ++ render_line len h') h)
 
     -- When doing enriched completions, add the command description
     -- to the completion variables (tab separated).
@@ -98,9 +113,9 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
     add_cmd_help p = case richness of
       Standard
         -> id
-      Enriched
+      Enriched _ len
         -> fmap (\cmd -> let h = p cmd >>= unChunk . infoProgDesc
-                         in  maybe cmd (\h' -> cmd ++ "\t" ++ render_line h') h)
+                         in  maybe cmd (\h' -> cmd ++ "\t" ++ render_line len h') h)
 
     show_names :: [OptName] -> [String]
     show_names = filter_names . map showOption
@@ -108,8 +123,8 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
     -- We only want to show a single line in the completion results description.
     -- If there's a line break, it will come across as a different completion
     -- possibility.
-    render_line :: Doc -> String
-    render_line doc = case lines (displayS (renderPretty 0.4 80 doc) "") of
+    render_line :: Int -> Doc -> String
+    render_line len doc = case lines (displayS (renderPretty 1 len doc) "") of
       [] -> ""
       [x] -> x
       x : _ -> x ++ "..."
