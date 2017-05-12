@@ -205,7 +205,7 @@ runParser :: MonadP m => ArgPolicy -> IsCmdStart -> Parser a -> Args -> m (a, Ar
 runParser policy _ p ("--" : argt) | policy /= AllPositionals
                                    = runParser AllPositionals CmdCont p argt
 runParser policy isCmdStart p args = case args of
-  [] -> exitP isCmdStart p result
+  [] -> exitP isCmdStart policy p result
   (arg : argt) -> do
     prefs <- getPrefs
     (mp', args') <- do_step prefs arg argt
