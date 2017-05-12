@@ -65,7 +65,7 @@ data ParseError
   | UnknownError
   | MissingError IsCmdStart SomeParser
   | ExpectsArgError String
-  | UnexpectedError String SomeParser
+  | UnexpectedError String ArgPolicy SomeParser
 
 data IsCmdStart = CmdStart | CmdCont
   deriving Show

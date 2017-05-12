@@ -191,7 +191,7 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
       ExpectsArgError x
         -> stringChunk $ "The option `" ++ x ++ "` expects an argument."
 
-      UnexpectedError arg _
+      UnexpectedError arg _ _
         -> stringChunk msg'
           where
             --
@@ -206,7 +206,7 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
 
 
     suggestion_help = suggestionsHelp $ case msg of
-      UnexpectedError arg (SomeParser x)
+      UnexpectedError arg argPolicy (SomeParser x)
         --
         -- We have an unexpected argument and the parser which
         -- it's running over.
@@ -251,13 +251,23 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
             -- reader also ensure that it can be immediately
             -- reachable from where the error was given.
             opt_completions hinfo opt = case optMain opt of
-              OptReader ns _ _ -> fmap showOption ns
-              FlagReader ns _  -> fmap showOption ns
-              ArgReader _      -> []
-              CmdReader _ ns _  | hinfoUnreachableArgs hinfo
-                               -> []
-                                | otherwise
-                               -> ns
+              OptReader ns _ _
+                 | argPolicy /= AllPositionals
+                -> fmap showOption ns
+                 | otherwise
+                -> []
+              FlagReader ns _
+                 | argPolicy /= AllPositionals
+                -> fmap showOption ns
+                 | otherwise
+                -> []
+              ArgReader _
+                -> []
+              CmdReader _ ns _
+                 | hinfoUnreachableArgs hinfo
+                -> []
+                 | otherwise
+                -> ns
       _
         -> mempty
 
