@@ -46,7 +46,7 @@ class (Alternative m, MonadPlus m) => MonadP m where
   missingArgP :: ParseError -> Completer -> m a
   tryP :: m a -> m (Either ParseError a)
   errorP :: ParseError -> m a
-  exitP :: IsCmdStart -> Parser b -> Maybe a -> m a
+  exitP :: IsCmdStart -> ArgPolicy -> Parser b -> Maybe a -> m a
 
 newtype P a = P (ExceptT ParseError (StateT [Context] (Reader ParserPrefs)) a)
 
@@ -81,7 +81,7 @@ instance MonadP P where
 
   missingArgP e _ = errorP e
   tryP (P p) = P $ lift $ runExceptT p
-  exitP i p = P . maybe (throwE . MissingError i . SomeParser $ p) return
+  exitP i _ p = P . maybe (throwE . MissingError i . SomeParser $ p) return
   errorP = P . throwE
 
 hoistMaybe :: MonadPlus m => Maybe a -> m a
@@ -107,7 +107,7 @@ withReadM f = ReadM . mapReaderT (withExcept f') . unReadM
     f' e = e
 
 data ComplResult a
-  = ComplParser SomeParser
+  = ComplParser SomeParser ArgPolicy
   | ComplOption Completer
   | ComplResult a
 
@@ -122,7 +122,7 @@ instance Monad ComplResult where
   return = pure
   m >>= f = case m of
     ComplResult r -> f r
-    ComplParser p -> ComplParser p
+    ComplParser p a -> ComplParser p a
     ComplOption c -> ComplOption c
 
 newtype Completion a =
@@ -154,13 +154,13 @@ instance MonadP Completion where
 
   missingArgP _ = Completion . lift . lift . ComplOption
   tryP (Completion p) = Completion $ catchE (Right <$> p) (return . Left)
-  exitP _ p _ = Completion . lift . lift . ComplParser $ SomeParser p
+  exitP _ a p _ = Completion . lift . lift $ ComplParser (SomeParser p) a
   errorP = Completion . throwE
 
-runCompletion :: Completion r -> ParserPrefs -> Maybe (Either SomeParser Completer)
+runCompletion :: Completion r -> ParserPrefs -> Maybe (Either (SomeParser, ArgPolicy) Completer)
 runCompletion (Completion c) prefs = case runReaderT (runExceptT c) prefs of
   ComplResult _ -> Nothing
-  ComplParser p' -> Just $ Left p'
+  ComplParser p' a' -> Just $ Left (p', a')
   ComplOption compl -> Just $ Right compl
 
 -- A "ListT done right" implementation

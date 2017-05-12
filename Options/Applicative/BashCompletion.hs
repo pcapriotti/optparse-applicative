@@ -9,9 +9,9 @@ module Options.Applicative.BashCompletion
 
 import Control.Applicative
 import Prelude
-import Data.Foldable (asum)
-import Data.List (isPrefixOf)
-import Data.Maybe (fromMaybe, listToMaybe)
+import Data.Foldable ( asum )
+import Data.List ( isPrefixOf )
+import Data.Maybe ( fromMaybe, listToMaybe )
 
 import Options.Applicative.Builder
 import Options.Applicative.Common
@@ -66,16 +66,19 @@ bashCompletionParser pinfo pprefs = complParser
 
 bashCompletionQuery :: ParserInfo a -> ParserPrefs -> Richness -> [String] -> Int -> String -> IO [String]
 bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl pprefs of
-  Just (Left (SomeParser p)) -> list_options p
-  Just (Right c)             -> run_completer c
-  _                          -> return []
+  Just (Left (SomeParser p, a))
+    -> list_options a p
+  Just (Right c)
+    -> run_completer c
+  Nothing
+    -> return []
   where
     compl = runParserInfo pinfo (drop 1 ws')
 
-    list_options
+    list_options a
       = fmap concat
       . sequence
-      . mapParser opt_completions
+      . mapParser (opt_completions a)
 
     --
     -- Prior to 0.14 there was a subtle bug which would
@@ -85,17 +88,30 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
     -- We therefore now check to see that
     -- hinfoUnreachableArgs is off before running the
     -- completion for position arguments.
-    opt_completions hinfo opt = case optMain opt of
-      OptReader ns _ _ -> return . add_opt_help opt $ show_names ns
-      FlagReader ns _  -> return . add_opt_help opt $ show_names ns
-      ArgReader rdr     | hinfoUnreachableArgs hinfo
-                       -> return []
-                        | otherwise
-                       -> run_completer (crCompleter rdr)
-      CmdReader _ ns p  | hinfoUnreachableArgs hinfo
-                       -> return []
-                        | otherwise
-                       -> return . add_cmd_help p $ filter_names ns
+    --
+    -- For options and flags, ensure that the user
+    -- hasn't disabled them with `--`.
+    opt_completions argPolicy hinfo opt = case optMain opt of
+      OptReader ns _ _
+         | argPolicy /= AllPositionals
+        -> return . add_opt_help opt $ show_names ns
+         | otherwise
+        -> return []
+      FlagReader ns _
+         | argPolicy /= AllPositionals
+        -> return . add_opt_help opt $ show_names ns
+         | otherwise
+        -> return []
+      ArgReader rdr
+         | hinfoUnreachableArgs hinfo
+        -> return []
+         | otherwise
+        -> run_completer (crCompleter rdr)
+      CmdReader _ ns p
+         | hinfoUnreachableArgs hinfo
+        -> return []
+         | otherwise
+        -> return . add_cmd_help p $ filter_names ns
 
     -- When doing enriched completions, add any help specified
     -- to the completion variables (tab separated).
