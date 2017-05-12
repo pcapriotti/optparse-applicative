@@ -235,6 +235,22 @@ prop_completion = once . ioProperty $
     Failure _   -> return $ counterexample "unexpected failure" failed
     Success val -> return $ counterexample ("unexpected result " ++ show val) failed
 
+prop_completion_opt_after_double_dash :: Property
+prop_completion_opt_after_double_dash = once . ioProperty $
+  let p = (,)
+        <$> strOption (long "foo" <> value "")
+        <*> argument readerAsk (completeWith ["bar"])
+      i = info p idm
+      result = run i ["--bash-completion-index", "2"
+                    , "--bash-completion-word", "test"
+                    , "--bash-completion-word", "--"]
+  in case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      return $ ["bar"] === completions
+    Failure _   -> return $ counterexample "unexpected failure" failed
+    Success val -> return $ counterexample ("unexpected result " ++ show val) failed
+
 prop_completion_only_reachable :: Property
 prop_completion_only_reachable = once . ioProperty $
   let p :: Parser (String,String)

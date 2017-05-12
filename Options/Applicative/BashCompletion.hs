@@ -88,14 +88,17 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
     -- We therefore now check to see that
     -- hinfoUnreachableArgs is off before running the
     -- completion for position arguments.
+    --
+    -- For options and flags, ensure that the user
+    -- hasn't disabled them with `--`.
     opt_completions argPolicy hinfo opt = case optMain opt of
       OptReader ns _ _
-         | argPolicy /=  AllPositionals
+         | argPolicy /= AllPositionals
         -> return . add_opt_help opt $ show_names ns
          | otherwise
         -> return []
       FlagReader ns _
-         | argPolicy /=  AllPositionals
+         | argPolicy /= AllPositionals
         -> return . add_opt_help opt $ show_names ns
          | otherwise
         -> return []
