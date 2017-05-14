@@ -210,7 +210,7 @@ runParser policy isCmdStart p args = case args of
     prefs <- getPrefs
     (mp', args') <- do_step prefs arg argt
     case mp' of
-      Nothing -> hoistMaybe result <|> parseError arg policy p
+      Nothing -> hoistMaybe result <|> parseError arg p
       Just p' -> runParser (newPolicy arg) CmdCont p' args'
   where
     result = (,) <$> evalParser p <*> pure args
@@ -222,8 +222,8 @@ runParser policy isCmdStart p args = case args of
       NoIntersperse -> if isJust (parseWord a) then NoIntersperse else AllPositionals
       x             -> x
 
-parseError :: MonadP m => String -> ArgPolicy -> Parser x -> m a
-parseError arg policy = errorP . UnexpectedError arg policy . SomeParser
+parseError :: MonadP m => String -> Parser x -> m a
+parseError arg = errorP . UnexpectedError arg . SomeParser
 
 runParserInfo :: MonadP m => ParserInfo a -> Args -> m a
 runParserInfo i = runParserFully (infoPolicy i) (infoParser i)
@@ -233,7 +233,7 @@ runParserFully policy p args = do
   (r, args') <- runParser policy CmdStart p args
   case args' of
     []  -> return r
-    a:_ -> parseError a policy (pure ())
+    a:_ -> parseError a (pure ())
 
 -- | The default value of a 'Parser'.  This function returns an error if any of
 -- the options don't have a default value.
