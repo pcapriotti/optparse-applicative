@@ -62,7 +62,7 @@ instance Alternative P where
   P x <|> P y = P $ x <|> y
 
 instance Monad P where
-  return a = P $ return a
+  return = pure
   P x >>= k = P $ x >>= \a -> case k a of P y -> y
 
 instance MonadPlus P where
@@ -140,7 +140,7 @@ instance Alternative Completion where
   Completion x <|> Completion y = Completion $ x <|> y
 
 instance Monad Completion where
-  return a = Completion $ return a
+  return = pure
   Completion x >>= k = Completion $ x >>= \a -> case k a of Completion y -> y
 
 instance MonadPlus Completion where
