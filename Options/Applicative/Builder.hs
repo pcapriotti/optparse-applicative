@@ -130,17 +130,18 @@ str = fromString <$> readerAsk
 -- easily with
 -- @
 -- import qualified Data.Attoparsec.Text as A
+-- import qualified Data.Text as T
 -- attoparsecReader :: A.Parser a => ReadM a
--- attoparsecReader = eitherReader . A.parseOnly
+-- attoparsecReader p = eitherReader (A.parseOnly p . T.pack)
 -- @
-eitherReader :: IsString s => (s -> Either String a) -> ReadM a
-eitherReader f = str >>= either readerError return . f
+eitherReader :: (String -> Either String a) -> ReadM a
+eitherReader f = readerAsk >>= either readerError return . f
 
 -- | Convert a function producing a 'Maybe' into a reader.
-maybeReader :: IsString s => (s -> Maybe a) -> ReadM a
+maybeReader :: (String -> Maybe a) -> ReadM a
 maybeReader f = do
   arg  <- readerAsk
-  maybe (readerError $ "cannot parse value `" ++ arg ++ "'") return . f . fromString $ arg
+  maybe (readerError $ "cannot parse value `" ++ arg ++ "'") return . f $ arg
 
 -- | Null 'Option' reader. All arguments will fail validation.
 disabled :: ReadM a
