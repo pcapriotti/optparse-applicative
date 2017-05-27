@@ -51,10 +51,11 @@ source-repository head
   location: https://github.com/pcapriotti/optparse-applicative.git
 
 library
-  if impl(ghc >= 8)
-    ghc-options:       -Wall -Wno-redundant-constraints -Wcompat
-  else
-    ghc-options:       -Wall
+  ghc-options:         -Wall
+
+  -- See https://ghc.haskell.org/trac/ghc/wiki/Migration/8.0#base-4.9.0.0
+  if impl(ghc >= 8.0)
+    ghc-options:  -Wno-redundant-constraints -Wcompat -Wnoncanonical-monad-instances -Wnoncanonical-monadfail-instances
 
   exposed-modules:     Options.Applicative,
                        Options.Applicative.Arrows,
@@ -82,7 +83,7 @@ library
 
   if !impl(ghc >= 8)
     build-depends:     semigroups                      >= 0.10 && < 0.19
-
+                     , fail                            == 4.9.*
 
 test-suite optparse-applicative-tests
   type:                exitcode-stdio-1.0

@@ -48,6 +48,7 @@ import Control.Monad (ap, liftM, MonadPlus, mzero, mplus)
 import Control.Monad.Trans.Except (Except, throwE)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, ask)
+import qualified Control.Monad.Fail as Fail
 import Data.Semigroup hiding (Option)
 import Prelude
 
@@ -174,6 +175,9 @@ instance Alternative ReadM where
 instance Monad ReadM where
   return = pure
   ReadM r >>= f = ReadM $ r >>= unReadM . f
+  fail = Fail.fail
+
+instance Fail.MonadFail ReadM where
   fail = readerError
 
 instance MonadPlus ReadM where
@@ -239,14 +243,14 @@ newtype ParserM r = ParserM
   { runParserM :: forall x . (r -> Parser x) -> Parser x }
 
 instance Monad ParserM where
-  return x = ParserM $ \k -> k x
+  return = pure
   ParserM f >>= g = ParserM $ \k -> f (\x -> runParserM (g x) k)
 
 instance Functor ParserM where
   fmap = liftM
 
 instance Applicative ParserM where
-  pure = return
+  pure x = ParserM $ \k -> k x
   (<*>) = ap
 
 fromM :: ParserM a -> Parser a
