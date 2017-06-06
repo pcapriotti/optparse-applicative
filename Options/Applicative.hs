@@ -43,12 +43,12 @@ module Options.Applicative (
 
   -- ** Parser builders
   --
-  -- | This module contains utility functions and combinators to create parsers
+  -- | This section contains utility functions and combinators to create parsers
   -- for individual options.
   --
   -- Each parser builder takes an option modifier. A modifier can be created by
-  -- composing the basic modifiers provided by this module using the 'Monoid'
-  -- operations 'mempty' and 'mappend', or their aliases 'idm' and '<>'.
+  -- composing the basic modifiers provided by here using the 'Monoid' operations
+  -- 'mempty' and 'mappend', or their aliases 'idm' and '<>'.
   --
   -- For example:
   --
@@ -71,19 +71,18 @@ module Options.Applicative (
   subparser,
   hsubparser,
 
-  nullOption,
-
   abortOption,
   infoOption,
   helper,
 
   -- ** Modifiers
   --
-  -- | 'Parser' builders take a modifier, which can be composed as a monoid.
+  -- | 'Parser' builders take a modifier, which represents a modification of the
+  -- properties of an option, and can be composed as a monoid.
   --
   -- Contraints are often used to ensure that the modifiers can be sensibly applied.
   -- For example, positional arguments can't be specified by long or short names,
-  -- So the 'HasName' constraint ensures we have a flag or option.
+  -- so the 'HasName' constraint is used to ensure we have a flag or option.
   Mod,
 
   short,
@@ -113,7 +112,16 @@ module Options.Applicative (
 
   -- ** Readers
   --
-  -- | A collection of basic 'Option' readers.
+  -- | A reader is used by the 'option' and 'argument' builders to parse
+  -- the data passed by the user on the command line into a data type.
+  --
+  -- The most common are 'str' which is used for 'String' like types,
+  -- including 'ByteString' and 'Text'; and 'auto', which uses the 'Read'
+  -- typeclass, and is good for simple types like 'Int' or 'Double'.
+  --
+  -- More complex types can use the 'eitherReader' or 'maybeReader'
+  -- functions to pattern match or use a more expressive parser like a
+  -- member of the 'Parsec' family.
   ReadM,
 
   auto,
@@ -137,6 +145,7 @@ module Options.Applicative (
   -- 'InfoMod' modifiers.
   --
   info,
+
   ParserInfo(..),
 
   InfoMod,
@@ -154,13 +163,10 @@ module Options.Applicative (
 
   -- * Running parsers
   --
-  -- | The execParser family are used to run parsers
+  -- | The execParser family of functions are used to run parsers
   execParser,
   customExecParser,
   execParserPure,
-
-  execParserMaybe,
-  customExecParserMaybe,
 
   -- ** Handling parser results manually
   getParseResult,
@@ -186,33 +192,30 @@ module Options.Applicative (
   columns,
   defaultPrefs,
 
-  -- * Types
-  ParseError(..),
-  ParserFailure(..),
-  ParserResult(..),
-  CompletionResult(..),
-
-  -- * Internal
-
-  -- ** Completion Builders
+  -- * Completions
+  --
+  -- | optparse-applicative supplies a rich completion system for bash,
+  -- zsh, and fish shells.
+  --
+  -- 'Completer' functions are used for option and argument to complete
+  -- their values.
+  --
+  -- Use the 'completer' builder to use these.
+  -- The 'action' and 'completeWith' builders are also provided for
+  -- convenience, to use 'bashCompleter' and 'listCompleter' as a 'Mod'.
   Completer,
   mkCompleter,
   listIOCompleter,
+
   listCompleter,
   bashCompleter,
 
-  -- ** Parsers Runners
-  runParserInfo,
-  runParserFully,
-  runParser,
-  evalParser,
-
-  -- ** Low-level utilities
-  mapParser,
-  treeMapParser,
-  optionNames,
-  liftOpt,
-  showOption,
+  -- * Types
+  ParseError(..),
+  ParserHelp(..),
+  ParserFailure(..),
+  ParserResult(..),
+  CompletionResult(..)
 
   ) where
 
@@ -223,5 +226,6 @@ import Options.Applicative.Common
 import Options.Applicative.Builder
 import Options.Applicative.Builder.Completer
 import Options.Applicative.Extra
+import Options.Applicative.Types
 
 {-# ANN module "HLint: ignore Use import/export shortcut" #-}

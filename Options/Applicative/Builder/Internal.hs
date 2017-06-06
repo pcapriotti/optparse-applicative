@@ -118,7 +118,7 @@ instance Semigroup (DefaultProp a) where
 --
 -- Modifiers are instances of 'Monoid', and can be composed as such.
 --
--- You rarely need to deal with modifiers directly, as most of the times it is
+-- One rarely needs to deal with modifiers directly, as most of the times it is
 -- sufficient to pass them to builders (such as 'strOption' or 'flag') to
 -- create options (see 'Options.Applicative.Builder').
 data Mod f a = Mod (f a -> f a)

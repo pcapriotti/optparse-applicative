@@ -275,9 +275,11 @@ instance Alternative Parser where
   many p = fromM $ manyM p
   some p = fromM $ (:) <$> oneM p <*> manyM p
 
+-- | A shell complete function.
 newtype Completer = Completer
   { runCompleter :: String -> IO [String] }
 
+-- | Smart constructor for a 'Completer'
 mkCompleter :: (String -> IO [String]) -> Completer
 mkCompleter = Completer
 

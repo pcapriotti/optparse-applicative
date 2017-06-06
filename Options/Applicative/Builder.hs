@@ -118,9 +118,6 @@ auto = eitherReader $ \arg -> case reads arg of
 -- | String 'Option' reader.
 --
 --   Polymorphic over the `IsString` type class since 0.14.
---
---   For a non-polymorphic version returning 'String', use
---   `readerAsk`.
 str :: IsString s => ReadM s
 str = fromString <$> readerAsk
 
