@@ -47,7 +47,8 @@ module Options.Applicative.Common (
   -- * Low-level utilities
   mapParser,
   treeMapParser,
-  optionNames
+  optionNames,
+  stepParser
   ) where
 
 import Control.Applicative
