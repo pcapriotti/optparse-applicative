@@ -38,6 +38,13 @@ import Options.Applicative.Internal
 import Options.Applicative.Types
 
 -- | A hidden \"helper\" option which always fails.
+--
+-- A common usage pattern is to apply this applicatively when
+-- creating a 'ParserInfo'
+--
+-- > opts :: ParserInfo Sample
+-- > opts = info (sample <**> helper) mempty
+
 helper :: Parser (a -> a)
 helper = abortOption ShowHelpText $ mconcat
   [ long "help"

@@ -14,13 +14,22 @@ import System.Process (readProcess)
 
 import Options.Applicative.Types
 
+-- | Create a 'Completer' from an IO action
 listIOCompleter :: IO [String] -> Completer
 listIOCompleter ss = Completer $ \s ->
   filter (isPrefixOf s) <$> ss
 
+-- | Create a 'Completer' from a constant
+-- list of strings.
 listCompleter :: [String] -> Completer
 listCompleter = listIOCompleter . pure
 
+-- | Run a compgen completion action.
+--
+-- Common actions include @file@ and
+-- @directory@. See
+-- <http://www.gnu.org/software/bash/manual/html_node/Programmable-Completion-Builtins.html#Programmable-Completion-Builtins>
+-- for a complete list.
 bashCompleter :: String -> Completer
 bashCompleter action = Completer $ \word -> do
   let cmd = unwords ["compgen", "-A", action, "--", requote word]

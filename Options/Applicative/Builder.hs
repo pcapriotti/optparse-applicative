@@ -118,9 +118,6 @@ auto = eitherReader $ \arg -> case reads arg of
 -- | String 'Option' reader.
 --
 --   Polymorphic over the `IsString` type class since 0.14.
---
---   For a non-polymorphic version returning 'String', use
---   `readerAsk`.
 str :: IsString s => ReadM s
 str = fromString <$> readerAsk
 
@@ -128,12 +125,11 @@ str = fromString <$> readerAsk
 --
 -- As an example, one can create a ReadM from an attoparsec Parser
 -- easily with
--- @
--- import qualified Data.Attoparsec.Text as A
--- import qualified Data.Text as T
--- attoparsecReader :: A.Parser a => ReadM a
--- attoparsecReader p = eitherReader (A.parseOnly p . T.pack)
--- @
+--
+-- > import qualified Data.Attoparsec.Text as A
+-- > import qualified Data.Text as T
+-- > attoparsecReader :: A.Parser a => ReadM a
+-- > attoparsecReader p = eitherReader (A.parseOnly p . T.pack)
 eitherReader :: (String -> Either String a) -> ReadM a
 eitherReader f = readerAsk >>= either readerError return . f
 
@@ -217,6 +213,7 @@ style x = optionMod $ \p ->
 -- | Add a command to a subparser option.
 --
 -- Suggested usage for multiple commands is to add them to a single subparser. e.g.
+--
 -- @
 -- sample :: Parser Sample
 -- sample = subparser
