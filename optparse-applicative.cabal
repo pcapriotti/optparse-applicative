@@ -1,5 +1,5 @@
 name:                optparse-applicative
-version:             0.13.2.0
+version:             0.14.0.0
 synopsis:            Utilities and combinators for parsing command line options
 description:
     optparse-applicative is a haskell library for parsing options
@@ -17,7 +17,7 @@ description:
 license:             BSD3
 license-file:        LICENSE
 author:              Paolo Capriotti, Huw Campbell
-maintainer:          paolo@capriotti.io
+maintainer:          huw.campbell@gmail.com
 copyright:           (c) 2012-2017 Paolo Capriotti <paolo@capriotti.io>
 category:            System, CLI, Options, Parsing
 build-type:          Simple
