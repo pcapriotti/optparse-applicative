@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Options.Applicative.Builder (
   -- * Parser builders
   --
@@ -106,6 +107,10 @@ import Options.Applicative.Common
 import Options.Applicative.Types
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
+
+#if __GLASGOW_HASKELL__ >= 800
+import Options.Applicative.Builder.TypeErrors ()
+#endif
 
 -- Readers --
 
