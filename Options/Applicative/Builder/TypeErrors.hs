@@ -38,7 +38,8 @@ instance TypeError
 
 instance TypeError
   ('Text "Can't set metavars for `flag` builders." ':$$:
-   'Text "Flags don't have an argument which can be displayed as a metavar.")
+   'Text "Flags don't have an argument which can be displayed as a metavar." ':$$:
+   'Text "The long and short names will be displayed instead.")
          => HasMetavar FlagFields where
   hasMetavarDummy _ = error "unreachable"
 

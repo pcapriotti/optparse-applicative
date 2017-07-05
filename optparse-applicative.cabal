@@ -73,7 +73,7 @@ library
                        Options.Applicative.Help.Types,
                        Options.Applicative.Types,
                        Options.Applicative.Internal
-  if !impl(ghc >= 8)
+  if impl(ghc >= 8)
      other-modules:    Options.Applicative.Builder.TypeErrors
 
 
