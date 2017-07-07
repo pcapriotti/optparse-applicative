@@ -962,7 +962,7 @@ and the `pure` value should instead be wrapped parenthetically).
   ```haskell
   import Options.Applicative
 
-  data S3orFile = S3 BucketKey | File FilsePath
+  data S3orFile = S3 BucketKey | File FilePath
 
   s3Read, fileRead :: ReadM S3orFile
   s3Read = S3 <$> ...
