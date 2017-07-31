@@ -35,7 +35,7 @@ import Options.Applicative.Types
 data OptionFields a = OptionFields
   { optNames :: [OptName]
   , optCompleter :: Completer
-  , optNoArgError :: ParseError
+  , optNoArgError :: String -> ParseError
   , optGroup :: Maybe String }
 
 data FlagFields a = FlagFields
@@ -138,7 +138,7 @@ instance Semigroup (DefaultProp a) where
 --
 -- Modifiers are instances of 'Monoid', and can be composed as such.
 --
--- You rarely need to deal with modifiers directly, as most of the times it is
+-- One rarely needs to deal with modifiers directly, as most of the times it is
 -- sufficient to pass them to builders (such as 'strOption' or 'flag') to
 -- create options (see 'Options.Applicative.Builder').
 data Mod f a = Mod (f a -> f a)
@@ -165,7 +165,9 @@ baseProps = OptProperties
   { propMetaVar = ""
   , propVisibility = Visible
   , propHelp = mempty
-  , propShowDefault = Nothing }
+  , propShowDefault = Nothing
+  , propDescMod = Nothing
+  }
 
 mkCommand :: Mod CommandFields a -> (Maybe String, [String], String -> Maybe (ParserInfo a))
 mkCommand m = (grp, map fst cmds, (`lookup` cmds))

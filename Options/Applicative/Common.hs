@@ -55,8 +55,7 @@ import Control.Monad (guard, mzero, msum, when, liftM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), get, put, runStateT)
 import Data.List (isPrefixOf)
-import Data.Maybe (maybeToList, isJust)
-import Data.Semigroup hiding (Option)
+import Data.Maybe (maybeToList, isJust, isNothing)
 import Prelude
 
 import Options.Applicative.Internal
@@ -80,30 +79,17 @@ isOptionPrefix _ _ = False
 liftOpt :: Option a -> Parser a
 liftOpt = OptP
 
-data MatchResult
-  = NoMatch
-  | Match (Maybe String)
-
-instance Monoid MatchResult where
-  mempty = NoMatch
-  mappend = (<>)
-
-instance Semigroup MatchResult where
-  m@(Match _) <> _ = m
-  _           <> m = m
-
 argMatches :: MonadP m => OptReader a -> String
            -> Maybe (StateT Args m a)
 argMatches opt arg = case opt of
-  ArgReader _ rdr -> Just $ do
-    result <- lift $ runReadM (crReader rdr) arg
-    return result
+  ArgReader _ rdr -> Just . lift $
+    runReadM (crReader rdr) arg
   CmdReader _ _ f ->
     flip fmap (f arg) $ \subp -> StateT $ \args -> do
       prefs <- getPrefs
       let runSubparser
             | prefBacktrack prefs = \i a ->
-                runParser (getPolicy i) CmdStart (infoParser i) a
+                runParser (infoPolicy i) CmdStart (infoParser i) a
             | otherwise = \i a
             -> (,) <$> runParserInfo i a <*> pure []
       enterContext arg subp *> runSubparser subp args <* exitContext
@@ -116,12 +102,18 @@ optMatches disambiguate opt (OptWord arg1 val) = case opt of
     Just $ do
       args <- get
       let mb_args = uncons $ maybeToList val ++ args
-      let missing_arg = lift $ missingArgP no_arg_err (crCompleter rdr)
-      (arg', args') <- maybe missing_arg return mb_args
+      let missing_arg = missingArgP (no_arg_err $ showOption arg1) (crCompleter rdr)
+      (arg', args') <- maybe (lift missing_arg) return mb_args
       put args'
       lift $ runReadM (withReadM (errorFor arg1) (crReader rdr)) arg'
+
   FlagReader _ names x -> do
     guard $ has_name arg1 names
+    -- #242 Flags/switches succeed incorrectly when given an argument.
+    -- We'll not match a long option for a flag if there's a word attached.
+    -- This was revealing an implementation detail as
+    -- `--foo=val` was being parsed as `--foo -val`, which is gibberish.
+    guard $ is_short arg1 || isNothing val
     Just $ do
       args <- get
       let val' = (\s -> '-' : s) <$> val
@@ -130,6 +122,9 @@ optMatches disambiguate opt (OptWord arg1 val) = case opt of
   _ -> Nothing
   where
     errorFor name msg = "option " ++ showOption name ++ ": " ++ msg
+
+    is_short (OptShort _) = True
+    is_short (OptLong _)  = False
 
     has_name a
       | disambiguate = any (isOptionPrefix a)
@@ -193,52 +188,52 @@ searchArg arg = searchParser $ \opt -> do
 
 stepParser :: MonadP m => ParserPrefs -> ArgPolicy -> String
            -> Parser a -> NondetT (StateT Args m) (Parser a)
-stepParser pprefs SkipOpts arg p = case parseWord arg of
+stepParser _ AllPositionals arg p =
+  searchArg arg p
+stepParser pprefs ForwardOptions arg p = case parseWord arg of
+  Just w -> searchOpt pprefs w p <|> searchArg arg p
+  Nothing -> searchArg arg p
+stepParser pprefs _ arg p = case parseWord arg of
   Just w -> searchOpt pprefs w p
   Nothing -> searchArg arg p
-stepParser _ AllowOpts arg p =
-  searchArg arg p
+
 
 -- | Apply a 'Parser' to a command line, and return a result and leftover
 -- arguments.  This function returns an error if any parsing error occurs, or
 -- if any options are missing and don't have a default value.
 runParser :: MonadP m => ArgPolicy -> IsCmdStart -> Parser a -> Args -> m (a, Args)
-runParser SkipOpts _ p ("--" : argt) = runParser AllowOpts CmdCont p argt
+runParser policy _ p ("--" : argt) | policy /= AllPositionals
+                                   = runParser AllPositionals CmdCont p argt
 runParser policy isCmdStart p args = case args of
-  [] -> exitP isCmdStart p result
+  [] -> exitP isCmdStart policy p result
   (arg : argt) -> do
     prefs <- getPrefs
     (mp', args') <- do_step prefs arg argt
     case mp' of
-      Nothing -> hoistMaybe result <|> parseError arg
-      Just p' -> runParser policy CmdCont p' args'
+      Nothing -> hoistMaybe result <|> parseError arg p
+      Just p' -> runParser (newPolicy arg) CmdCont p' args'
   where
     result = (,) <$> evalParser p <*> pure args
     do_step prefs arg argt = (`runStateT` argt)
                            . disamb (not (prefDisambiguate prefs))
                            $ stepParser prefs policy arg p
 
-parseError :: MonadP m => String -> m a
-parseError arg = errorP . ErrorMsg $ msg
-  where
-    msg = case arg of
-      ('-':_) -> "Invalid option `" ++ arg ++ "'"
-      _       -> "Invalid argument `" ++ arg ++ "'"
+    newPolicy a = case policy of
+      NoIntersperse -> if isJust (parseWord a) then NoIntersperse else AllPositionals
+      x             -> x
 
-getPolicy :: ParserInfo a -> ArgPolicy
-getPolicy i = if infoIntersperse i
-  then SkipOpts
-  else AllowOpts
+parseError :: MonadP m => String -> Parser x -> m a
+parseError arg = errorP . UnexpectedError arg . SomeParser
 
 runParserInfo :: MonadP m => ParserInfo a -> Args -> m a
-runParserInfo i = runParserFully (getPolicy i) (infoParser i)
+runParserInfo i = runParserFully (infoPolicy i) (infoParser i)
 
 runParserFully :: MonadP m => ArgPolicy -> Parser a -> Args -> m a
 runParserFully policy p args = do
   (r, args') <- runParser policy CmdStart p args
   case args' of
     []  -> return r
-    a:_ -> parseError a
+    a:_ -> parseError a (pure ())
 
 -- | The default value of a 'Parser'.  This function returns an error if any of
 -- the options don't have a default value.
@@ -252,7 +247,7 @@ evalParser (BindP p k) = evalParser p >>= evalParser . k
 -- | Map a polymorphic function over all the options of a parser, and collect
 -- the results in a list.
 mapParser :: (forall x. OptHelpInfo -> Option x -> b)
-              -> Parser a -> [b]
+          -> Parser a -> [b]
 mapParser f = flatten . treeMapParser f
   where
     flatten (Leaf x) = [x]
@@ -263,25 +258,44 @@ mapParser f = flatten . treeMapParser f
 treeMapParser :: (forall x . OptHelpInfo -> Option x -> b)
           -> Parser a
           -> OptTree b
-treeMapParser g = simplify . go False False g
+treeMapParser g = simplify . go False False False g
   where
     has_default :: Parser a -> Bool
     has_default p = isJust (evalParser p)
 
-    go :: Bool -> Bool
+    go :: Bool -> Bool -> Bool
        -> (forall x . OptHelpInfo -> Option x -> b)
        -> Parser a
        -> OptTree b
-    go _ _ _ (NilP _) = MultNode []
-    go m d f (OptP opt)
+    go _ _ _ _ (NilP _) = MultNode []
+    go m d r f (OptP opt)
       | optVisibility opt > Internal
-      = Leaf (f (OptHelpInfo m d) opt)
+      = Leaf (f (OptHelpInfo m d r) opt)
       | otherwise
       = MultNode []
-    go m d f (MultP p1 p2) = MultNode [go m d f p1, go m d f p2]
-    go m d f (AltP p1 p2) = AltNode [go m d' f p1, go m d' f p2]
+    go m d r f (MultP p1 p2) = MultNode [go m d r f p1, go m d r' f p2]
+      where r' = r || has_positional p1
+    go m d r f (AltP p1 p2) = AltNode [go m d' r f p1, go m d' r f p2]
       where d' = d || has_default p1 || has_default p2
-    go _ d f (BindP p _) = go True d f p
+    go _ d r f (BindP p k) =
+      let go' = go True d r f p
+      in case evalParser p of
+        Nothing -> go'
+        Just aa -> MultNode [ go', go True d r f (k aa) ]
+
+    has_positional :: Parser a -> Bool
+    has_positional (NilP _) = False
+    has_positional (OptP p) = (is_positional . optMain) p
+    has_positional (MultP p1 p2) = has_positional p1 || has_positional p2
+    has_positional (AltP p1 p2) = has_positional p1 || has_positional p2
+    has_positional (BindP p _) = has_positional p
+
+    is_positional :: OptReader a -> Bool
+    is_positional (OptReader {})  = False
+    is_positional (FlagReader {}) = False
+    is_positional (ArgReader {})  = True
+    is_positional (CmdReader {})  = True
+
 
 simplify :: OptTree a -> OptTree a
 simplify (Leaf x) = Leaf x

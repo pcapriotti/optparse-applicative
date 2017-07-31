@@ -1,4 +1,7 @@
-Invalid option `-zzz'
+Invalid option `-zello'
+
+Did you mean this?
+    hello
 
 foo
 

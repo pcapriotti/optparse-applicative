@@ -41,6 +41,7 @@ module Options.Applicative.Builder (
   ParseError(..),
   hidden,
   internal,
+  style,
   command,
   commandGroup,
   group,
@@ -73,6 +74,7 @@ module Options.Applicative.Builder (
   progDescDoc,
   failureCode,
   noIntersperse,
+  forwardOptions,
   info,
 
   -- * Builder for 'ParserPrefs'
@@ -97,6 +99,7 @@ module Options.Applicative.Builder (
 
 import Control.Applicative
 import Data.Semigroup hiding (option)
+import Data.String (fromString, IsString)
 
 import Options.Applicative.Builder.Completer
 import Options.Applicative.Builder.Internal
@@ -105,7 +108,7 @@ import Options.Applicative.Types
 import Options.Applicative.Help.Pretty hiding (group)
 import Options.Applicative.Help.Chunk
 
--- readers --
+-- Readers --
 
 -- | 'Option' reader based on the 'Read' type class.
 auto :: Read a => ReadM a
@@ -114,17 +117,28 @@ auto = eitherReader $ \arg -> case reads arg of
   _         -> Left $ "cannot parse value `" ++ arg ++ "'"
 
 -- | String 'Option' reader.
-str :: ReadM String
-str = readerAsk
+--
+--   Polymorphic over the `IsString` type class since 0.14.
+str :: IsString s => ReadM s
+str = fromString <$> readerAsk
 
--- | Convert a function in the 'Either' monad to a reader.
+-- | Convert a function producing an 'Either' into a reader.
+--
+-- As an example, one can create a ReadM from an attoparsec Parser
+-- easily with
+--
+-- > import qualified Data.Attoparsec.Text as A
+-- > import qualified Data.Text as T
+-- > attoparsecReader :: A.Parser a => ReadM a
+-- > attoparsecReader p = eitherReader (A.parseOnly p . T.pack)
 eitherReader :: (String -> Either String a) -> ReadM a
 eitherReader f = readerAsk >>= either readerError return . f
 
--- | Convert a function in the 'Maybe' monad to a reader.
+-- | Convert a function producing a 'Maybe' into a reader.
 maybeReader :: (String -> Maybe a) -> ReadM a
-maybeReader f = eitherReader $ \arg ->
-  maybe (Left $ "cannot parse value `" ++ arg ++ "'") pure . f $ arg
+maybeReader f = do
+  arg  <- readerAsk
+  maybe (readerError $ "cannot parse value `" ++ arg ++ "'") return . f $ arg
 
 -- | Null 'Option' reader. All arguments will fail validation.
 disabled :: ReadM a
@@ -146,6 +160,9 @@ long = fieldMod . name . OptLong
 -- do not use it with combinators such as 'some' or 'many', as
 -- these combinators continue until a failure occurs.
 -- Careless use will thus result in a hang.
+--
+-- To display the default value, combine with showDefault or
+-- showDefaultWith.
 value :: HasValue f => a -> Mod f a
 value x = Mod id (DefaultProp (Just x) Nothing) id
 
@@ -168,7 +185,7 @@ helpDoc doc = optionMod $ \p -> p { propHelp = Chunk doc }
 
 -- | Specify the error to display when no argument is provided to this option.
 noArgError :: ParseError -> Mod OptionFields a
-noArgError e = fieldMod $ \p -> p { optNoArgError = e }
+noArgError e = fieldMod $ \p -> p { optNoArgError = const e }
 
 -- | Specify a metavariable for the argument.
 --
@@ -182,12 +199,41 @@ hidden :: Mod f a
 hidden = optionMod $ \p ->
   p { propVisibility = min Hidden (propVisibility p) }
 
+-- | Apply a function to the option description in the usage text.
+--
+-- > import Options.Applicative.Help
+-- > flag' () (short 't' <> style bold)
+--
+-- /NOTE/: This builder is more flexible than its name and example
+-- allude. One of the motivating examples for its addition was to
+-- used `const` to completely replace the usage text of an option.
+style :: ( Doc -> Doc ) -> Mod f a
+style x = optionMod $ \p ->
+  p { propDescMod = Just x }
+
 -- | Add a command to a subparser option.
+--
+-- Suggested usage for multiple commands is to add them to a single subparser. e.g.
+--
+-- @
+-- sample :: Parser Sample
+-- sample = subparser
+--        ( command "hello"
+--          (info hello (progDesc "Print greeting"))
+--       <> command "goodbye"
+--          (info goodbye (progDesc "Say goodbye"))
+--        )
+-- @
 command :: String -> ParserInfo a -> Mod CommandFields a
 command cmd pinfo = fieldMod $ \p ->
   p { cmdCommands = (cmd, pinfo) : cmdCommands p }
 
 -- | Add a description to a group of commands.
+--
+-- Advanced feature for separating logical groups of commands on the parse line.
+--
+-- If using the same `metavar` for each group of commands, it may yield a more
+-- attractive usage text combined with `hidden` for some groups.
 commandGroup :: String -> Mod CommandFields a
 commandGroup g = fieldMod $ \p ->
   p { cmdGroup = Just g }
@@ -198,14 +244,14 @@ group groupName = fieldMod $ setGroup groupName
 
 -- | Add a list of possible completion values.
 completeWith :: HasCompleter f => [String] -> Mod f a
-completeWith xs = completer (listCompleter xs)
+completeWith = completer . listCompleter
 
 -- | Add a bash completion action. Common actions include @file@ and
 -- @directory@. See
 -- <http://www.gnu.org/software/bash/manual/html_node/Programmable-Completion-Builtins.html#Programmable-Completion-Builtins>
 -- for a complete list.
 action :: HasCompleter f => String -> Mod f a
-action act = completer (bashCompleter act)
+action = completer . bashCompleter
 
 -- | Add a completer to an argument.
 --
@@ -233,13 +279,17 @@ argument p (Mod f d g) = mkParser d g (ArgReader grp rdr)
     rdr = CReader compl p
 
 -- | Builder for a 'String' argument.
-strArgument :: Mod ArgumentFields String -> Parser String
+strArgument :: IsString s => Mod ArgumentFields s -> Parser s
 strArgument = argument str
 
 -- | Builder for a flag parser.
 --
 -- A flag that switches from a \"default value\" to an \"active value\" when
 -- encountered. For a simple boolean value, use `switch` instead.
+--
+-- /Note/: Because this parser will never fail, it can not be used with
+-- combinators such as 'some' or 'many', as these combinators continue until
+-- a failure occurs. See @flag'@.
 flag :: a                         -- ^ default value
      -> a                         -- ^ active value
      -> Mod FlagFields a          -- ^ option modifier
@@ -255,7 +305,12 @@ flag defv actv m = flag' actv m <|> pure defv
 --
 -- > length <$> many (flag' () (short 't'))
 --
--- is a parser that counts the number of "-t" arguments on the command line.
+-- is a parser that counts the number of "-t" arguments on the command line,
+-- alternatively
+--
+-- > flag' True (long "on") <|> flag' False (long "off")
+--
+-- will require the user to enter '--on' or '--off' on the command line.
 flag' :: a                         -- ^ active value
       -> Mod FlagFields a          -- ^ option modifier
       -> Parser a
@@ -266,6 +321,10 @@ flag' actv (Mod f d g) = mkParser d g rdr
                         (flagActive fields)
 
 -- | Builder for a boolean flag.
+--
+-- /Note/: Because this parser will never fail, it can not be used with
+-- combinators such as 'some' or 'many', as these combinators continue until
+-- a failure occurs. See @flag'@.
 --
 -- > switch = flag False True
 switch :: Mod FlagFields Bool -> Parser Bool
@@ -287,7 +346,7 @@ infoOption :: String -> Mod OptionFields (a -> a) -> Parser (a -> a)
 infoOption = abortOption . InfoMsg
 
 -- | Builder for an option taking a 'String' argument.
-strOption :: Mod OptionFields String -> Parser String
+strOption :: IsString s => Mod OptionFields s -> Parser s
 strOption = option str
 
 -- | Same as 'option'.
@@ -296,11 +355,17 @@ nullOption :: ReadM a -> Mod OptionFields a -> Parser a
 nullOption = option
 
 -- | Builder for an option using the given reader.
+--
+-- This is a regular option, and should always have either a @long@ or
+-- @short@ name specified in the modifiers (or both).
+--
+-- > nameParser = option str ( long "name" <> short 'n' )
+--
 option :: ReadM a -> Mod OptionFields a -> Parser a
 option r m = mkParser d g rdr
   where
     Mod f d g = metavar "ARG" `mappend` m
-    fields = f (OptionFields [] mempty (ErrorMsg "") Nothing)
+    fields = f (OptionFields [] mempty ExpectsArgError Nothing)
     crdr = CReader (optCompleter fields) r
     rdr = OptReader (optGroup fields) (optNames fields) crdr (optNoArgError fields)
 
@@ -354,9 +419,22 @@ progDescDoc doc = InfoMod $ \i -> i { infoProgDesc = Chunk doc }
 failureCode :: Int -> InfoMod a
 failureCode n = InfoMod $ \i -> i { infoFailureCode = n }
 
--- | Disable parsing of regular options after arguments
+-- | Disable parsing of regular options after arguments. After a positional
+--   argument is parsed, all remaining options and arguments will be treated
+--   as a positional arguments. Not recommended in general as users often
+--   expect to be able to freely intersperse regular options and flags within
+--   command line options.
 noIntersperse :: InfoMod a
-noIntersperse = InfoMod $ \p -> p { infoIntersperse = False }
+noIntersperse = InfoMod $ \p -> p { infoPolicy = NoIntersperse }
+
+-- | Intersperse matched options and arguments normally, but allow unmatched
+--   options to be treated as positional arguments.
+--   This is sometimes useful if one is wrapping a third party cli tool and
+--   needs to pass options through, while also providing a handful of their
+--   own options. Not recommended in general as typos by the user may not
+--   yield a parse error and cause confusion.
+forwardOptions :: InfoMod a
+forwardOptions = InfoMod $ \p -> p { infoPolicy = ForwardOptions }
 
 -- | Create a 'ParserInfo' given a 'Parser' and a modifier.
 info :: Parser a -> InfoMod a -> ParserInfo a
@@ -369,7 +447,7 @@ info parser m = applyInfoMod m base
       , infoHeader = mempty
       , infoFooter = mempty
       , infoFailureCode = 1
-      , infoIntersperse = True }
+      , infoPolicy = Intersperse }
 
 newtype PrefsMod = PrefsMod
   { applyPrefsMod :: ParserPrefs -> ParserPrefs }
@@ -381,24 +459,39 @@ instance Monoid PrefsMod where
 instance Semigroup PrefsMod where
   m1 <> m2 = PrefsMod $ applyPrefsMod m2 . applyPrefsMod m1
 
+-- | Include a suffix to attach to the metavar when multiple values
+--   can be entered.
 multiSuffix :: String -> PrefsMod
 multiSuffix s = PrefsMod $ \p -> p { prefMultiSuffix = s }
 
+-- | Turn on disambiguation.
+--
+--   See
+--   https://github.com/pcapriotti/optparse-applicative#disambiguation
 disambiguate :: PrefsMod
 disambiguate = PrefsMod $ \p -> p { prefDisambiguate = True }
 
+-- | Show full help text on any error.
 showHelpOnError :: PrefsMod
 showHelpOnError = PrefsMod $ \p -> p { prefShowHelpOnError = True }
 
+-- | Show the help text if the user enters only the program name or
+--   subcommand.
+--
+--   This will suppress a "Missing:" error and show the full usage
+--   instead if a user just types the name of the program.
 showHelpOnEmpty :: PrefsMod
 showHelpOnEmpty = PrefsMod $ \p -> p { prefShowHelpOnEmpty = True }
 
+-- | Turn off backtracking after subcommand is parsed.
 noBacktrack :: PrefsMod
 noBacktrack = PrefsMod $ \p -> p { prefBacktrack = False }
 
+-- | Set the maximum width of the generated help text.
 columns :: Int -> PrefsMod
 columns cols = PrefsMod $ \p -> p { prefColumns = cols }
 
+-- | Create a `ParserPrefs` given a modifier
 prefs :: PrefsMod -> ParserPrefs
 prefs m = applyPrefsMod m base
   where
@@ -410,7 +503,7 @@ prefs m = applyPrefsMod m base
       , prefBacktrack = True
       , prefColumns = 80 }
 
--- convenience shortcuts
+-- Convenience shortcuts
 
 -- | Trivial option modifier.
 idm :: Monoid m => m

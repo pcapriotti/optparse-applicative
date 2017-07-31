@@ -39,7 +39,8 @@ module Options.Applicative.Types (
   optVisibility,
   optMetaVar,
   optHelp,
-  optShowDefault
+  optShowDefault,
+  optDescMod
   ) where
 
 import Control.Applicative
@@ -47,6 +48,7 @@ import Control.Monad (ap, liftM, MonadPlus, mzero, mplus)
 import Control.Monad.Trans.Except (Except, throwE)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, ask)
+import qualified Control.Monad.Fail as Fail
 import Data.Semigroup hiding (Option)
 import Prelude
 
@@ -63,6 +65,8 @@ data ParseError
   | ShowHelpText
   | UnknownError
   | MissingError IsCmdStart SomeParser
+  | ExpectsArgError String
+  | UnexpectedError String SomeParser
 
 data IsCmdStart = CmdStart | CmdCont
   deriving Show
@@ -84,8 +88,8 @@ data ParserInfo a = ParserInfo
   , infoHeader :: Chunk Doc   -- ^ header of the full parser description
   , infoFooter :: Chunk Doc   -- ^ footer of the full parser description
   , infoFailureCode :: Int    -- ^ exit code for a parser failure
-  , infoIntersperse :: Bool   -- ^ allow regular options and flags to occur
-                              -- after arguments (default: True)
+  , infoPolicy :: ArgPolicy   -- ^ allow regular options and flags to occur
+                              -- after arguments (default: InterspersePolicy)
   }
 
 instance Functor ParserInfo where
@@ -123,7 +127,17 @@ data OptProperties = OptProperties
   , propHelp :: Chunk Doc                 -- ^ help text for this option
   , propMetaVar :: String                 -- ^ metavariable for this option
   , propShowDefault :: Maybe String       -- ^ what to show in the help text as the default
-  } deriving Show
+  , propDescMod :: Maybe ( Doc -> Doc )   -- ^ a function to run over the brief description
+  }
+
+instance Show OptProperties where
+  showsPrec p (OptProperties pV pH pMV pSD _)
+    = showParen (p >= 11)
+    $ showString "OptProperties { propVisibility = " . showsPrec 0 pV
+    . showString ", propHelp = " . showsPrec 0 pH
+    . showString ", propMetaVar = " . showsPrec 0 pMV
+    . showString ", propShowDefault = " . showsPrec 0 pSD
+    . showString ", propDescMod = _ }"
 
 -- | A single option of a parser.
 data Option a = Option
@@ -161,6 +175,9 @@ instance Alternative ReadM where
 instance Monad ReadM where
   return = pure
   ReadM r >>= f = ReadM $ r >>= unReadM . f
+  fail = Fail.fail
+
+instance Fail.MonadFail ReadM where
   fail = readerError
 
 instance MonadPlus ReadM where
@@ -188,11 +205,14 @@ instance Functor CReader where
 
 -- | An 'OptReader' defines whether an option matches an command line argument.
 data OptReader a
-  = OptReader (Maybe String) [OptName] (CReader a) ParseError -- ^ option reader
-  | FlagReader (Maybe String) [OptName] !a                    -- ^ flag reader
-  | ArgReader (Maybe String) (CReader a)                      -- ^ argument reader
-  | CmdReader (Maybe String)
-              [String] (String -> Maybe (ParserInfo a)) -- ^ command reader
+  = OptReader (Maybe String) [OptName] (CReader a) (String -> ParseError)
+  -- ^ option reader
+  | FlagReader (Maybe String) [OptName] !a
+  -- ^ flag reader
+  | ArgReader (Maybe String) (CReader a)
+  -- ^ argument reader
+  | CmdReader (Maybe String) [String] (String -> Maybe (ParserInfo a))
+  -- ^ command reader
 
 instance Functor OptReader where
   fmap f (OptReader gn ns cr e) = OptReader gn ns (fmap f cr) e
@@ -223,14 +243,14 @@ newtype ParserM r = ParserM
   { runParserM :: forall x . (r -> Parser x) -> Parser x }
 
 instance Monad ParserM where
-  return x = ParserM $ \k -> k x
+  return = pure
   ParserM f >>= g = ParserM $ \k -> f (\x -> runParserM (g x) k)
 
 instance Functor ParserM where
   fmap = liftM
 
 instance Applicative ParserM where
-  pure = return
+  pure x = ParserM $ \k -> k x
   (<*>) = ap
 
 fromM :: ParserM a -> Parser a
@@ -255,16 +275,21 @@ instance Alternative Parser where
   many p = fromM $ manyM p
   some p = fromM $ (:) <$> oneM p <*> manyM p
 
+-- | A shell complete function.
 newtype Completer = Completer
   { runCompleter :: String -> IO [String] }
 
+-- | Smart constructor for a 'Completer'
 mkCompleter :: (String -> IO [String]) -> Completer
 mkCompleter = Completer
 
+instance Semigroup Completer where
+  (Completer c1) <> (Completer c2) =
+    Completer $ \s -> (++) <$> c1 s <*> c2 s
+
 instance Monoid Completer where
   mempty = Completer $ \_ -> return []
-  mappend (Completer c1) (Completer c2) =
-    Completer $ \s -> (++) <$> c1 s <*> c2 s
+  mappend = (<>)
 
 newtype CompletionResult = CompletionResult
   { execCompletion :: String -> IO String }
@@ -319,16 +344,34 @@ type Args = [String]
 
 -- | Policy for how to handle options within the parse
 data ArgPolicy
-  = SkipOpts  -- ^ Inputs beginning with `-` or `--` are treated
-              --   as options or flags, and can be mixed with arguments.
-  | AllowOpts -- ^ All input is treated as positional arguments.
-              --   Used after a bare `--` input, and also with
-              --   `noIntersperse` policy.
-  deriving (Eq, Show)
+  = Intersperse
+  -- ^ The default policy, options and arguments can
+  --   be interspersed.
+  --   A `--` option can be passed to ensure all following
+  --   commands are treated as arguments.
+  | NoIntersperse
+  -- ^ Options must all come before arguments, once a
+  --   single positional argument or subcommand is parsed,
+  --   all remaining arguments are treated as positionals.
+  --   A `--` option can be passed if the first positional
+  --   one needs starts with `-`.
+  | AllPositionals
+  -- ^ No options are parsed at all, all arguments are
+  --   treated as positionals.
+  --   Is the policy used after `--` is encountered.
+  | ForwardOptions
+  -- ^ Options and arguments can be interspersed, but if
+  --   a given option is not found, it is treated as a
+  --   positional argument. This is sometimes useful if
+  --   one is passing through most options to another tool,
+  --   but are supplying just a few of their own options.
+  deriving (Eq, Ord, Show)
 
 data OptHelpInfo = OptHelpInfo
-  { hinfoMulti :: Bool
-  , hinfoDefault :: Bool
+  { hinfoMulti :: Bool    -- ^ Whether this is part of a many or some (approximately)
+  , hinfoDefault :: Bool  -- ^ Whether this option has a default value
+  , hinfoUnreachableArgs :: Bool -- ^ If the result is a positional, if it can't be
+                                 --   accessed in the current parser position ( first arg )
   } deriving (Eq, Show)
 
 data OptTree a
@@ -348,3 +391,6 @@ optMetaVar = propMetaVar . optProps
 
 optShowDefault :: Option a -> Maybe String
 optShowDefault = propShowDefault . optProps
+
+optDescMod :: Option a -> Maybe ( Doc -> Doc )
+optDescMod = propDescMod . optProps

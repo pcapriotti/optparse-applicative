@@ -29,7 +29,7 @@ import System.Exit (exitSuccess, exitWith, ExitCode(..))
 import System.IO (hPutStrLn, stderr)
 
 import Options.Applicative.BashCompletion
-import Options.Applicative.Builder hiding (briefDesc)
+import Options.Applicative.Builder
 import Options.Applicative.Builder.Internal
 import Options.Applicative.Common
 import Options.Applicative.Help
@@ -38,6 +38,13 @@ import Options.Applicative.Internal
 import Options.Applicative.Types
 
 -- | A hidden \"helper\" option which always fails.
+--
+-- A common usage pattern is to apply this applicatively when
+-- creating a 'ParserInfo'
+--
+-- > opts :: ParserInfo Sample
+-- > opts = info (sample <**> helper) mempty
+
 helper :: Parser (a -> a)
 helper = abortOption ShowHelpText $ mconcat
   [ long "help"
@@ -143,15 +150,18 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
   let h = with_context ctx pinfo $ \names pinfo' -> mconcat
             [ base_help pinfo'
             , usage_help progn names pinfo'
+            , suggestion_help
             , error_help ]
   in (h, exit_code, prefColumns pprefs)
   where
     exit_code = case msg of
-      ErrorMsg _       -> ExitFailure (infoFailureCode pinfo)
-      UnknownError     -> ExitFailure (infoFailureCode pinfo)
-      MissingError _ _ -> ExitFailure (infoFailureCode pinfo)
-      ShowHelpText     -> ExitSuccess
-      InfoMsg  _       -> ExitSuccess
+      ErrorMsg {}        -> ExitFailure (infoFailureCode pinfo)
+      UnknownError       -> ExitFailure (infoFailureCode pinfo)
+      MissingError {}    -> ExitFailure (infoFailureCode pinfo)
+      ExpectsArgError {} -> ExitFailure (infoFailureCode pinfo)
+      UnexpectedError {} -> ExitFailure (infoFailureCode pinfo)
+      ShowHelpText       -> ExitSuccess
+      InfoMsg {}         -> ExitSuccess
 
     with_context :: [Context]
                  -> ParserInfo a
@@ -161,19 +171,102 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
     with_context c@(Context _ i:_) _ f = f (contextNames c) i
 
     usage_help progn names i = case msg of
-      InfoMsg _ -> mempty
-      _         -> usageHelp $ vcatChunks
-        [ pure . parserUsage pprefs (infoParser i) . unwords $ progn : names
-        , fmap (indent 2) . infoProgDesc $ i ]
+      InfoMsg _
+        -> mempty
+      _
+        -> usageHelp $ vcatChunks
+          [ pure . parserUsage pprefs (infoParser i) . unwords $ progn : names
+          , fmap (indent 2) . infoProgDesc $ i ]
 
     error_help = errorHelp $ case msg of
-      ShowHelpText                  -> mempty
-      ErrorMsg m                    -> stringChunk m
-      InfoMsg  m                    -> stringChunk m
-      MissingError CmdStart _        | prefShowHelpOnEmpty pprefs
-                                    -> mempty
-      MissingError _ (SomeParser x) -> stringChunk "Missing:" <<+>> missingDesc pprefs x
-      UnknownError                  -> mempty
+      ShowHelpText
+        -> mempty
+
+      ErrorMsg m
+        -> stringChunk m
+
+      InfoMsg  m
+        -> stringChunk m
+
+      MissingError CmdStart _
+        | prefShowHelpOnEmpty pprefs
+        -> mempty
+
+      MissingError _ (SomeParser x)
+        -> stringChunk "Missing:" <<+>> missingDesc pprefs x
+
+      ExpectsArgError x
+        -> stringChunk $ "The option `" ++ x ++ "` expects an argument."
+
+      UnexpectedError arg _
+        -> stringChunk msg'
+          where
+            --
+            -- This gives us the same error we have always
+            -- reported
+            msg' = case arg of
+              ('-':_) -> "Invalid option `" ++ arg ++ "'"
+              _       -> "Invalid argument `" ++ arg ++ "'"
+
+      UnknownError
+        -> mempty
+
+
+    suggestion_help = suggestionsHelp $ case msg of
+      UnexpectedError arg (SomeParser x)
+        --
+        -- We have an unexpected argument and the parser which
+        -- it's running over.
+        --
+        -- We can make a good help suggestion here if we do
+        -- a levenstein distance between all possible suggestions
+        -- and the supplied option or argument.
+        -> suggestions
+          where
+            --
+            -- Not using chunked here, as we don't want to
+            -- show "Did you mean" if there's nothing there
+            -- to show
+            suggestions = (.$.) <$> prose
+                                <*> (indent 4 <$> (vcatChunks . fmap stringChunk $ good ))
+
+            --
+            -- We won't worry about the 0 case, it won't be
+            -- shown anyway.
+            prose       = if length good < 2
+                            then stringChunk "Did you mean this?"
+                            else stringChunk "Did you mean one of these?"
+            --
+            -- Suggestions we will show, they're close enough
+            -- to what the user wrote
+            good        = filter isClose possibles
+
+            --
+            -- Bit of an arbitrary decision here.
+            -- Edit distances of 1 or 2 will give hints
+            isClose a   = editDistance a arg < 3
+
+            --
+            -- Similar to how bash completion works.
+            -- We map over the parser and get the names
+            -- ( no IO here though, unlike for completers )
+            possibles   = concat $ mapParser opt_completions x
+
+            --
+            -- Look at the option and give back the possible
+            -- things the user could type. If it's a command
+            -- reader also ensure that it can be immediately
+            -- reachable from where the error was given.
+            opt_completions hinfo opt = case optMain opt of
+              OptReader _ ns _ _ -> fmap showOption ns
+              FlagReader _ ns _  -> fmap showOption ns
+              ArgReader _ _      -> []
+              CmdReader _ ns _   | hinfoUnreachableArgs hinfo
+                                 -> []
+                                 | otherwise
+                                 -> ns
+      _
+        -> mempty
 
     base_help :: ParserInfo a -> ParserHelp
     base_help i
@@ -187,7 +280,7 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
 
     show_full_help = case msg of
       ShowHelpText             -> True
-      MissingError CmdStart  _ | prefShowHelpOnEmpty pprefs
+      MissingError CmdStart  _  | prefShowHelpOnEmpty pprefs
                                -> True
       _                        -> prefShowHelpOnError pprefs
 

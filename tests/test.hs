@@ -12,8 +12,10 @@ import qualified Examples.Formatting as Formatting
 
 import           Control.Applicative
 import           Control.Monad
+import           Data.ByteString (ByteString)
 import           Data.List hiding (group)
 import           Data.Semigroup hiding (option)
+import           Data.String
 
 import           System.Exit
 import           Test.QuickCheck hiding (Success, Failure)
@@ -24,6 +26,7 @@ import           Options.Applicative.Types
 import           Options.Applicative.Help.Pretty (Doc, SimpleDoc(..))
 import qualified Options.Applicative.Help.Pretty as Doc
 import           Options.Applicative.Help.Chunk
+import           Options.Applicative.Help.Levenshtein
 
 import           Prelude
 
@@ -73,9 +76,9 @@ prop_cmd_header :: Property
 prop_cmd_header = once $
   let i  = info (helper <*> Commands.sample) (header "foo")
       r1 = checkHelpTextWith (ExitFailure 1) defaultPrefs
-                    "commands_header" i ["-zzz"]
+                    "commands_header" i ["-zello"]
       r2 = checkHelpTextWith (ExitFailure 1) (prefs showHelpOnError)
-                    "commands_header_full" i ["-zzz"]
+                    "commands_header_full" i ["-zello"]
   in  (r1 .&&. r2)
 
 prop_cabal_conf :: Property
@@ -129,7 +132,8 @@ prop_alt_cont = once $
 
 prop_alt_help :: Property
 prop_alt_help = once $
-  let p = p1 <|> p2 <|> p3
+  let p :: Parser (Maybe (Either String String))
+      p = p1 <|> p2 <|> p3
       p1 = (Just . Left)
         <$> strOption ( long "virtual-machine"
                      <> metavar "VM"
@@ -144,7 +148,8 @@ prop_alt_help = once $
 
 prop_nested_commands :: Property
 prop_nested_commands = once $
-  let p3 = strOption (short 'a' <> metavar "A")
+  let p3 :: Parser String
+      p3 = strOption (short 'a' <> metavar "A")
       p2 = subparser (command "b" (info p3 idm))
       p1 = subparser (command "c" (info p2 idm))
       i = info (p1 <**> helper) idm
@@ -152,7 +157,8 @@ prop_nested_commands = once $
 
 prop_drops_back_contexts :: Property
 prop_drops_back_contexts = once $
-  let p3 = strOption (short 'a' <> metavar "A")
+  let p3 :: Parser String
+      p3 = strOption (short 'a' <> metavar "A")
       p2 = subparser (command "b" (info p3 idm)  <> metavar "B")
       p1 = subparser (command "c" (info p3 idm)  <> metavar "C")
       p0 = (,) <$> p2 <*> p1
@@ -161,7 +167,8 @@ prop_drops_back_contexts = once $
 
 prop_context_carry :: Property
 prop_context_carry = once $
-  let p3 = strOption (short 'a' <> metavar "A")
+  let p3 :: Parser String
+      p3 = strOption (short 'a' <> metavar "A")
       p2 = subparser (command "b" (info p3 idm)  <> metavar "B")
       p1 = subparser (command "c" (info p3 idm)  <> metavar "C")
       p0 = (,) <$> p2 <*> p1
@@ -170,7 +177,8 @@ prop_context_carry = once $
 
 prop_help_on_empty :: Property
 prop_help_on_empty = once $
-  let p3 = strOption (short 'a' <> metavar "A")
+  let p3 :: Parser String
+      p3 = strOption (short 'a' <> metavar "A")
       p2 = subparser (command "b" (info p3 idm)  <> metavar "B")
       p1 = subparser (command "c" (info p3 idm)  <> metavar "C")
       p0 = (,) <$> p2 <*> p1
@@ -179,7 +187,8 @@ prop_help_on_empty = once $
 
 prop_help_on_empty_sub :: Property
 prop_help_on_empty_sub = once $
-  let p3 = strOption (short 'a' <> metavar "A" <> help "both commands require this")
+  let p3 :: Parser String
+      p3 = strOption (short 'a' <> metavar "A" <> help "both commands require this")
       p2 = subparser (command "b" (info p3 idm)  <> metavar "B")
       p1 = subparser (command "c" (info p3 idm)  <> metavar "C")
       p0 = (,) <$> p2 <*> p1
@@ -188,7 +197,8 @@ prop_help_on_empty_sub = once $
 
 prop_many_args :: Property
 prop_many_args = forAll (choose (0,2000)) $ \nargs ->
-  let p = many (argument str idm)
+  let p :: Parser [String]
+      p = many (argument str idm)
       i = info p idm
       result = run i (replicate nargs "foo")
   in  assertResult result (\xs -> nargs === length xs)
@@ -225,9 +235,104 @@ prop_completion = once . ioProperty $
     Failure _   -> return $ counterexample "unexpected failure" failed
     Success val -> return $ counterexample ("unexpected result " ++ show val) failed
 
+prop_completion_opt_after_double_dash :: Property
+prop_completion_opt_after_double_dash = once . ioProperty $
+  let p = (,)
+        <$> strOption (long "foo" <> value "")
+        <*> argument readerAsk (completeWith ["bar"])
+      i = info p idm
+      result = run i ["--bash-completion-index", "2"
+                    , "--bash-completion-word", "test"
+                    , "--bash-completion-word", "--"]
+  in case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      return $ ["bar"] === completions
+    Failure _   -> return $ counterexample "unexpected failure" failed
+    Success val -> return $ counterexample ("unexpected result " ++ show val) failed
+
+prop_completion_only_reachable :: Property
+prop_completion_only_reachable = once . ioProperty $
+  let p :: Parser (String,String)
+      p = (,)
+        <$> strArgument (completeWith ["reachable"])
+        <*> strArgument (completeWith ["unreachable"])
+      i = info p idm
+      result = run i ["--bash-completion-index", "0"]
+  in case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      return $ ["reachable"] === completions
+    Failure _   -> return $ counterexample "unexpected failure" failed
+    Success val -> return $ counterexample ("unexpected result " ++ show val) failed
+
+prop_completion_only_reachable_deep :: Property
+prop_completion_only_reachable_deep = once . ioProperty $
+  let p :: Parser (String,String)
+      p = (,)
+        <$> strArgument (completeWith ["seen"])
+        <*> strArgument (completeWith ["now-reachable"])
+      i = info p idm
+      result = run i [ "--bash-completion-index", "2"
+                     , "--bash-completion-word", "test-prog"
+                     , "--bash-completion-word", "seen" ]
+  in case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      return $ ["now-reachable"] === completions
+    Failure _   -> return $ counterexample "unexpected failure" failed
+    Success val -> return $ counterexample ("unexpected result " ++ show val) failed
+
+prop_completion_multi :: Property
+prop_completion_multi = once . ioProperty $
+  let p :: Parser [String]
+      p = many (strArgument (completeWith ["reachable"]))
+      i = info p idm
+      result = run i [ "--bash-completion-index", "3"
+                     , "--bash-completion-word", "test-prog"
+                     , "--bash-completion-word", "nope" ]
+  in case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      return $ ["reachable"] === completions
+    Failure _   -> return $ counterexample "unexpected failure" failed
+    Success val -> return $ counterexample ("unexpected result " ++ show val) failed
+
+prop_completion_rich :: Property
+prop_completion_rich = once . ioProperty $
+  let p = (,)
+        <$> option readerAsk (long "foo" <> help "Fo?")
+        <*> option readerAsk (long "bar" <> help "Ba?")
+      i = info p idm
+      result = run i ["--bash-completion-enriched", "--bash-completion-index", "0"]
+  in case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      return $ ["--foo\tFo?", "--bar\tBa?"] === completions
+    Failure _   -> return $ counterexample "unexpected failure" failed
+    Success val -> return $ counterexample ("unexpected result " ++ show val) failed
+
+prop_completion_rich_lengths :: Property
+prop_completion_rich_lengths = once . ioProperty $
+  let p = (,)
+        <$> option readerAsk (long "foo" <> help "Foo hide this")
+        <*> option readerAsk (long "bar" <> help "Bar hide this")
+      i = info p idm
+      result = run i [ "--bash-completion-enriched"
+                     , "--bash-completion-index=0"
+                     , "--bash-completion-option-desc-length=3"
+                     , "--bash-completion-command-desc-length=30"]
+  in case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      return $ ["--foo\tFoo...", "--bar\tBar..."] === completions
+    Failure _   -> return $ counterexample "unexpected failure" failed
+    Success val -> return $ counterexample ("unexpected result " ++ show val) failed
+
 prop_bind_usage :: Property
 prop_bind_usage = once $
-  let p = many (argument str (metavar "ARGS..."))
+  let p :: Parser [String]
+      p = many (argument str (metavar "ARGS..."))
       i = info (p <**> helper) briefDesc
       result = run i ["--help"]
   in assertError result $ \failure ->
@@ -245,21 +350,24 @@ prop_issue_19 = once $
 
 prop_arguments1_none :: Property
 prop_arguments1_none =
-  let p = some (argument str idm)
+  let p :: Parser [String]
+      p = some (argument str idm)
       i = info (p <**> helper) idm
       result = run i []
   in assertError result $ \_ -> property succeeded
 
 prop_arguments1_some :: Property
 prop_arguments1_some = once $
-  let p = some (argument str idm)
+  let p :: Parser [String]
+      p = some (argument str idm)
       i = info (p <**> helper) idm
       result = run i ["foo", "--", "bar", "baz"]
   in  assertResult result (["foo", "bar", "baz"] ===)
 
 prop_arguments_switch :: Property
 prop_arguments_switch = once $
-  let p =  switch (short 'x')
+  let p :: Parser [String]
+      p =  switch (short 'x')
         *> many (argument str idm)
       i = info p idm
       result = run i ["--", "-x"]
@@ -404,10 +512,32 @@ prop_intersperse_2 = once $
              ( info (many (argument str (metavar "ARGS")))
                     idm ) )
       i = info p idm
-      result1 = run i ["run", "-x", "foo"]
-      result2 = run i ["test", "-x", "bar"]
-  in conjoin [ assertResult result1 $ \args -> ["-x", "foo"] === args
+      result1 = run i ["run", "foo", "-x"]
+      result2 = run i ["test", "bar", "-x"]
+  in conjoin [ assertResult result1 $ \args -> ["foo", "-x"] === args
              , assertError result2 $ \_ -> property succeeded ]
+
+prop_intersperse_3 :: Property
+prop_intersperse_3 = once $
+  let p = (,,) <$> switch ( long "foo" )
+               <*> strArgument ( metavar "FILE" )
+               <*> many ( strArgument ( metavar "ARGS..." ) )
+      i = info p noIntersperse
+      result = run i ["--foo", "myfile", "-a", "-b", "-c"]
+  in assertResult result $ \(b,f,as) ->
+     conjoin [ ["-a", "-b", "-c"] === as
+             , True               === b
+             , "myfile"           === f ]
+
+prop_forward_options :: Property
+prop_forward_options = once $
+  let p = (,) <$> switch ( long "foo" )
+              <*> many ( strArgument ( metavar "ARGS..." ) )
+      i = info p forwardOptions
+      result = run i ["--fo", "--foo", "myfile"]
+  in assertResult result $ \(b,a) ->
+     conjoin [ True               === b
+             , ["--fo", "myfile"] === a ]
 
 prop_issue_52 :: Property
 prop_issue_52 = once $
@@ -452,7 +582,8 @@ prop_reader_error_mplus = once $
 
 prop_missing_flags_described :: Property
 prop_missing_flags_described = once $
-  let p = (,,)
+  let p :: Parser (String, String, Maybe String)
+      p = (,,)
        <$> option str (short 'a')
        <*> option str (short 'b')
        <*> optional (option str (short 'c'))
@@ -463,7 +594,8 @@ prop_missing_flags_described = once $
 
 prop_many_missing_flags_described :: Property
 prop_many_missing_flags_described = once $
-  let p = (,)
+  let p :: Parser (String, String)
+      p = (,)
         <$> option str (short 'a')
         <*> option str (short 'b')
       i = info p idm
@@ -473,15 +605,26 @@ prop_many_missing_flags_described = once $
 
 prop_alt_missing_flags_described :: Property
 prop_alt_missing_flags_described = once $
-  let p = option str (short 'a') <|> option str (short 'b')
+  let p :: Parser String
+      p = option str (short 'a') <|> option str (short 'b')
       i = info p idm
   in assertError (run i []) $ \failure ->
     let text = head . lines . fst $ renderFailure failure "test"
     in  "Missing: (-a ARG | -b ARG)" === text
 
+prop_missing_option_parameter_err :: Property
+prop_missing_option_parameter_err = once $
+  let p :: Parser String
+      p = option str (short 'a')
+      i = info p idm
+  in assertError (run i ["-a"]) $ \failure ->
+    let text = head . lines . fst $ renderFailure failure "test"
+    in  "The option `-a` expects an argument." === text
+
 prop_many_pairs_success :: Property
 prop_many_pairs_success = once $
-  let p = many $ (,) <$> argument str idm <*> argument str idm
+  let p :: Parser [(String, String)]
+      p = many $ (,) <$> argument str idm <*> argument str idm
       i = info p idm
       nargs = 10000
       result = run i (replicate nargs "foo")
@@ -489,7 +632,8 @@ prop_many_pairs_success = once $
 
 prop_many_pairs_failure :: Property
 prop_many_pairs_failure = once $
-  let p = many $ (,) <$> argument str idm <*> argument str idm
+  let p :: Parser [(String, String)]
+      p = many $ (,) <$> argument str idm <*> argument str idm
       i = info p idm
       nargs = 9999
       result = run i (replicate nargs "foo")
@@ -497,10 +641,33 @@ prop_many_pairs_failure = once $
 
 prop_many_pairs_lazy_progress :: Property
 prop_many_pairs_lazy_progress = once $
-  let p = many $ (,) <$> optional (option str (short 'a')) <*> argument str idm
+  let p :: Parser [(Maybe String, String)]
+      p = many $ (,) <$> optional (option str (short 'a')) <*> argument str idm
       i = info p idm
       result = run i ["foo", "-abar", "baz"]
   in assertResult result $ \xs -> [(Just "bar", "foo"), (Nothing, "baz")] === xs
+
+prop_suggest :: Property
+prop_suggest = once $
+  let p2 = subparser (command "reachable"   (info (pure ()) idm))
+      p1 = subparser (command "unreachable" (info (pure ()) idm))
+      p  = (,) <$> p2 <*> p1
+      i  = info p idm
+      result = run i ["ureachable"]
+  in assertError result $ \failure ->
+    let (msg, _)  = renderFailure failure "prog"
+    in  counterexample msg
+       $  isInfixOf "Did you mean this?\n    reachable" msg
+      .&. not (isInfixOf "unreachable" msg)
+
+prop_bytestring_reader :: Property
+prop_bytestring_reader = once $
+  let t = "testValue"
+      p :: Parser ByteString
+      p = argument str idm
+      i = info p idm
+      result = run i ["testValue"]
+  in assertResult result $ \xs -> fromString t === xs
 
 ---
 
@@ -534,6 +701,38 @@ prop_stringChunk_2 s = isEmpty (stringChunk s) === null s
 
 prop_paragraph :: String -> Property
 prop_paragraph s = isEmpty (paragraph s) === null (words s)
+
+---
+
+--
+-- From
+-- https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance
+--
+-- In information theory and computer science, the Damerau–Levenshtein
+-- distance is a distance (string metric) between two strings, i.e.,
+-- finite sequence of symbols, given by counting the minimum number
+-- of operations needed to transform one string into the other, where
+-- an operation is defined as an insertion, deletion, or substitution
+-- of a single character, or a transposition of two adjacent characters.
+--
+prop_edit_distance_gezero :: String -> String -> Bool
+prop_edit_distance_gezero a b = editDistance a b >= 0
+
+prop_edit_insertion :: [Char] -> Char -> [Char] -> Property
+prop_edit_insertion as i bs =
+  editDistance (as ++ bs) (as ++ [i] ++ bs) === 1
+
+prop_edit_symmetric :: [Char] -> [Char] -> Property
+prop_edit_symmetric as bs =
+  editDistance as bs === editDistance bs as
+
+prop_edit_substitution :: [Char] -> [Char] -> Char -> Char -> Property
+prop_edit_substitution as bs a b = a /= b ==>
+  editDistance (as ++ [a] ++ bs) (as ++ [b] ++ bs) === 1
+
+prop_edit_transposition :: [Char] -> [Char] -> Char -> Char -> Property
+prop_edit_transposition as bs a b = a /= b ==>
+  editDistance (as ++ [a] ++ [b] ++ bs) (as ++ [b] ++ [a] ++ bs) === 1
 
 ---
 
