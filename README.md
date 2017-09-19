@@ -11,7 +11,7 @@ for composing these options.
 optparse-applicative takes care of reading and validating the
 arguments passed to the command line, handling and reporting errors,
 generating a usage line, a comprehensive help screen, and enabling
-context-sensitive bash completions.
+context-sensitive bash, zsh, and fish completions.
 
 **Table of Contents**
 
@@ -35,7 +35,7 @@ context-sensitive bash completions.
     - [Disambiguation](#disambiguation)
     - [Customising the help screen](#customising-the-help-screen)
     - [Command Groups](#command-groups)
-- [Bash completion](#bash-completion)
+- [Bash completion](#bash-zsh-and-fish-completions)
     - [Actions and completers](#actions-and-completers)
     - [Internals](#internals)
 - [Arrow interface](#arrow-interface)
@@ -789,12 +789,13 @@ French commands:
   au-revoir                Say goodbye
 ```
 
-## Bash completion
+## Bash, Zsh, and Fish Completions
 
-`optparse-applicative` has built-in support for bash completion of
-command line options and arguments. Any parser, when run using
-`execParser` (and similar functions), is automatically extended
-with a few (hidden) options for bash completion:
+`optparse-applicative` has built-in support for the completion of
+command line options and arguments in bash, zsh, and fish shells.
+Any parser, when run using the `execParser` family of functions,
+is automatically extended with a few (hidden) options for the
+completion system:
 
  - `--bash-completion-script`: this takes the full path of the program as
    argument, and prints a bash script, which, when sourced into a bash session,
@@ -808,11 +809,19 @@ with a few (hidden) options for bash completion:
 
    Normally, the output of `--bash-completion-script` should be shipped with
    the program and copied to the appropriate directory (usually
-   `/etc/bash_completion.d/`) during installation.
+   `/etc/bash_completion.d/`) during installation;
+
+ - `--zsh-completion-script`: which is analogous for zsh;
+
+ - `--fish-completion-script`: which is analogous for fish shell;
 
  - `--bash-completion-index`, `--bash-completion-word`: internal options used
    by the completion script to obtain a list of possible completions for a
-   given command line.
+   given command line;
+
+ - `--bash-completion-enriched`: a flag to tell the completion system to emit
+   descriptions along with possible completions. This is used to provide help
+   along with the completion for `zsh` and `fish`.
 
 ### Actions and completers
 
@@ -831,8 +840,8 @@ on a regular option or argument:
 
  - `completeWith`: specifies a list of possible completions to choose from;
  - `action`: specifies a completion "action". An action dynamically determines
-   a list of possible completions. A full list of actions can be found in the
-   [bash documentation];
+   a list of possible completions. Common actions are "file" and "directory";
+   the full list of actions can be found in the [bash documentation];
  - `completer`: a completer is a function `String -> IO [String]`, returning
    all possible completions for a given string. You can use this modifier to
    specify a custom completion for an argument.
@@ -858,7 +867,7 @@ it failed while fetching the argument for that option).
 
 From that we generate a list of possible completions, and print them to
 standard output. They are then read by the completion script and put into the
-`COMPREPLY` variable.
+`COMPREPLY` variable (or an appropriate alternative for the other shells).
 
 ## Arrow interface
 
