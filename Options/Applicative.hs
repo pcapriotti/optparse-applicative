@@ -110,6 +110,10 @@ module Options.Applicative (
   ArgumentFields,
   CommandFields,
 
+  HasName,
+  HasCompleter,
+  HasValue,
+  HasMetavar,
   -- ** Readers
   --
   -- | A reader is used by the 'option' and 'argument' builders to parse
