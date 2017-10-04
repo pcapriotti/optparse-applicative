@@ -1,4 +1,3 @@
-{-# LANGUAGE ExistentialQuantification #-}
 module Options.Applicative.Internal
   ( P
   , MonadP(..)
