@@ -93,7 +93,12 @@ module Options.Applicative.Builder (
   OptionFields,
   FlagFields,
   ArgumentFields,
-  CommandFields
+  CommandFields,
+
+  HasName,
+  HasCompleter,
+  HasValue,
+  HasMetavar
   ) where
 
 import Control.Applicative
