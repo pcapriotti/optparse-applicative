@@ -7,6 +7,7 @@ module Options.Applicative.Internal
   , hoistMaybe
   , hoistEither
   , runReadM
+  , execReadM
   , withReadM
 
   , runP
@@ -30,9 +31,9 @@ import Prelude
 import Control.Monad (MonadPlus(..), liftM, ap, guard)
 import Control.Monad.Trans.Class (MonadTrans, lift)
 import Control.Monad.Trans.Except
-  (runExcept, runExceptT, withExcept, ExceptT(..), throwE, catchE)
+  (runExceptT, ExceptT(..), throwE, catchE)
 import Control.Monad.Trans.Reader
-  (mapReaderT, runReader, runReaderT, Reader, ReaderT, ask)
+  (runReader, runReaderT, Reader, ReaderT, ask)
 import Control.Monad.Trans.State (StateT, get, put, modify, evalStateT, runStateT)
 
 import Options.Applicative.Types
@@ -96,11 +97,14 @@ uncons :: [a] -> Maybe (a, [a])
 uncons [] = Nothing
 uncons (x : xs) = Just (x, xs)
 
-runReadM :: MonadP m => ReadM a -> String -> m a
-runReadM (ReadM r) s = hoistEither . runExcept $ runReaderT r s
+execReadM :: MonadP m => ReadM a -> [String] -> m (a, [String])
+execReadM (ReadM r) s = hoistEither $ r s
 
 withReadM :: (String -> String) -> ReadM a -> ReadM a
-withReadM f = ReadM . mapReaderT (withExcept f') . unReadM
+withReadM f (ReadM r)= ReadM $ \input ->
+    case r input of
+      Left e -> Left (f' e)
+      Right x -> Right x
   where
     f' (ErrorMsg err) = ErrorMsg (f err)
     f' e = e

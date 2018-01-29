@@ -92,7 +92,7 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
     -- For options and flags, ensure that the user
     -- hasn't disabled them with `--`.
     opt_completions argPolicy hinfo opt = case optMain opt of
-      OptReader ns _ _
+      OptReader ns _
          | argPolicy /= AllPositionals
         -> return . add_opt_help opt $ show_names ns
          | otherwise

@@ -33,8 +33,7 @@ import Options.Applicative.Types
 
 data OptionFields a = OptionFields
   { optNames :: [OptName]
-  , optCompleter :: Completer
-  , optNoArgError :: String -> ParseError }
+  , optCompleter :: Completer }
 
 data FlagFields a = FlagFields
   { flagNames :: [OptName]
@@ -160,9 +159,10 @@ mkParser :: DefaultProp a
          -> (OptProperties -> OptProperties)
          -> OptReader a
          -> Parser a
-mkParser d@(DefaultProp def _) g rdr = liftOpt opt <|> maybe empty pure def
-  where
-    opt = mkOption d g rdr
+mkParser d@(DefaultProp def _) g rdr =
+  maybe opt (\def' -> opt <|> pure def') def
+    where
+  opt = liftOpt $ mkOption d g rdr
 
 mkOption :: DefaultProp a
          -> (OptProperties -> OptProperties)

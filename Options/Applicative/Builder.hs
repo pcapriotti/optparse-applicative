@@ -189,7 +189,8 @@ helpDoc doc = optionMod $ \p -> p { propHelp = Chunk doc }
 
 -- | Specify the error to display when no argument is provided to this option.
 noArgError :: ParseError -> Mod OptionFields a
-noArgError e = fieldMod $ \p -> p { optNoArgError = const e }
+noArgError = const mempty
+{-# WARNING noArgError "This builder no longer has any effect. Please examine the ReadM documentation" #-}
 
 -- | Specify a metavariable for the argument.
 --
@@ -337,8 +338,7 @@ switch = flag False True
 -- 'infoOption' instead.
 abortOption :: ParseError -> Mod OptionFields (a -> a) -> Parser (a -> a)
 abortOption err m = option (readerAbort err) . (`mappend` m) $ mconcat
-  [ noArgError err
-  , value id
+  [ value id
   , metavar "" ]
 
 -- | An option that always fails and displays a message.
@@ -365,9 +365,9 @@ option :: ReadM a -> Mod OptionFields a -> Parser a
 option r m = mkParser d g rdr
   where
     Mod f d g = metavar "ARG" `mappend` m
-    fields = f (OptionFields [] mempty ExpectsArgError)
+    fields = f (OptionFields [] mempty)
     crdr = CReader (optCompleter fields) r
-    rdr = OptReader (optNames fields) crdr (optNoArgError fields)
+    rdr = OptReader (optNames fields) crdr
 
 -- | Modifier for 'ParserInfo'.
 newtype InfoMod a = InfoMod

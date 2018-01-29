@@ -114,6 +114,7 @@ module Options.Applicative (
   HasCompleter,
   HasValue,
   HasMetavar,
+
   -- ** Readers
   --
   -- | A reader is used by the 'option' and 'argument' builders to parse

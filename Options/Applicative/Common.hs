@@ -66,7 +66,7 @@ showOption (OptLong n) = "--" ++ n
 showOption (OptShort n) = '-' : [n]
 
 optionNames :: OptReader a -> [OptName]
-optionNames (OptReader names _ _) = names
+optionNames (OptReader names _) = names
 optionNames (FlagReader names _) = names
 optionNames _ = []
 
@@ -82,8 +82,8 @@ liftOpt = OptP
 argMatches :: MonadP m => OptReader a -> String
            -> Maybe (StateT Args m a)
 argMatches opt arg = case opt of
-  ArgReader rdr -> Just . lift $
-    runReadM (crReader rdr) arg
+  ArgReader rdr -> Just $ StateT $ \args ->
+    execReadM (crReader rdr) (arg : args)
   CmdReader _ _ f ->
     flip fmap (f arg) $ \subp -> StateT $ \args -> do
       prefs <- getPrefs
@@ -97,15 +97,11 @@ argMatches opt arg = case opt of
 
 optMatches :: MonadP m => Bool -> OptReader a -> OptWord -> Maybe (StateT Args m a)
 optMatches disambiguate opt (OptWord arg1 val) = case opt of
-  OptReader names rdr no_arg_err -> do
+  OptReader names rdr -> do
     guard $ has_name arg1 names
-    Just $ do
-      args <- get
-      let mb_args = uncons $ maybeToList val ++ args
-      let missing_arg = missingArgP (no_arg_err $ showOption arg1) (crCompleter rdr)
-      (arg', args') <- maybe (lift missing_arg) return mb_args
-      put args'
-      lift $ runReadM (withReadM (errorFor arg1) (crReader rdr)) arg'
+    return $ StateT $ \args -> do
+      let mb_args = maybeToList val ++ args
+      execReadM (withReadM (errorFor arg1) (crReader rdr)) mb_args
 
   FlagReader names x -> do
     guard $ has_name arg1 names
