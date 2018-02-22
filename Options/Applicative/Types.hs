@@ -133,10 +133,10 @@ data OptProperties = OptProperties
 instance Show OptProperties where
   showsPrec p (OptProperties pV pH pMV pSD _)
     = showParen (p >= 11)
-    $ showString "OptProperties { propVisibility = " . showsPrec 0 pV
-    . showString ", propHelp = " . showsPrec 0 pH
-    . showString ", propMetaVar = " . showsPrec 0 pMV
-    . showString ", propShowDefault = " . showsPrec 0 pSD
+    $ showString "OptProperties { propVisibility = " . shows pV
+    . showString ", propHelp = " . shows pH
+    . showString ", propMetaVar = " . shows pMV
+    . showString ", propShowDefault = " . shows pSD
     . showString ", propDescMod = _ }"
 
 -- | A single option of a parser.

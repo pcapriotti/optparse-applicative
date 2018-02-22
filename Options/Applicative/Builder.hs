@@ -94,7 +94,12 @@ module Options.Applicative.Builder (
   OptionFields,
   FlagFields,
   ArgumentFields,
-  CommandFields
+  CommandFields,
+
+  HasName,
+  HasCompleter,
+  HasValue,
+  HasMetavar
   ) where
 
 import Control.Applicative
@@ -129,7 +134,7 @@ str = fromString <$> readerAsk
 --
 -- > import qualified Data.Attoparsec.Text as A
 -- > import qualified Data.Text as T
--- > attoparsecReader :: A.Parser a => ReadM a
+-- > attoparsecReader :: A.Parser a -> ReadM a
 -- > attoparsecReader p = eitherReader (A.parseOnly p . T.pack)
 eitherReader :: (String -> Either String a) -> ReadM a
 eitherReader f = readerAsk >>= either readerError return . f

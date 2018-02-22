@@ -155,6 +155,7 @@ instance Monoid (Mod f a) where
   mempty = Mod id mempty id
   mappend = (<>)
 
+-- | @since 0.13.0.0
 instance Semigroup (Mod f a) where
   Mod f1 d1 g1 <> Mod f2 d2 g2
     = Mod (f2 . f1) (d2 <> d1) (g2 . g1)
