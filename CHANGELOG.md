@@ -1,3 +1,12 @@
+## Version 0.14.1.0 (12 Feb 2018)
+
+- Updated dependency bounds.
+
+- Export `HasName`, `HasCompleter`, `HasValue`, and
+  `HasMetavar` type classes.
+
+- Doc.
+
 ## Version 0.14.0.0 (09 Jun 2017)
 
 - Upgrade `str` and related builders to be polymorphic over

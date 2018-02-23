@@ -1,5 +1,5 @@
 name:                optparse-applicative
-version:             0.14.0.0
+version:             0.14.1.0
 synopsis:            Utilities and combinators for parsing command line options
 description:
     optparse-applicative is a haskell library for parsing options
@@ -98,7 +98,7 @@ test-suite optparse-applicative-tests
   build-depends:       base
                      , bytestring                      == 0.10.*
                      , optparse-applicative
-                     , QuickCheck                      >= 2.8 && < 2.11
+                     , QuickCheck                      >= 2.8 && < 2.12
 
   if !impl(ghc >= 8)
     build-depends:     semigroups
