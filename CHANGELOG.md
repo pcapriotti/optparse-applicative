@@ -1,4 +1,8 @@
-## Version 0.14.1.0 (12 Feb 2018)
+## Version 0.14.2.0 (26 Feb 2018)
+
+- Updated dependency bounds.
+
+## Version 0.14.1.0 (23 Feb 2018)
 
 - Updated dependency bounds.
 
