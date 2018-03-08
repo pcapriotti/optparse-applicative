@@ -7,6 +7,7 @@ env:
  - GHCVER=7.10.3
  - GHCVER=8.0.2
  - GHCVER=8.2.1
+ - GHCVER=8.4.1
  - GHCVER=head
 
 matrix:
@@ -27,6 +28,6 @@ script:
  - export VERSION=$(cabal info . | awk 'NR==1 { n=split($2,x,"-"); print x[n]; }')
  - cabal install --only-dependencies --enable-tests
  - |
-   if [ $GHCVER = "head" ] || [ ${GHCVER%.*} = "8.2" ] || [ ${GHCVER%.*} = "8.0" ] || [ ${GHCVER%.*} = "7.10" ] || [ ${GHCVER%.*} = "7.8" ] || [ ${GHCVER%.*} = "7.6" ] || [ ${GHCVER%.*} = "7.4" ] ; then
+   if [ $GHCVER = "head" ] || [ ${GHCVER%.*} = "8.4" ] || [ ${GHCVER%.*} = "8.2" ] || [ ${GHCVER%.*} = "8.0" ] || [ ${GHCVER%.*} = "7.10" ] || [ ${GHCVER%.*} = "7.8" ] || [ ${GHCVER%.*} = "7.6" ] || [ ${GHCVER%.*} = "7.4" ] ; then
       cabal test
    fi
