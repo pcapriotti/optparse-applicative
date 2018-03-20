@@ -104,6 +104,7 @@ module Options.Applicative (
   completer,
   idm,
   mappend,
+  group,
 
   OptionFields,
   FlagFields,

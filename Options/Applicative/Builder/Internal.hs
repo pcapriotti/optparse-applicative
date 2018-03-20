@@ -5,6 +5,7 @@ module Options.Applicative.Builder.Internal (
   HasCompleter(..),
   HasValue(..),
   HasMetavar(..),
+  HasGroup(..),
   OptionFields(..),
   FlagFields(..),
   CommandFields(..),
@@ -34,18 +35,21 @@ import Options.Applicative.Types
 data OptionFields a = OptionFields
   { optNames :: [OptName]
   , optCompleter :: Completer
-  , optNoArgError :: String -> ParseError }
+  , optNoArgError :: String -> ParseError
+  , optGroup :: Maybe String }
 
 data FlagFields a = FlagFields
   { flagNames :: [OptName]
-  , flagActive :: a }
+  , flagActive :: a
+  , flagGroup :: Maybe String }
 
 data CommandFields a = CommandFields
   { cmdCommands :: [(String, ParserInfo a)]
   , cmdGroup :: Maybe String }
 
 data ArgumentFields a = ArgumentFields
-  { argCompleter :: Completer }
+  { argCompleter :: Completer
+  , argGroup :: Maybe String }
 
 class HasName f where
   name :: OptName -> f a -> f a
@@ -81,6 +85,22 @@ instance HasMetavar ArgumentFields where
   hasMetavarDummy _ = ()
 instance HasMetavar CommandFields where
   hasMetavarDummy _ = ()
+
+class HasGroup f where
+  setGroup :: String -> f a -> f a
+  getGroup :: f a -> Maybe String
+instance HasGroup OptionFields where
+  setGroup n fields = fields { optGroup = Just n }
+  getGroup = optGroup
+instance HasGroup CommandFields where
+  setGroup n fields = fields { cmdGroup = Just n }
+  getGroup = cmdGroup
+instance HasGroup ArgumentFields where
+  setGroup n fields = fields { argGroup = Just n }
+  getGroup = argGroup
+instance HasGroup FlagFields where
+  setGroup n fields = fields { flagGroup = Just n }
+  getGroup = flagGroup
 
 -- mod --
 
@@ -151,10 +171,10 @@ baseProps = OptProperties
   }
 
 mkCommand :: Mod CommandFields a -> (Maybe String, [String], String -> Maybe (ParserInfo a))
-mkCommand m = (group, map fst cmds, (`lookup` cmds))
+mkCommand m = (grp, map fst cmds, (`lookup` cmds))
   where
     Mod f _ _ = m
-    CommandFields cmds group = f (CommandFields [] Nothing)
+    CommandFields cmds grp = f (CommandFields [] Nothing)
 
 mkParser :: DefaultProp a
          -> (OptProperties -> OptProperties)
