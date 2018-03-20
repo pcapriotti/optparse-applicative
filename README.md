@@ -301,7 +301,8 @@ Having `Applicative` and `Alternative` instances, optparse-applicative
 parsers are also able to be composed with standard combinators. For
 example: `optional :: Alternative f => f a -> f (Maybe a)` will
 mean the user is not required to provide input for the affected
-`Parser`.
+`Parser`, or `many strOption` can be used to create a parser that accepts
+repeated string options turning them into a list of strings.
 
 ### Running parsers
 
