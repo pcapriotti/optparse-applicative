@@ -484,6 +484,11 @@ showHelpOnEmpty :: PrefsMod
 showHelpOnEmpty = PrefsMod $ \p -> p { prefShowHelpOnEmpty = True }
 
 -- | Turn off backtracking after subcommand is parsed.
+--
+--    When used in conjunction with 'showHelpOnError' and a parser
+--    with subcommands it will cause the program, on error, to show
+--    the help for the subcommand instead of backtracking to the
+--    parent parser and trying to find an alternate parse there.
 noBacktrack :: PrefsMod
 noBacktrack = PrefsMod $ \p -> p { prefBacktrack = False }
 
