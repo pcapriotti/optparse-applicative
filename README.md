@@ -238,8 +238,8 @@ will give the same result as
     -q --target world
 
 It is this property which leads us to an Applicative interface
-instead of a Monadic one, as all option must be considered in
-parallel, and can not depend on the output of other options.
+instead of a Monadic one, as all options must be considered in
+parallel, and cannot depend on the output of other options.
 
 Note, however, that the order of sequencing is still somewhat
 significant, in that it affects the generated help text. Customisation
