@@ -274,7 +274,7 @@ treeMapParser g = simplify . go False False False g
       | otherwise
       = MultNode []
     go m d r f (MultP p1 p2) = MultNode [go m d r f p1, go m d r' f p2]
-      where r' = r || has_positional p1
+      where r' = r || hasArg p1
     go m d r f (AltP p1 p2) = AltNode [go m d' r f p1, go m d' r f p2]
       where d' = d || has_default p1 || has_default p2
     go _ d r f (BindP p k) =
@@ -283,18 +283,12 @@ treeMapParser g = simplify . go False False False g
         Nothing -> go'
         Just aa -> MultNode [ go', go True d r f (k aa) ]
 
-    has_positional :: Parser a -> Bool
-    has_positional (NilP _) = False
-    has_positional (OptP p) = (is_positional . optMain) p
-    has_positional (MultP p1 p2) = has_positional p1 || has_positional p2
-    has_positional (AltP p1 p2) = has_positional p1 || has_positional p2
-    has_positional (BindP p _) = has_positional p
-
-    is_positional :: OptReader a -> Bool
-    is_positional (OptReader {})  = False
-    is_positional (FlagReader {}) = False
-    is_positional (ArgReader {})  = True
-    is_positional (CmdReader {})  = True
+    hasArg :: Parser a -> Bool
+    hasArg (NilP _) = False
+    hasArg (OptP p) = (isArg . optMain) p
+    hasArg (MultP p1 p2) = hasArg p1 || hasArg p2
+    hasArg (AltP p1 p2) = hasArg p1 || hasArg p2
+    hasArg (BindP p _) = hasArg p
 
 
 simplify :: OptTree a -> OptTree a
