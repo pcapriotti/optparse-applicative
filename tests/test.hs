@@ -649,16 +649,16 @@ prop_many_pairs_lazy_progress = once $
 
 prop_suggest :: Property
 prop_suggest = once $
-  let p2 = subparser (command "reachable"   (info (pure ()) idm))
-      p1 = subparser (command "unreachable" (info (pure ()) idm))
-      p  = (,) <$> p2 <*> p1
+  let p2 = subparser (command "first"   (info (pure ()) idm))
+      p1 = subparser (command "fst"     (info (pure ()) idm))
+      p3 = subparser (command "far-off" (info (pure ()) idm))
+      p  = p2 *> p1 *> p3
       i  = info p idm
-      result = run i ["ureachable"]
+      result = run i ["fist"]
   in assertError result $ \failure ->
     let (msg, _)  = renderFailure failure "prog"
     in  counterexample msg
-       $  isInfixOf "Did you mean this?\n    reachable" msg
-      .&. not (isInfixOf "unreachable" msg)
+       $  isInfixOf "Did you mean one of these?\n    first\n    fst" msg
 
 prop_bytestring_reader :: Property
 prop_bytestring_reader = once $
