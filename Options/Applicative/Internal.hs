@@ -30,7 +30,7 @@ import Prelude
 import Control.Monad (MonadPlus(..), liftM, ap, guard)
 import Control.Monad.Trans.Class (MonadTrans, lift)
 import Control.Monad.Trans.Except
-  (runExcept, runExceptT, withExcept, ExceptT(..), throwE, catchE)
+  (runExcept, runExceptT, withExcept, ExceptT(..), throwE)
 import Control.Monad.Trans.Reader
   (mapReaderT, runReader, runReaderT, Reader, ReaderT, ask)
 import Control.Monad.Trans.State (StateT, get, put, modify, evalStateT, runStateT)
@@ -43,7 +43,6 @@ class (Alternative m, MonadPlus m) => MonadP m where
   getPrefs :: m ParserPrefs
 
   missingArgP :: ParseError -> Completer -> m a
-  tryP :: m a -> m (Either ParseError a)
   errorP :: ParseError -> m a
   exitP :: IsCmdStart -> ArgPolicy -> Parser b -> Maybe a -> m a
 
@@ -79,7 +78,6 @@ instance MonadP P where
   getPrefs = P . lift . lift $ ask
 
   missingArgP e _ = errorP e
-  tryP (P p) = P $ lift $ runExceptT p
   exitP i _ p = P . maybe (throwE . MissingError i . SomeParser $ p) return
   errorP = P . throwE
 
@@ -152,7 +150,6 @@ instance MonadP Completion where
   getPrefs = Completion $ lift ask
 
   missingArgP _ = Completion . lift . lift . ComplOption
-  tryP (Completion p) = Completion $ catchE (Right <$> p) (return . Left)
   exitP _ a p _ = Completion . lift . lift $ ComplParser (SomeParser p) a
   errorP = Completion . throwE
 
