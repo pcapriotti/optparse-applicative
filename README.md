@@ -475,8 +475,8 @@ usually used as one side of an alternative.
 
 Another interesting use for the `flag'` builder is to count the
 number of instances on the command line, for example, verbosity
-settings could be specified on a scale; the following parser with
-count the number of of instances of `-v` on the command line.
+settings could be specified on a scale; the following parser will
+count the number of instances of `-v` on the command line.
 
 ```haskell
 length <$> many (flag' () (short 'v'))
