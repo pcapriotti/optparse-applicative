@@ -98,7 +98,7 @@ test-suite optparse-applicative-tests
   build-depends:       base
                      , bytestring                      == 0.10.*
                      , optparse-applicative
-                     , QuickCheck                      >= 2.8 && < 2.12
+                     , QuickCheck                      >= 2.8 && < 2.13
 
   if !impl(ghc >= 8)
     build-depends:     semigroups
