@@ -282,6 +282,7 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
       ShowHelpText             -> True
       MissingError CmdStart  _  | prefShowHelpOnEmpty pprefs
                                -> True
+      InfoMsg _                -> False
       _                        -> prefShowHelpOnError pprefs
 
 renderFailure :: ParserFailure ParserHelp -> String -> (String, ExitCode)
