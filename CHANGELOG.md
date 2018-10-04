@@ -1,3 +1,11 @@
+## Version 0.14.3.0 (03 Oct 2018)
+
+- Updated dependency bounds.
+
+- Fix tab completion with Commands being unreachable.
+
+- Clean ups and Documentation.
+
 ## Version 0.14.2.0 (26 Feb 2018)
 
 - Updated dependency bounds.
