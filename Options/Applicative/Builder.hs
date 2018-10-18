@@ -83,6 +83,7 @@ module Options.Applicative.Builder (
   showHelpOnError,
   showHelpOnEmpty,
   noBacktrack,
+  subparserInline,
   columns,
   prefs,
   defaultPrefs,
@@ -485,7 +486,15 @@ showHelpOnEmpty = PrefsMod $ \p -> p { prefShowHelpOnEmpty = True }
 
 -- | Turn off backtracking after subcommand is parsed.
 noBacktrack :: PrefsMod
-noBacktrack = PrefsMod $ \p -> p { prefBacktrack = False }
+noBacktrack = PrefsMod $ \p -> p { prefBacktrack = NoBacktrack }
+
+-- | Allow full mixing of subcommand and parent arguments by inlining
+-- selected subparsers into the parent parser.
+--
+-- /NOTE:/ When this option is used, preferences for the subparser which
+-- effect the parser behaviour (such as noIntersperse) are ignored.
+subparserInline :: PrefsMod
+subparserInline = PrefsMod $ \p -> p { prefBacktrack = SubparserInline }
 
 -- | Set the maximum width of the generated help text.
 columns :: Int -> PrefsMod
@@ -500,7 +509,7 @@ prefs m = applyPrefsMod m base
       , prefDisambiguate = False
       , prefShowHelpOnError = False
       , prefShowHelpOnEmpty = False
-      , prefBacktrack = True
+      , prefBacktrack = Backtrack
       , prefColumns = 80 }
 
 -- Convenience shortcuts

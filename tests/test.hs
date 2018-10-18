@@ -393,6 +393,16 @@ prop_backtracking = once $
       result = execParserPure (prefs noBacktrack) i ["c", "-b"]
   in assertError result $ \_ -> property succeeded
 
+prop_subparser_inline :: Property
+prop_subparser_inline = once $
+  let p2 = switch (short 'a')
+      p1 = (,)
+        <$> subparser (command "c" (info p2 idm))
+        <*> switch (short 'b')
+      i = info (p1 <**> helper) idm
+      result = execParserPure (prefs subparserInline) i ["c", "-b", "-a" ]
+  in assertResult result ((True, True) ===)
+
 prop_error_context :: Property
 prop_error_context = once $
   let p = pk <$> option auto (long "port")
