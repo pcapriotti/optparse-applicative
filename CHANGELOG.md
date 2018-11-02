@@ -97,17 +97,17 @@
   fires when a command or subcommand is begun, and suppresses the "Missing:"
   error text.
 
-- Fix ghc 8.0 warnings
+- Fix ghc 8.0 warnings.
 
-- Fix ghc 7.10 warnings
+- Fix ghc 7.10 warnings.
 
-- Bump dependency bounds
+- Bump dependency bounds.
 
-- Add maybeReader function for convenient ReadM creation
+- Add maybeReader function for convenient ReadM creation.
 
-- Move eitherReader to Readers section (for better discoverability)
+- Move eitherReader to Readers section (for better discoverability).
 
-- Fix hsubparser metavar override
+- Fix hsubparser metavar override.
 
 - Remove ComplError, which was dead code.
 
@@ -123,9 +123,9 @@
 
 - Updated dependency bounds.
 
-- Improve subparser contexts to improve usage error texts
+- Improve subparser contexts to improve usage error texts.
 
-- Doc
+- Docs.
 
 - Fixed bugs
     * \# 164 - Invalid options and invalid arguments after parser has succeeded
@@ -145,7 +145,7 @@
 
 - Add `Show` and `Eq` instances to some types for easier debugging.
 
-- Add defaultPrefs, a default preferences value
+- Add defaultPrefs, a default preferences value.
 
 - Docs.
 
@@ -243,7 +243,7 @@
 
 ## Version 0.7.0.1 (18 Oct 2013)
 
-- Minor docs fixes
+- Minor docs fixes.
 
 ## Version 0.7.0 (17 Oct 2013)
 
@@ -271,15 +271,15 @@
     * \#44 - Can the build input restriction process == 1.1.* be relaxed?
     * \#28 - Help for subcommands
 
-## Version 0.5.2.1 (24 Dic 2012)
+## Version 0.5.2.1 (24 Dec 2012)
 
 - Minor docs fixes.
 
-## Version 0.5.2 (23 Dic 2012)
+## Version 0.5.2 (23 Dec 2012)
 
 - Fixed compatibility with GHC 7.2.
 
-## Version 0.5.1 (23 Dic 2012)
+## Version 0.5.1 (23 Dec 2012)
 
 - There is a new parser preference `noBacktrack`, that controls whether how a
   failure in a subparser is propagated. By default, an unknown option in a
@@ -295,7 +295,7 @@
     * \#29 - Document Mod
     * \#26 - Improve docs for the `Arrow` interface
 
-## Version 0.5.0 (22 Dic 2012)
+## Version 0.5.0 (22 Dec 2012)
 
 - Fewer GHC extensions required.
 
@@ -311,7 +311,7 @@
 - Fixed bugs
     * \#37 - Use (\<\>) instead of (&) in documentation
 
-## Version 0.4.3 (09 Dic 2012)
+## Version 0.4.3 (09 Dec 2012)
 
 - Updated dependency bounds.
 
@@ -402,20 +402,20 @@ description like `[METAVAR]...`.
 
 ## Version 0.1.1 (21 Jul 2012)
 
-- New arrow interface
+- New arrow interface.
 
 - Fixed bugs
-      * \#7 - "arguments" reads positional arguments in reverse
+    * \#7 - "arguments" reads positional arguments in reverse
 
 ## Version 0.1.0 (07 Jul 2012)
 
-- Improved error reporting internals
+- Improved error reporting internals.
 
-- Removed template-haskell dependency
+- Removed template-haskell dependency.
 
 - Fixed bugs:
-      * \#3 - No help for subparsers
-      * \#4 - Extra empty lines around command list
+    * \#3 - No help for subparsers
+    * \#4 - Extra empty lines around command list
 
 ## Version 0.0.1 (09 Jun 2012)
 
