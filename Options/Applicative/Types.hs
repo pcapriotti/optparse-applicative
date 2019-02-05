@@ -130,7 +130,7 @@ data OptVisibility
 
 -- | Specification for an individual parser option.
 data OptProperties = OptProperties
-  { propVisibility :: OptVisibility       -- ^ whether this flag is shown is the brief description
+  { propVisibility :: OptVisibility       -- ^ whether this flag is shown in the brief description
   , propHelp :: Chunk Doc                 -- ^ help text for this option
   , propMetaVar :: String                 -- ^ metavariable for this option
   , propShowDefault :: Maybe String       -- ^ what to show in the help text as the default
