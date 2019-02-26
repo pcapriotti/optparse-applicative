@@ -45,10 +45,10 @@ instance Monad Chunk where
   return = pure
   m >>= f = Chunk $ unChunk m >>= unChunk . f
 
-instance Monoid a => Semigroup (Chunk a) where
-  (<>) = chunked mappend
+instance Semigroup a => Semigroup (Chunk a) where
+  (<>) = chunked (<>)
 
-instance Monoid a => Monoid (Chunk a) where
+instance Semigroup a => Monoid (Chunk a) where
   mempty = Chunk Nothing
   mappend = (<>)
 
