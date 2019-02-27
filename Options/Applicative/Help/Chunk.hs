@@ -16,6 +16,7 @@ module Options.Applicative.Help.Chunk
 
 import Control.Applicative
 import Control.Monad
+import Data.List.NonEmpty ( NonEmpty(..) )
 import Data.Maybe
 import Data.Semigroup
 import Prelude
@@ -69,9 +70,9 @@ chunked f (Chunk (Just x)) (Chunk (Just y)) = Chunk (Just (f x y))
 --
 -- > isEmpty . listToChunk = null
 -- > listToChunk = mconcat . fmap pure
-listToChunk :: (Semigroup a, Monoid a) => [a] -> Chunk a
+listToChunk :: Semigroup a => [a] -> Chunk a
 listToChunk [] = mempty
-listToChunk xs = pure (mconcat xs)
+listToChunk (x:xs) = pure (sconcat (x :| xs))
 
 -- | Part of a constrained comonad instance.
 --
