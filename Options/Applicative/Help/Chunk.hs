@@ -69,7 +69,7 @@ chunked f (Chunk (Just x)) (Chunk (Just y)) = Chunk (Just (f x y))
 --
 -- > isEmpty . listToChunk = null
 -- > listToChunk = mconcat . fmap pure
-listToChunk :: Monoid a => [a] -> Chunk a
+listToChunk :: (Semigroup a, Monoid a) => [a] -> Chunk a
 listToChunk [] = mempty
 listToChunk xs = pure (mconcat xs)
 
