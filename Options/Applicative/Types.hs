@@ -384,7 +384,9 @@ data OptHelpInfo = OptHelpInfo
 data OptTree a
   = Leaf a
   | MultNode [OptTree a]
-  | AltNode [OptTree a]
+  | AltNode Bool [OptTree a]
+  -- ^ The 'Bool' argument indicates whether this node should be displayed with
+  -- brackets around it.
   deriving Show
 
 optVisibility :: Option a -> OptVisibility
