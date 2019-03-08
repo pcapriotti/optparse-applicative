@@ -59,12 +59,13 @@ optDesc pprefs style info opt =
         = mempty
         | isEmpty chunk || not (descSurround style)
         = mappend chunk suffix
-        | hinfoDefault info
-        = mappend (fmap brackets chunk) suffix
+        --  | hinfoDefault info
+        -- = mappend chunk suffix
         | null (drop 1 descs)
         = mappend chunk suffix
         | otherwise
-        = mappend (fmap parens chunk) suffix
+        = mappend chunk suffix
+--         = mappend (fmap parens chunk) suffix
   in maybe id fmap (optDescMod opt) (render desc')
 
 -- | Generate descriptions for commands.
@@ -91,7 +92,7 @@ missingDesc = briefDesc' False
 -- | Generate a brief help text for a parser, allowing the specification
 --   of if optional arguments are show.
 briefDesc' :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
-briefDesc' showOptional pprefs = fold_tree . treeMapParser (optDesc pprefs style)
+briefDesc' showOptional pprefs p = fold_tree (treeMapParser (optDesc pprefs style) p)
   where
     style = OptDescStyle
       { descSep = string "|"
@@ -99,12 +100,16 @@ briefDesc' showOptional pprefs = fold_tree . treeMapParser (optDesc pprefs style
       , descOptional = showOptional
       , descSurround = True }
 
+bracket :: Bool -> Chunk Doc -> Chunk Doc
+bracket b chunk = if b then fmap brackets chunk else chunk
+
 fold_tree :: OptTree (Chunk Doc) -> Chunk Doc
-fold_tree (Leaf x) = x
+fold_tree (Leaf x) = x -- bracket b x
 fold_tree (MultNode xs) = foldr ((<</>>) . fold_tree) mempty xs
-fold_tree (AltNode xs) = alt_node
-                       . filter (not . isEmpty)
-                       . map fold_tree $ xs
+fold_tree (AltNode b xs) = bracket (b == AltDefault)
+                           . alt_node
+                           . filter (not . isEmpty)
+                           . map fold_tree $ xs
   where
     alt_node :: [Chunk Doc] -> Chunk Doc
     alt_node [n] = n

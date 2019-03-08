@@ -26,6 +26,7 @@ module Options.Applicative.Types (
   Args,
   ArgPolicy(..),
   OptHelpInfo(..),
+  AltNodeType(..),
   OptTree(..),
   ParserHelp(..),
   SomeParser(..),
@@ -381,10 +382,15 @@ data OptHelpInfo = OptHelpInfo
                                  --   accessed in the current parser position ( first arg )
   } deriving (Eq, Show)
 
+-- | This type encapsulates whether an 'AltNode' of an 'OptTree' should be displayed
+-- with brackets around it.
+data AltNodeType = AltDefault | AltNoDefault
+  deriving (Show, Eq)
+
 data OptTree a
   = Leaf a
   | MultNode [OptTree a]
-  | AltNode [OptTree a]
+  | AltNode AltNodeType [OptTree a]
   deriving Show
 
 optVisibility :: Option a -> OptVisibility

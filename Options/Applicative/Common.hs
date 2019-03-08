@@ -251,7 +251,7 @@ mapParser f = flatten . treeMapParser f
   where
     flatten (Leaf x) = [x]
     flatten (MultNode xs) = xs >>= flatten
-    flatten (AltNode xs) = xs >>= flatten
+    flatten (AltNode _ xs) = xs >>= flatten
 
 -- | Like 'mapParser', but collect the results in a tree structure.
 treeMapParser :: (forall x . OptHelpInfo -> Option x -> b)
@@ -262,7 +262,9 @@ treeMapParser g = simplify . go False False False g
     has_default :: Parser a -> Bool
     has_default p = isJust (evalParser p)
 
-    go :: Bool -> Bool -> Bool
+    go :: Bool
+       -> Bool
+       -> Bool
        -> (forall x . OptHelpInfo -> Option x -> b)
        -> Parser a
        -> OptTree b
@@ -272,10 +274,14 @@ treeMapParser g = simplify . go False False False g
       = Leaf (f (OptHelpInfo m d r) opt)
       | otherwise
       = MultNode []
-    go m d r f (MultP p1 p2) = MultNode [go m d r f p1, go m d r' f p2]
+    go m d r f (MultP p1 p2) =
+      MultNode [go m d r f p1, go m d r' f p2]
       where r' = r || hasArg p1
-    go m d r f (AltP p1 p2) = AltNode [go m d' r f p1, go m d' r f p2]
-      where d' = d || has_default p1 || has_default p2
+    go m d r f p@(AltP p1 p2) =
+      AltNode altNodeType [go m d' r f p1, go m d' r f p2]
+      where altNodeType | has_default p && not (has_default p1 && has_default p2) = AltDefault
+                        | otherwise = AltNoDefault
+            d' = d || altNodeType == AltDefault
     go _ d r f (BindP p k) =
       let go' = go True d r f p
       in case evalParser p of
@@ -289,9 +295,13 @@ treeMapParser g = simplify . go False False False g
     hasArg (AltP p1 p2) = hasArg p1 || hasArg p2
     hasArg (BindP p _) = hasArg p
 
-
 simplify :: OptTree a -> OptTree a
 simplify (Leaf x) = Leaf x
+simplify (AltNode b xs) = AltNode b (concatMap (remove_alt . simplify) xs)
+  where
+    remove_alt (AltNode _ ts) = map simplify ts
+    remove_alt (MultNode []) = []
+    remove_alt t = [simplify t]
 simplify (MultNode xs) =
   case concatMap (remove_mult . simplify) xs of
     [x] -> x
@@ -299,12 +309,3 @@ simplify (MultNode xs) =
   where
     remove_mult (MultNode ts) = ts
     remove_mult t = [t]
-simplify (AltNode xs) =
-  case concatMap (remove_alt . simplify) xs of
-    []  -> MultNode []
-    [x] -> x
-    xs' -> AltNode xs'
-  where
-    remove_alt (AltNode ts) = ts
-    remove_alt (MultNode []) = []
-    remove_alt t = [t]
