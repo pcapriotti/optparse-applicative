@@ -279,9 +279,19 @@ treeMapParser g = simplify . go False False False g
       where r' = r || hasArg p1
     go m d r f p@(AltP p1 p2) =
       AltNode altNodeType [go m d' r f p1, go m d' r f p2]
-      where altNodeType | has_default p && not (has_default p1 && has_default p2) = AltDefault
-                        | otherwise = AltNoDefault
-            d' = d || altNodeType == AltDefault
+      where
+        -- The 'altNodeType' variable tracks whether or not this node of the
+        -- 'OptTree' ought to be displayed with brackets or not. Generally, we want
+        -- to put brackets around it when the parser has optional arguments, but if
+        -- *both* of its children also have optional arguments, then we don't put
+        -- brackets around the top-level because that would be redundant.
+        altNodeType | has_default p && not (has_default p1 && has_default p2) = AltDefault
+                    | otherwise = AltNoDefault
+        -- The 'd' variable tracks whether the option nodes at the leaves have
+        -- optional arguments so that when we want to hide optional arguments, we
+        -- have the information needed to do that. An option can be considered
+        -- optional in this sense if any of its parents were optional.
+        d' = d || altNodeType == AltDefault
     go _ d r f (BindP p k) =
       let go' = go True d r f p
       in case evalParser p of

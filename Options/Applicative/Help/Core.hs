@@ -57,15 +57,10 @@ optDesc pprefs style info opt =
       render chunk
         | not show_opt
         = mempty
-        | isEmpty chunk || not (descSurround style)
-        = mappend chunk suffix
-        --  | hinfoDefault info
-        -- = mappend chunk suffix
-        | null (drop 1 descs)
-        = mappend chunk suffix
+        | not (hinfoDefault info) && length descs > 1
+        = fmap parens chunk <> suffix
         | otherwise
-        = mappend chunk suffix
---         = mappend (fmap parens chunk) suffix
+        = chunk <> suffix
   in maybe id fmap (optDescMod opt) (render desc')
 
 -- | Generate descriptions for commands.
@@ -104,7 +99,7 @@ bracket :: Bool -> Chunk Doc -> Chunk Doc
 bracket b chunk = if b then fmap brackets chunk else chunk
 
 fold_tree :: OptTree (Chunk Doc) -> Chunk Doc
-fold_tree (Leaf x) = x -- bracket b x
+fold_tree (Leaf x) = x
 fold_tree (MultNode xs) = foldr ((<</>>) . fold_tree) mempty xs
 fold_tree (AltNode b xs) = bracket (b == AltDefault)
                            . alt_node
