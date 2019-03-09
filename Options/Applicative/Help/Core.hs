@@ -106,10 +106,10 @@ bracket b chunk = if b then fmap brackets chunk else chunk
 fold_tree :: OptTree (Chunk Doc) -> Chunk Doc
 fold_tree (Leaf x) = x -- bracket b x
 fold_tree (MultNode xs) = foldr ((<</>>) . fold_tree) mempty xs
-fold_tree (AltNode b xs) = bracket b
-                       . alt_node
-                       . filter (not . isEmpty)
-                       . map fold_tree $ xs
+fold_tree (AltNode b xs) = bracket (b == AltDefault)
+                           . alt_node
+                           . filter (not . isEmpty)
+                           . map fold_tree $ xs
   where
     alt_node :: [Chunk Doc] -> Chunk Doc
     alt_node [n] = n

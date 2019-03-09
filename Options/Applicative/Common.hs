@@ -278,8 +278,10 @@ treeMapParser g = simplify . go False False False g
       MultNode [go m d r f p1, go m d r' f p2]
       where r' = r || hasArg p1
     go m d r f p@(AltP p1 p2) =
-      AltNode (has_default p && not (has_default p1 && has_default p2)) [go m d' r f p1, go m d' r f p2]
-      where d' = d || (has_default p && not (has_default p1 && has_default p2))
+      AltNode altNodeType [go m d' r f p1, go m d' r f p2]
+      where altNodeType | has_default p && not (has_default p1 && has_default p2) = AltDefault
+                        | otherwise = AltNoDefault
+            d' = d || altNodeType == AltDefault
     go _ d r f (BindP p k) =
       let go' = go True d r f p
       in case evalParser p of
