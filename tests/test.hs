@@ -159,6 +159,24 @@ prop_optional_help = once $
       i = info (p <**> helper) idm
   in checkHelpText "optional" i ["--help"]
 
+prop_nested_optional_help :: Property
+prop_nested_optional_help = once $
+  let p :: Parser (String, Maybe (String, Maybe String))
+      p = (,) <$>
+          (strOption ( long "a"
+                       <> metavar "A"
+                       <> help "value a" ) ) <*>
+          (optional
+           ((,) <$>
+            (strOption ( long "b0"
+                         <> metavar "B0"
+                         <> help "value b0" ) ) <*>
+            (optional (strOption ( long "b1"
+                                   <> metavar "B1"
+                                   <> help "value b1" )))))
+      i = info (p <**> helper) idm
+  in checkHelpText "nested_optional" i ["--help"]
+
 prop_nested_commands :: Property
 prop_nested_commands = once $
   let p3 :: Parser String
