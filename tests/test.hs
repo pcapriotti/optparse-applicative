@@ -146,6 +146,19 @@ prop_alt_help = once $
       i = info (p <**> helper) idm
   in checkHelpText "alt" i ["--help"]
 
+prop_optional_help :: Property
+prop_optional_help = once $
+  let p :: Parser (Maybe (String, String))
+      p = optional ((,)
+                    <$> strOption ( long "a"
+                                    <> metavar "A"
+                                    <> help "value a" )
+                    <*> strOption ( long "b"
+                                    <> metavar "B"
+                                    <> help "value b" ) )
+      i = info (p <**> helper) idm
+  in checkHelpText "optional" i ["--help"]
+
 prop_nested_commands :: Property
 prop_nested_commands = once $
   let p3 :: Parser String
