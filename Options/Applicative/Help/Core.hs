@@ -99,7 +99,7 @@ bracket :: Bool -> Chunk Doc -> Chunk Doc
 bracket b chunk = if b then fmap brackets chunk else chunk
 
 fold_tree :: OptTree (Chunk Doc) -> Chunk Doc
-fold_tree (Leaf x) = x -- bracket b x
+fold_tree (Leaf x) = x
 fold_tree (MultNode xs) = foldr ((<</>>) . fold_tree) mempty xs
 fold_tree (AltNode b xs) = bracket (b == AltDefault)
                            . alt_node
