@@ -57,15 +57,10 @@ optDesc pprefs style info opt =
       render chunk
         | not show_opt
         = mempty
-        | isEmpty chunk || not (descSurround style)
-        = mappend chunk suffix
-        --  | hinfoDefault info
-        -- = mappend chunk suffix
-        | null (drop 1 descs)
-        = mappend chunk suffix
+        | not (hinfoDefault info) && length descs > 1
+        = fmap parens chunk <> suffix
         | otherwise
-        = mappend chunk suffix
---         = mappend (fmap parens chunk) suffix
+        = chunk <> suffix
   in maybe id fmap (optDescMod opt) (render desc')
 
 -- | Generate descriptions for commands.
