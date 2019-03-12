@@ -384,7 +384,7 @@ data OptHelpInfo = OptHelpInfo
 
 -- | This type encapsulates whether an 'AltNode' of an 'OptTree' should be displayed
 -- with brackets around it.
-data AltNodeType = AltDefault | AltNoDefault
+data AltNodeType = MarkDefault | NoDefault
   deriving (Show, Eq)
 
 data OptTree a

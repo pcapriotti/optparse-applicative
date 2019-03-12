@@ -81,7 +81,7 @@ library
     build-depends:     semigroups                      >= 0.10 && < 0.19
                      , fail                            == 4.9.*
 
-test-suite optparse-applicative-tests
+test-suite tests
   type:                exitcode-stdio-1.0
 
   main-is:             test.hs

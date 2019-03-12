@@ -159,11 +159,35 @@ prop_optional_help = once $
       i = info (p <**> helper) idm
   in checkHelpText "optional" i ["--help"]
 
+prop_optional_requiring_parens :: Property
+prop_optional_requiring_parens = once $
+  let p = optional $
+            (,)
+            <$> flag' () ( short 'a' <> long "a" )
+            <*> flag' () ( short 'b' <> long "b" )
+      i = info (p <**> helper) briefDesc
+      result = run i ["--help"]
+  in assertError result $ \failure ->
+    let text = head . lines . fst $ renderFailure failure "test"
+    in  "Usage: test [(-a|--a) (-b|--b)]" === text
+
+prop_optional_alt_requiring_parens :: Property
+prop_optional_alt_requiring_parens = once $
+  let p = optional $
+                flag' () ( short 'a' <> long "a" )
+            <|> flag' () ( short 'b' <> long "b" )
+      i = info (p <**> helper) briefDesc
+      result = run i ["--help"]
+  in assertError result $ \failure ->
+    let text = head . lines . fst $ renderFailure failure "test"
+    in  "Usage: test [(-a|--a) | (-b|--b)]" === text
+
 prop_nested_optional_help :: Property
 prop_nested_optional_help = once $
   let p :: Parser (String, Maybe (String, Maybe String))
       p = (,) <$>
-          (strOption ( long "a"
+          (strOption ( short 'a'
+                       <> long "a"
                        <> metavar "A"
                        <> help "value a" ) ) <*>
           (optional
@@ -176,6 +200,21 @@ prop_nested_optional_help = once $
                                    <> help "value b1" )))))
       i = info (p <**> helper) idm
   in checkHelpText "nested_optional" i ["--help"]
+
+prop_nested_fun :: Property
+prop_nested_fun = once $
+  let p :: Parser (String, Maybe (String, Maybe String))
+      p = (,) <$>
+          (strOption (short 'a' <> long "a" <> metavar "A")) <*>
+          (optional
+           ((,) <$>
+            (strOption (short 'b' <> long "b" <> metavar "B")) <*>
+            (optional (strOption (short 'c' <> long "c" <> metavar "C")))))
+      i = info (p <**> helper) briefDesc
+      result = run i ["--help"]
+  in assertError result $ \failure ->
+    let text = head . lines . fst $ renderFailure failure "test"
+    in  "Usage: test (-a|--a A) [(-b|--b B) [-c|--c C]]" === text
 
 prop_nested_commands :: Property
 prop_nested_commands = once $

@@ -2,7 +2,6 @@ module Options.Applicative.Help.Core (
   cmdDesc,
   briefDesc,
   missingDesc,
-  fold_tree,
   fullDesc,
   ParserHelp(..),
   errorHelp,
@@ -36,12 +35,12 @@ data OptDescStyle = OptDescStyle
   , descSurround :: Bool }
 
 -- | Generate description for a single option.
-optDesc :: ParserPrefs -> OptDescStyle -> OptHelpInfo -> Option a -> Chunk Doc
+optDesc :: ParserPrefs -> OptDescStyle -> OptHelpInfo -> Option a -> (Chunk Doc, Wrapping)
 optDesc pprefs style info opt =
   let ns = optionNames $ optMain opt
       mv = stringChunk $ optMetaVar opt
       descs = map (string . showOption) (sort ns)
-      desc' = listToChunk (intersperse (descSep style) descs) <<+>> mv
+      desc  = listToChunk (intersperse (descSep style) descs) <<+>> mv
       show_opt
         | hinfoDefault info && not (descOptional style)
         = False
@@ -54,14 +53,16 @@ optDesc pprefs style info opt =
         = stringChunk . prefMultiSuffix $ pprefs
         | otherwise
         = mempty
-      render chunk
+      wrapping
+        = wrapIf (length ns > 1)
+      rendered
         | not show_opt
         = mempty
-        | not (hinfoDefault info) && length descs > 1
-        = fmap parens chunk <> suffix
         | otherwise
-        = chunk <> suffix
-  in maybe id fmap (optDescMod opt) (render desc')
+        = desc <> suffix
+      modified
+        = maybe id fmap (optDescMod opt) rendered
+  in  (modified, wrapping)
 
 -- | Generate descriptions for commands.
 cmdDesc :: Parser a -> [(Maybe String, Chunk Doc)]
@@ -87,7 +88,7 @@ missingDesc = briefDesc' False
 -- | Generate a brief help text for a parser, allowing the specification
 --   of if optional arguments are show.
 briefDesc' :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
-briefDesc' showOptional pprefs p = fold_tree (treeMapParser (optDesc pprefs style) p)
+briefDesc' showOptional pprefs = wrap NoDefault . foldTree . treeMapParser (optDesc pprefs style)
   where
     style = OptDescStyle
       { descSep = string "|"
@@ -95,21 +96,31 @@ briefDesc' showOptional pprefs p = fold_tree (treeMapParser (optDesc pprefs styl
       , descOptional = showOptional
       , descSurround = True }
 
-bracket :: Bool -> Chunk Doc -> Chunk Doc
-bracket b chunk = if b then fmap brackets chunk else chunk
+-- | Potentially wrap a doc in parentheses or brackets as required.
+wrap :: AltNodeType ->  (Chunk Doc, Wrapping) -> Chunk Doc
+wrap altnode (chunk, wrapping)
+  | altnode == MarkDefault
+  = fmap brackets chunk
+  | needsWrapping wrapping
+  = fmap parens chunk
+  | otherwise
+  = chunk
 
-fold_tree :: OptTree (Chunk Doc) -> Chunk Doc
-fold_tree (Leaf x) = x
-fold_tree (MultNode xs) = foldr ((<</>>) . fold_tree) mempty xs
-fold_tree (AltNode b xs) = bracket (b == AltDefault)
+-- Fold a tree of option docs into a single doc with fully marked
+-- optional areas and groups.
+foldTree :: OptTree (Chunk Doc, Wrapping) -> (Chunk Doc, Wrapping)
+foldTree (Leaf x) = x
+foldTree (MultNode xs) = (foldr ((<</>>) . fst . foldTree) mempty xs, Bare)
+foldTree (AltNode b xs) = (\x -> (x, Bare))
+                           . wrap b
                            . alt_node
-                           . filter (not . isEmpty)
-                           . map fold_tree $ xs
+                           . filter (not . isEmpty . fst)
+                           . map foldTree $ xs
   where
-    alt_node :: [Chunk Doc] -> Chunk Doc
+    alt_node :: [(Chunk Doc, Wrapping)] -> (Chunk Doc, Wrapping)
     alt_node [n] = n
-    alt_node ns = fmap parens
-                . foldr (chunked (\x y -> x </> char '|' </> y)) mempty
+    alt_node ns = (\y -> (y, Wrapped))
+                . foldr (chunked (\x y -> x </> char '|' </> y) . wrap NoDefault) mempty
                 $ ns
 
 -- | Generate a full help text for a parser.
@@ -121,7 +132,7 @@ fullDesc pprefs = tabulate . catMaybes . mapParser doc
       guard . not . isEmpty $ h
       return (extractChunk n, align . extractChunk $ h <<+>> hdef)
       where
-        n = optDesc pprefs style info opt
+        n = fst $ optDesc pprefs style info opt
         h = optHelp opt
         hdef = Chunk . fmap show_def . optShowDefault $ opt
         show_def s = parens (string "default:" <+> string s)
@@ -174,4 +185,13 @@ parserUsage pprefs p progn = hsep
   , string progn
   , align (extractChunk (briefDesc pprefs p)) ]
 
-{-# ANN footerHelp "HLint: ignore Eta reduce" #-}
+data Wrapping
+  = Bare
+  | Wrapped
+  deriving (Eq, Show)
+
+wrapIf :: Bool -> Wrapping
+wrapIf b = if b then Wrapped else Bare
+
+needsWrapping :: Wrapping -> Bool
+needsWrapping = (==)  Wrapped

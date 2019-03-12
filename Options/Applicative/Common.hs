@@ -285,13 +285,13 @@ treeMapParser g = simplify . go False False False g
         -- to put brackets around it when the parser has optional arguments, but if
         -- *both* of its children also have optional arguments, then we don't put
         -- brackets around the top-level because that would be redundant.
-        altNodeType | has_default p && not (has_default p1 && has_default p2) = AltDefault
-                    | otherwise = AltNoDefault
+        altNodeType | has_default p && not (has_default p1 && has_default p2) = MarkDefault
+                    | otherwise = NoDefault
         -- The 'd' variable tracks whether the option nodes at the leaves have
         -- optional arguments so that when we want to hide optional arguments, we
         -- have the information needed to do that. An option can be considered
         -- optional in this sense if any of its parents were optional.
-        d' = d || altNodeType == AltDefault
+        d' = d || altNodeType == MarkDefault
     go _ d r f (BindP p k) =
       let go' = go True d r f p
       in case evalParser p of
