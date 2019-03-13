@@ -257,46 +257,41 @@ mapParser f = flatten . treeMapParser f
 treeMapParser :: (forall x . OptHelpInfo -> Option x -> b)
           -> Parser a
           -> OptTree b
-treeMapParser g = simplify . go False False False g
+treeMapParser g = simplify . go False False g
   where
     has_default :: Parser a -> Bool
     has_default p = isJust (evalParser p)
 
     go :: Bool
        -> Bool
-       -> Bool
        -> (forall x . OptHelpInfo -> Option x -> b)
        -> Parser a
        -> OptTree b
-    go _ _ _ _ (NilP _) = MultNode []
-    go m d r f (OptP opt)
+    go _ _ _ (NilP _) = MultNode []
+    go m r f (OptP opt)
       | optVisibility opt > Internal
-      = Leaf (f (OptHelpInfo m d r) opt)
+      = Leaf (f (OptHelpInfo m r) opt)
       | otherwise
       = MultNode []
-    go m d r f (MultP p1 p2) =
-      MultNode [go m d r f p1, go m d r' f p2]
+    go m r f (MultP p1 p2) =
+      MultNode [go m r f p1, go m r' f p2]
       where r' = r || hasArg p1
-    go m d r f p@(AltP p1 p2) =
-      AltNode altNodeType [go m d' r f p1, go m d' r f p2]
+    go m r f (AltP p1 p2) =
+      AltNode altNodeType [go m r f p1, go m r f p2]
       where
-        -- The 'altNodeType' variable tracks whether or not this node of the
-        -- 'OptTree' ought to be displayed with brackets or not. Generally, we want
-        -- to put brackets around it when the parser has optional arguments, but if
-        -- *both* of its children also have optional arguments, then we don't put
-        -- brackets around the top-level because that would be redundant.
-        altNodeType | has_default p && not (has_default p1 && has_default p2) = MarkDefault
-                    | otherwise = NoDefault
-        -- The 'd' variable tracks whether the option nodes at the leaves have
-        -- optional arguments so that when we want to hide optional arguments, we
-        -- have the information needed to do that. An option can be considered
-        -- optional in this sense if any of its parents were optional.
-        d' = d || altNodeType == MarkDefault
-    go _ d r f (BindP p k) =
-      let go' = go True d r f p
+        -- The 'AltNode' indicates if one of the branches has a default.
+        -- This is used for rendering brackets, as well as filtering
+        -- out optional arguments when generating the "missing:" text.
+        altNodeType =
+          if has_default p1 || has_default p2
+            then MarkDefault
+            else NoDefault
+
+    go _ r f (BindP p k) =
+      let go' = go True r f p
       in case evalParser p of
         Nothing -> go'
-        Just aa -> MultNode [ go', go True d r f (k aa) ]
+        Just aa -> MultNode [ go', go True r f (k aa) ]
 
     hasArg :: Parser a -> Bool
     hasArg (NilP _) = False
@@ -307,11 +302,6 @@ treeMapParser g = simplify . go False False False g
 
 simplify :: OptTree a -> OptTree a
 simplify (Leaf x) = Leaf x
-simplify (AltNode b xs) = AltNode b (concatMap (remove_alt . simplify) xs)
-  where
-    remove_alt (AltNode _ ts) = map simplify ts
-    remove_alt (MultNode []) = []
-    remove_alt t = [simplify t]
 simplify (MultNode xs) =
   case concatMap (remove_mult . simplify) xs of
     [x] -> x
@@ -319,3 +309,9 @@ simplify (MultNode xs) =
   where
     remove_mult (MultNode ts) = ts
     remove_mult t = [t]
+simplify (AltNode b xs) =
+  AltNode b (concatMap (remove_alt . simplify) xs)
+  where
+    remove_alt (AltNode _ ts) = ts
+    remove_alt (MultNode []) = []
+    remove_alt t = [t]

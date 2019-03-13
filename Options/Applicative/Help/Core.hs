@@ -30,9 +30,7 @@ import Options.Applicative.Help.Chunk
 -- | Style for rendering an option.
 data OptDescStyle = OptDescStyle
   { descSep :: Doc
-  , descHidden :: Bool
-  , descOptional :: Bool
-  , descSurround :: Bool }
+  , descHidden :: Bool }
 
 -- | Generate description for a single option.
 optDesc :: ParserPrefs -> OptDescStyle -> OptHelpInfo -> Option a -> (Chunk Doc, Wrapping)
@@ -42,8 +40,6 @@ optDesc pprefs style info opt =
       descs = map (string . showOption) (sort ns)
       desc  = listToChunk (intersperse (descSep style) descs) <<+>> mv
       show_opt
-        | hinfoDefault info && not (descOptional style)
-        = False
         | optVisibility opt == Hidden
         = descHidden style
         | otherwise
@@ -88,15 +84,20 @@ missingDesc = briefDesc' False
 -- | Generate a brief help text for a parser, allowing the specification
 --   of if optional arguments are show.
 briefDesc' :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
-briefDesc' showOptional pprefs = wrap NoDefault . foldTree . treeMapParser (optDesc pprefs style)
+briefDesc' showOptional pprefs
+    = wrap NoDefault . foldTree . mfilterOptional . treeMapParser (optDesc pprefs style)
   where
+    mfilterOptional
+      | showOptional
+      = id
+      | otherwise
+      = filterOptional
+
     style = OptDescStyle
       { descSep = string "|"
-      , descHidden = False
-      , descOptional = showOptional
-      , descSurround = True }
+      , descHidden = False }
 
--- | Potentially wrap a doc in parentheses or brackets as required.
+-- | Wrap a doc in parentheses or brackets if required.
 wrap :: AltNodeType ->  (Chunk Doc, Wrapping) -> Chunk Doc
 wrap altnode (chunk, wrapping)
   | altnode == MarkDefault
@@ -109,19 +110,22 @@ wrap altnode (chunk, wrapping)
 -- Fold a tree of option docs into a single doc with fully marked
 -- optional areas and groups.
 foldTree :: OptTree (Chunk Doc, Wrapping) -> (Chunk Doc, Wrapping)
-foldTree (Leaf x) = x
-foldTree (MultNode xs) = (foldr ((<</>>) . fst . foldTree) mempty xs, Bare)
-foldTree (AltNode b xs) = (\x -> (x, Bare))
-                           . wrap b
-                           . alt_node
-                           . filter (not . isEmpty . fst)
-                           . map foldTree $ xs
-  where
-    alt_node :: [(Chunk Doc, Wrapping)] -> (Chunk Doc, Wrapping)
-    alt_node [n] = n
-    alt_node ns = (\y -> (y, Wrapped))
-                . foldr (chunked (\x y -> x </> char '|' </> y) . wrap NoDefault) mempty
-                $ ns
+foldTree (Leaf x)
+  = x
+foldTree (MultNode xs)
+  = (foldr ((<</>>) . wrap NoDefault . foldTree) mempty xs, Bare)
+foldTree (AltNode b xs)
+  = (\x -> (x, Bare))
+  . wrap b
+  . alt_node
+  . filter (not . isEmpty . fst)
+  . map foldTree $ xs
+    where
+  alt_node :: [(Chunk Doc, Wrapping)] -> (Chunk Doc, Wrapping)
+  alt_node [n] = n
+  alt_node ns = (\y -> (y, Wrapped))
+              . foldr (chunked (\x y -> x </> char '|' </> y) . wrap NoDefault) mempty
+              $ ns
 
 -- | Generate a full help text for a parser.
 fullDesc :: ParserPrefs -> Parser a -> Chunk Doc
@@ -138,9 +142,7 @@ fullDesc pprefs = tabulate . catMaybes . mapParser doc
         show_def s = parens (string "default:" <+> string s)
     style = OptDescStyle
       { descSep = string ","
-      , descHidden = True
-      , descOptional = True
-      , descSurround = False }
+      , descHidden = True }
 
 errorHelp :: Chunk Doc -> ParserHelp
 errorHelp chunk = mempty { helpError = chunk }
@@ -194,4 +196,4 @@ wrapIf :: Bool -> Wrapping
 wrapIf b = if b then Wrapped else Bare
 
 needsWrapping :: Wrapping -> Bool
-needsWrapping = (==)  Wrapped
+needsWrapping = (==) Wrapped

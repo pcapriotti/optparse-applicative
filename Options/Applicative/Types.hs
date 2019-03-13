@@ -38,6 +38,7 @@ module Options.Applicative.Types (
   manyM,
   someM,
 
+  filterOptional,
   optVisibility,
   optMetaVar,
   optHelp,
@@ -376,8 +377,7 @@ data ArgPolicy
   deriving (Eq, Ord, Show)
 
 data OptHelpInfo = OptHelpInfo
-  { hinfoMulti :: Bool    -- ^ Whether this is part of a many or some (approximately)
-  , hinfoDefault :: Bool  -- ^ Whether this option has a default value
+  { hinfoMulti :: Bool           -- ^ Whether this is part of a many or some (approximately)
   , hinfoUnreachableArgs :: Bool -- ^ If the result is a positional, if it can't be
                                  --   accessed in the current parser position ( first arg )
   } deriving (Eq, Show)
@@ -392,6 +392,17 @@ data OptTree a
   | MultNode [OptTree a]
   | AltNode AltNodeType [OptTree a]
   deriving Show
+
+filterOptional :: OptTree a -> OptTree a
+filterOptional t = case t of
+  Leaf a
+    -> Leaf a
+  MultNode xs
+    -> MultNode (map filterOptional xs)
+  AltNode MarkDefault _
+    -> AltNode MarkDefault []
+  AltNode NoDefault xs
+    -> AltNode NoDefault (map filterOptional xs)
 
 optVisibility :: Option a -> OptVisibility
 optVisibility = propVisibility . optProps

@@ -812,7 +812,7 @@ prop_edit_substitution as bs a b = a /= b ==>
 
 prop_edit_transposition :: [Char] -> [Char] -> Char -> Char -> Property
 prop_edit_transposition as bs a b = a /= b ==>
-  editDistance (as ++ [a] ++ [b] ++ bs) (as ++ [b] ++ [a] ++ bs) === 1
+  editDistance (as ++ [a,b] ++ bs) (as ++ [b,a] ++ bs) === 1
 
 ---
 
