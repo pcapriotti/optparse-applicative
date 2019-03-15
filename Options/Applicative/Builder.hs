@@ -85,6 +85,7 @@ module Options.Applicative.Builder (
   noBacktrack,
   subparserInline,
   columns,
+  longEquals,
   prefs,
   defaultPrefs,
 
@@ -500,6 +501,10 @@ subparserInline = PrefsMod $ \p -> p { prefBacktrack = SubparserInline }
 columns :: Int -> PrefsMod
 columns cols = PrefsMod $ \p -> p { prefColumns = cols }
 
+-- | Show equals signs in usage and help text for options with long names.
+longEquals :: PrefsMod
+longEquals = PrefsMod $ \p -> p { prefLongEquals = True }
+
 -- | Create a `ParserPrefs` given a modifier
 prefs :: PrefsMod -> ParserPrefs
 prefs m = applyPrefsMod m base
@@ -510,7 +515,8 @@ prefs m = applyPrefsMod m base
       , prefShowHelpOnError = False
       , prefShowHelpOnEmpty = False
       , prefBacktrack = Backtrack
-      , prefColumns = 80 }
+      , prefColumns = 80
+      , prefLongEquals = False }
 
 -- Convenience shortcuts
 

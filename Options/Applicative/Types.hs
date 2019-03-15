@@ -117,6 +117,8 @@ data ParserPrefs = ParserPrefs
                                   -- subcommand fails (default: Backtrack)
   , prefColumns :: Int            -- ^ number of columns in the terminal, used to
                                   -- format the help page (default: 80)
+  , prefLongEquals :: Bool        -- ^ If true, display usage and help information
+                                  -- using an '=' sign for long names.
   } deriving (Eq, Show)
 
 data OptName = OptShort !Char
