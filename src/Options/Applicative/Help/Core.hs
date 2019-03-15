@@ -37,8 +37,16 @@ optDesc :: ParserPrefs -> OptDescStyle -> OptHelpInfo -> Option a -> (Chunk Doc,
 optDesc pprefs style info opt =
   let ns = optionNames $ optMain opt
       mv = stringChunk $ optMetaVar opt
-      descs = map (string . showOption) (sort ns)
-      desc  = listToChunk (intersperse (descSep style) descs) <<+>> mv
+      has_arg = case mv of
+        Chunk Nothing -> True
+        _ -> False
+      descs | has_arg = map (string . showOption) (sort ns)
+            | otherwise = map (string . showOptionEquals pprefs) (sort ns)
+      isLong (OptLong _) = True
+      isLong _ = False
+      has_equals = any isLong ns && prefHelpLongEquals pprefs
+      desc | has_equals = listToChunk (intersperse (descSep style) descs) <> mv
+           | otherwise = listToChunk (intersperse (descSep style) descs) <<+>> mv
       show_opt
         | optVisibility opt == Hidden
         = descHidden style
