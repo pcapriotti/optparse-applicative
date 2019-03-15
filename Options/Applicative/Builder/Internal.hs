@@ -160,9 +160,11 @@ mkParser :: DefaultProp a
          -> (OptProperties -> OptProperties)
          -> OptReader a
          -> Parser a
-mkParser d@(DefaultProp def _) g rdr = liftOpt opt <|> maybe empty pure def
-  where
-    opt = mkOption d g rdr
+mkParser d@(DefaultProp def _) g rdr =
+  let
+    o = liftOpt $ mkOption d g rdr
+  in
+    maybe o (\a -> o <|> pure a) def
 
 mkOption :: DefaultProp a
          -> (OptProperties -> OptProperties)

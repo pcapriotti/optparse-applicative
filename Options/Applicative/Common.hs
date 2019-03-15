@@ -251,36 +251,47 @@ mapParser f = flatten . treeMapParser f
   where
     flatten (Leaf x) = [x]
     flatten (MultNode xs) = xs >>= flatten
-    flatten (AltNode xs) = xs >>= flatten
+    flatten (AltNode _ xs) = xs >>= flatten
 
 -- | Like 'mapParser', but collect the results in a tree structure.
 treeMapParser :: (forall x . OptHelpInfo -> Option x -> b)
           -> Parser a
           -> OptTree b
-treeMapParser g = simplify . go False False False g
+treeMapParser g = simplify . go False False g
   where
     has_default :: Parser a -> Bool
     has_default p = isJust (evalParser p)
 
-    go :: Bool -> Bool -> Bool
+    go :: Bool
+       -> Bool
        -> (forall x . OptHelpInfo -> Option x -> b)
        -> Parser a
        -> OptTree b
-    go _ _ _ _ (NilP _) = MultNode []
-    go m d r f (OptP opt)
+    go _ _ _ (NilP _) = MultNode []
+    go m r f (OptP opt)
       | optVisibility opt > Internal
-      = Leaf (f (OptHelpInfo m d r) opt)
+      = Leaf (f (OptHelpInfo m r) opt)
       | otherwise
       = MultNode []
-    go m d r f (MultP p1 p2) = MultNode [go m d r f p1, go m d r' f p2]
+    go m r f (MultP p1 p2) =
+      MultNode [go m r f p1, go m r' f p2]
       where r' = r || hasArg p1
-    go m d r f (AltP p1 p2) = AltNode [go m d' r f p1, go m d' r f p2]
-      where d' = d || has_default p1 || has_default p2
-    go _ d r f (BindP p k) =
-      let go' = go True d r f p
+    go m r f (AltP p1 p2) =
+      AltNode altNodeType [go m r f p1, go m r f p2]
+      where
+        -- The 'AltNode' indicates if one of the branches has a default.
+        -- This is used for rendering brackets, as well as filtering
+        -- out optional arguments when generating the "missing:" text.
+        altNodeType =
+          if has_default p1 || has_default p2
+            then MarkDefault
+            else NoDefault
+
+    go _ r f (BindP p k) =
+      let go' = go True r f p
       in case evalParser p of
         Nothing -> go'
-        Just aa -> MultNode [ go', go True d r f (k aa) ]
+        Just aa -> MultNode [ go', go True r f (k aa) ]
 
     hasArg :: Parser a -> Bool
     hasArg (NilP _) = False
@@ -288,7 +299,6 @@ treeMapParser g = simplify . go False False False g
     hasArg (MultP p1 p2) = hasArg p1 || hasArg p2
     hasArg (AltP p1 p2) = hasArg p1 || hasArg p2
     hasArg (BindP p _) = hasArg p
-
 
 simplify :: OptTree a -> OptTree a
 simplify (Leaf x) = Leaf x
@@ -299,12 +309,9 @@ simplify (MultNode xs) =
   where
     remove_mult (MultNode ts) = ts
     remove_mult t = [t]
-simplify (AltNode xs) =
-  case concatMap (remove_alt . simplify) xs of
-    []  -> MultNode []
-    [x] -> x
-    xs' -> AltNode xs'
+simplify (AltNode b xs) =
+  AltNode b (concatMap (remove_alt . simplify) xs)
   where
-    remove_alt (AltNode ts) = ts
+    remove_alt (AltNode _ ts) = ts
     remove_alt (MultNode []) = []
     remove_alt t = [t]
