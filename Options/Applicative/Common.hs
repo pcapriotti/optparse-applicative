@@ -22,6 +22,7 @@ module Options.Applicative.Common (
   Parser,
   liftOpt,
   showOption,
+  showOptionEquals,
 
   -- * Program descriptions
   --
@@ -64,6 +65,12 @@ import Options.Applicative.Types
 showOption :: OptName -> String
 showOption (OptLong n) = "--" ++ n
 showOption (OptShort n) = '-' : [n]
+
+-- | Like 'showOption', but puts an equals sign or a space after long options if the
+-- 'ParserPrefs' indicate we should do so.
+showOptionEquals :: ParserPrefs -> OptName -> String
+showOptionEquals prefs (OptLong n) = "--" ++ n ++ (if prefLongEquals prefs then "=" else "")
+showOptionEquals _ (OptShort n) = '-' : [n]
 
 optionNames :: OptReader a -> [OptName]
 optionNames (OptReader names _ _) = names
