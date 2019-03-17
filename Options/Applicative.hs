@@ -195,7 +195,7 @@ module Options.Applicative (
   noBacktrack,
   subparserInline,
   columns,
-  longEquals,
+  helpLongEquals,
   defaultPrefs,
 
   -- * Completions

@@ -69,7 +69,7 @@ showOption (OptShort n) = '-' : [n]
 -- | Like 'showOption', but puts an equals sign or a space after long options if the
 -- 'ParserPrefs' indicate we should do so.
 showOptionEquals :: ParserPrefs -> OptName -> String
-showOptionEquals prefs (OptLong n) = "--" ++ n ++ (if prefLongEquals prefs then "=" else "")
+showOptionEquals prefs (OptLong n) = "--" ++ n ++ (if prefHelpLongEquals prefs then "=" else "")
 showOptionEquals _ (OptShort n) = '-' : [n]
 
 optionNames :: OptReader a -> [OptName]

@@ -44,7 +44,7 @@ optDesc pprefs style info opt =
             | otherwise = map (string . showOptionEquals pprefs) (sort ns)
       isLong (OptLong _) = True
       isLong _ = False
-      has_equals = any isLong ns && prefLongEquals pprefs
+      has_equals = any isLong ns && prefHelpLongEquals pprefs
       desc | has_equals = listToChunk (intersperse (descSep style) descs) <> mv
            | otherwise = listToChunk (intersperse (descSep style) descs) <<+>> mv
       show_opt
