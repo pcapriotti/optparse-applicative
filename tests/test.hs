@@ -201,6 +201,17 @@ prop_nested_optional_help = once $
       i = info (p <**> helper) idm
   in checkHelpText "nested_optional" i ["--help"]
 
+prop_long_equals :: Property
+prop_long_equals = once $
+  let p :: Parser String
+      p = option auto (long "intval"
+                       <> short 'j'
+                       <> long "intval2"
+                       <> short 'i'
+                       <> help "integer value")
+      i = info (p <**> helper) fullDesc
+  in checkHelpTextWith ExitSuccess (prefs helpLongEquals) "long_equals" i ["--help"]
+
 prop_nested_fun :: Property
 prop_nested_fun = once $
   let p :: Parser (String, Maybe (String, Maybe String))
