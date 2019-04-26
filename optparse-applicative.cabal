@@ -78,7 +78,7 @@ library
                      , ansi-wl-pprint                  >= 0.6.8 && < 0.7
 
   if !impl(ghc >= 8)
-    build-depends:     semigroups                      >= 0.10 && < 0.19
+    build-depends:     semigroups                      >= 0.10 && < 0.20
                      , fail                            == 4.9.*
 
 test-suite tests
