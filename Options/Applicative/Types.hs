@@ -184,7 +184,6 @@ instance Alternative ReadM where
 instance Monad ReadM where
   return = pure
   ReadM r >>= f = ReadM $ r >>= unReadM . f
-  fail = Fail.fail
 
 instance Fail.MonadFail ReadM where
   fail = readerError

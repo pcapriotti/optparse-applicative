@@ -1,3 +1,8 @@
+## Version 0.15.0.0
+
+- No longer supply `fail` method for `ReadM` monad; instead supply
+  it via the `MonadFail` class.
+
 ## Version 0.14.3.0 (03 Oct 2018)
 
 - Updated dependency bounds.
