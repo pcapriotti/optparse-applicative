@@ -13,6 +13,7 @@ import qualified Examples.Formatting as Formatting
 import           Control.Applicative
 import           Control.Monad
 import           Data.ByteString (ByteString)
+import qualified Data.ByteString.Char8 as BS8
 import           Data.List hiding (group)
 import           Data.Semigroup hiding (option)
 import           Data.String
@@ -744,7 +745,7 @@ prop_bytestring_reader :: Property
 prop_bytestring_reader = once $
   let t = "testValue"
       p :: Parser ByteString
-      p = argument str idm
+      p = argument (fmap BS8.pack readerAsk) idm
       i = info p idm
       result = run i ["testValue"]
   in assertResult result $ \xs -> fromString t === xs
