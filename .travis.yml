@@ -7,6 +7,7 @@ env:
  - GHCVER=8.2.1
  - GHCVER=8.4.1
  - GHCVER=8.6.3
+ - GHCVER=8.8.1
  - GHCVER=head
 
 matrix:
@@ -16,8 +17,8 @@ matrix:
 before_install:
  - travis_retry sudo add-apt-repository -y ppa:hvr/ghc
  - travis_retry sudo apt-get update
- - travis_retry sudo apt-get install cabal-install-1.24 ghc-$GHCVER happy-1.19.5 alex-3.1.7
- - export PATH=/opt/alex/3.1.7/bin:/opt/happy/1.19.5/bin:/opt/ghc/$GHCVER/bin:/opt/cabal/1.24/bin:$HOME/.cabal/bin:$PATH
+ - travis_retry sudo apt-get install cabal-install-2.4 ghc-$GHCVER happy-1.19.5 alex-3.1.7
+ - export PATH=/opt/alex/3.1.7/bin:/opt/happy/1.19.5/bin:/opt/ghc/$GHCVER/bin:/opt/cabal/2.4/bin:$HOME/.cabal/bin:$PATH
 
 install:
  - /bin/true
@@ -27,6 +28,6 @@ script:
  - export VERSION=$(cabal info . | awk 'NR==1 { n=split($2,x,"-"); print x[n]; }')
  - cabal install --only-dependencies --enable-tests
  - |
-   if [ $GHCVER = "head" ] || [ ${GHCVER%.*} = "8.6" ] || [ ${GHCVER%.*} = "8.4" ] || [ ${GHCVER%.*} = "8.2" ] || [ ${GHCVER%.*} = "8.0" ] || [ ${GHCVER%.*} = "7.10" ] || [ ${GHCVER%.*} = "7.8" ] || [ ${GHCVER%.*} = "7.6" ] || [ ${GHCVER%.*} = "7.4" ] ; then
+   if [ $GHCVER = "head" ] || [ ${GHCVER%.*} = "8.8" ] || [ ${GHCVER%.*} = "8.6" ] || [ ${GHCVER%.*} = "8.4" ] || [ ${GHCVER%.*} = "8.2" ] || [ ${GHCVER%.*} = "8.0" ] || [ ${GHCVER%.*} = "7.10" ] || [ ${GHCVER%.*} = "7.8" ] || [ ${GHCVER%.*} = "7.6" ] || [ ${GHCVER%.*} = "7.4" ] ; then
       cabal test
    fi
