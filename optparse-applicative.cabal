@@ -43,6 +43,8 @@ extra-source-files:  CHANGELOG.md
 homepage:            https://github.com/pcapriotti/optparse-applicative
 bug-reports:         https://github.com/pcapriotti/optparse-applicative/issues
 tested-with: 
+  GHC==7.0.4,
+  GHC==7.2.2,
   GHC==7.4.2,
   GHC==7.6.3,
   GHC==7.8.4,
