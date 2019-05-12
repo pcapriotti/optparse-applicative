@@ -232,5 +232,3 @@ import Options.Applicative.Builder
 import Options.Applicative.Builder.Completer
 import Options.Applicative.Extra
 import Options.Applicative.Types
-
-{-# ANN module "HLint: ignore Use import/export shortcut" #-}

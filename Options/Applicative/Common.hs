@@ -100,7 +100,7 @@ optMatches disambiguate opt (OptWord arg1 val) = case opt of
     guard $ is_short arg1 || isNothing val
     Just $ do
       args <- get
-      let val' = (\s -> '-' : s) <$> val
+      let val' = ('-' :) <$> val
       put $ maybeToList val' ++ args
       return x
   _ -> Nothing
@@ -173,7 +173,7 @@ searchArg prefs arg = searchParser $ \opt -> do
           args <- get <* put []
           fmap pure . lift $ enterContext arg subp *> runParserInfo subp args <* exitContext
 
-        (Just subp, Backtrack) -> fmap pure . lift . StateT $ \args -> do
+        (Just subp, Backtrack) -> fmap pure . lift . StateT $ \args ->
           enterContext arg subp *> runParser (infoPolicy subp) CmdStart (infoParser subp) args <* exitContext
 
         (Just subp, SubparserInline) -> lift $ do

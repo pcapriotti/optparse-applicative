@@ -55,7 +55,7 @@ optDesc pprefs style info opt =
         | not show_opt
         = mempty
         | otherwise
-        = desc <> suffix
+        = desc `mappend` suffix
       modified
         = maybe id fmap (optDescMod opt) rendered
   in  (modified, wrapping)
@@ -164,8 +164,8 @@ footerHelp chunk = mempty { helpFooter = chunk }
 
 -- | Generate the help text for a program.
 parserHelp :: ParserPrefs -> Parser a -> ParserHelp
-parserHelp pprefs p = bodyHelp . vsepChunks $
-  ( with_title "Available options:" (fullDesc pprefs p) )
+parserHelp pprefs p = bodyHelp . vsepChunks
+  $ with_title "Available options:" (fullDesc pprefs p)
   : (group_title <$> cs)
   where
     def = "Available commands:"

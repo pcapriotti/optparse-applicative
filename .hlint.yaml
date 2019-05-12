@@ -1,0 +1,5 @@
+# Ignore some builtin hints
+- ignore: {name: "Use import/export shortcut" }
+- ignore: {name: "Use tuple-section" }
+- ignore: {name: "Use newtype instead of data" } # ArgumentFields
+- ignore: {name: "Use fmap" } # we use liftM because Functor isn't superclass of Monad prior AMP
