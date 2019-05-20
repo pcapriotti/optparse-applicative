@@ -43,10 +43,10 @@ editDistance a b = last $
         -- will have an edit distance of 1.
         doDiag (ach:ach':as) (bch:bch':bs) nw n w
           | ach' == bch && ach == bch'
-          = nw : (doDiag (ach' : as) (bch' : bs) nw (tail n) (tail w))
+          = nw : doDiag (ach' : as) (bch' : bs) nw (tail n) (tail w)
         -- Standard case
         doDiag (ach:as) (bch:bs) nw n w =
-          me : (doDiag as bs me (tail n) (tail w))
+          me : doDiag as bs me (tail n) (tail w)
           where
             me =
               if ach == bch

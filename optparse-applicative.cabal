@@ -42,17 +42,32 @@ extra-source-files:  CHANGELOG.md
 
 homepage:            https://github.com/pcapriotti/optparse-applicative
 bug-reports:         https://github.com/pcapriotti/optparse-applicative/issues
+tested-with: 
+  GHC==7.0.4,
+  GHC==7.2.2,
+  GHC==7.4.2,
+  GHC==7.6.3,
+  GHC==7.8.4,
+  GHC==7.10.3,
+  GHC==8.0.2,
+  GHC==8.2.2,
+  GHC==8.4.4,
+  GHC==8.6.5,
+  GHC==8.8.1
 
 source-repository head
   type:     git
   location: https://github.com/pcapriotti/optparse-applicative.git
 
 library
+  hs-source-dirs:      src
   ghc-options:         -Wall
 
   -- See https://ghc.haskell.org/trac/ghc/wiki/Migration/8.0#base-4.9.0.0
   if impl(ghc >= 8.0)
-    ghc-options:  -Wno-redundant-constraints -Wcompat -Wnoncanonical-monad-instances -Wnoncanonical-monadfail-instances
+    ghc-options:  -Wno-redundant-constraints -Wcompat -Wnoncanonical-monad-instances
+    if impl(ghc < 8.8)
+      ghc-options: -Wnoncanonical-monadfail-instances
 
   exposed-modules:     Options.Applicative
                      , Options.Applicative.Arrows
@@ -78,7 +93,7 @@ library
                      , ansi-wl-pprint                  >= 0.6.8 && < 0.7
 
   if !impl(ghc >= 8)
-    build-depends:     semigroups                      >= 0.10 && < 0.19
+    build-depends:     semigroups                      >= 0.10 && < 0.20
                      , fail                            == 4.9.*
 
 test-suite tests
@@ -98,9 +113,9 @@ test-suite tests
                      , Examples.Hello
 
   build-depends:       base
-                     , bytestring                      == 0.10.*
+                     , bytestring                      >= 0.9 && < 0.11
                      , optparse-applicative
-                     , QuickCheck                      >= 2.8 && < 2.13
+                     , QuickCheck                      >= 2.8 && < 2.14
 
   if !impl(ghc >= 8)
     build-depends:     semigroups

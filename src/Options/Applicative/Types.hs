@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types, ExistentialQuantification #-}
+{-# LANGUAGE CPP, Rank2Types, ExistentialQuantification #-}
 module Options.Applicative.Types (
   ParseError(..),
   ParserInfo(..),
@@ -184,7 +184,10 @@ instance Alternative ReadM where
 instance Monad ReadM where
   return = pure
   ReadM r >>= f = ReadM $ r >>= unReadM . f
+
+#if !(MIN_VERSION_base(4,13,0))
   fail = Fail.fail
+#endif
 
 instance Fail.MonadFail ReadM where
   fail = readerError
