@@ -117,21 +117,23 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
     -- to the completion variables (tab separated).
     add_opt_help :: Functor f => Option a -> f String -> f String
     add_opt_help opt = case richness of
-      Standard
-        -> id
-      Enriched len _
-        -> fmap (\o -> let h = unChunk $ optHelp opt
-                       in  maybe o (\h' -> o ++ "\t" ++ render_line len h') h)
+      Standard ->
+        id
+      Enriched len _ ->
+        fmap $ \o ->
+          let h = unChunk $ optHelp opt
+          in  maybe o (\h' -> o ++ "\t" ++ render_line len h') h
 
     -- When doing enriched completions, add the command description
     -- to the completion variables (tab separated).
     add_cmd_help :: Functor f => (String -> Maybe (ParserInfo a)) -> f String -> f String
     add_cmd_help p = case richness of
-      Standard
-        -> id
-      Enriched _ len
-        -> fmap (\cmd -> let h = p cmd >>= unChunk . infoProgDesc
-                         in  maybe cmd (\h' -> cmd ++ "\t" ++ render_line len h') h)
+      Standard ->
+        id
+      Enriched _ len ->
+        fmap $ \cmd ->
+          let h = p cmd >>= unChunk . infoProgDesc
+          in  maybe cmd (\h' -> cmd ++ "\t" ++ render_line len h') h
 
     show_names :: [OptName] -> [String]
     show_names = filter_names . map showOption
