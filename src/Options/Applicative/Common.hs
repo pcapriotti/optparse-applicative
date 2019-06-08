@@ -22,7 +22,6 @@ module Options.Applicative.Common (
   Parser,
   liftOpt,
   showOption,
-  showOptionEquals,
 
   -- * Program descriptions
   --
@@ -66,12 +65,6 @@ showOption :: OptName -> String
 showOption (OptLong n) = "--" ++ n
 showOption (OptShort n) = '-' : [n]
 
--- | Like 'showOption', but puts an equals sign or a space after long options if the
--- 'ParserPrefs' indicate we should do so.
-showOptionEquals :: ParserPrefs -> OptName -> String
-showOptionEquals prefs (OptLong n) = "--" ++ n ++ (if prefHelpLongEquals prefs then "=" else "")
-showOptionEquals _ (OptShort n) = '-' : [n]
-
 optionNames :: OptReader a -> [OptName]
 optionNames (OptReader names _ _) = names
 optionNames (FlagReader names _) = names
@@ -104,7 +97,7 @@ optMatches disambiguate opt (OptWord arg1 val) = case opt of
     -- We'll not match a long option for a flag if there's a word attached.
     -- This was revealing an implementation detail as
     -- `--foo=val` was being parsed as `--foo -val`, which is gibberish.
-    guard $ is_short arg1 || isNothing val
+    guard $ isShortName arg1 || isNothing val
     Just $ do
       args <- get
       let val' = ('-' :) <$> val
@@ -113,9 +106,6 @@ optMatches disambiguate opt (OptWord arg1 val) = case opt of
   _ -> Nothing
   where
     errorFor name msg = "option " ++ showOption name ++ ": " ++ msg
-
-    is_short (OptShort _) = True
-    is_short (OptLong _)  = False
 
     has_name a
       | disambiguate = any (isOptionPrefix a)

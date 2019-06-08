@@ -205,13 +205,24 @@ prop_nested_optional_help = once $
 prop_long_equals :: Property
 prop_long_equals = once $
   let p :: Parser String
-      p = option auto (long "intval"
+      p = option auto (   long "intval"
                        <> short 'j'
                        <> long "intval2"
                        <> short 'i'
                        <> help "integer value")
       i = info (p <**> helper) fullDesc
   in checkHelpTextWith ExitSuccess (prefs helpLongEquals) "long_equals" i ["--help"]
+
+prop_long_equals_doesnt_do_shorts :: Property
+prop_long_equals_doesnt_do_shorts = once $
+  let p :: Parser String
+      p = option auto (   short 'i'
+                       <> help "integer value")
+      i = info (p <**> helper) fullDesc
+      result = execParserPure (prefs helpLongEquals) i ["--help"]
+  in assertError result $ \failure ->
+    let text = head . lines . fst $ renderFailure failure "test"
+    in  "Usage: test -i ARG" === text
 
 prop_nested_fun :: Property
 prop_nested_fun = once $
@@ -756,10 +767,10 @@ prop_bytestring_reader :: Property
 prop_bytestring_reader = once $
   let t = "testValue"
       p :: Parser ByteString
-      p = argument (fmap BS8.pack readerAsk) idm
+      p = argument str idm
       i = info p idm
       result = run i ["testValue"]
-  in assertResult result $ \xs -> fromString t === xs
+  in assertResult result $ \xs -> BS8.pack t === xs
 
 ---
 

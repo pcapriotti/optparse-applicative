@@ -6,6 +6,9 @@ module Options.Applicative.Types (
 
   Option(..),
   OptName(..),
+  isShortName,
+  isLongName,
+
   OptReader(..),
   OptProperties(..),
   OptVisibility(..),
@@ -125,6 +128,13 @@ data ParserPrefs = ParserPrefs
 data OptName = OptShort !Char
              | OptLong !String
   deriving (Eq, Ord, Show)
+
+isShortName :: OptName -> Bool
+isShortName (OptShort _) = True
+isShortName (OptLong _)  = False
+
+isLongName :: OptName -> Bool
+isLongName = not . isShortName
 
 -- | Visibility of an option in the help text.
 data OptVisibility
