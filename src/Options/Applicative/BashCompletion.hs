@@ -176,7 +176,7 @@ bashCompletionScript prog progn = return
   , "    COMPREPLY=( $(" ++ prog ++ " \"${CMDLINE[@]}\") )"
   , "}"
   , ""
-  , "complete -o filenames -F _" ++ progn ++ " " ++ progn ]
+  , "complete -o bashdefault -o default -F _" ++ progn ++ " " ++ progn ]
 
 {-
 /Note/: Fish Shell
