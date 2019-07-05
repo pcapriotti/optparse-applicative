@@ -5,3 +5,5 @@
 cabal.project.local
 .cabal-sandbox/
 cabal.sandbox.config
+
+.ghc.environment.*

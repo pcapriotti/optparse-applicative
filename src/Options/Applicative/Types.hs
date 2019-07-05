@@ -6,6 +6,9 @@ module Options.Applicative.Types (
 
   Option(..),
   OptName(..),
+  isShortName,
+  isLongName,
+
   OptReader(..),
   OptProperties(..),
   OptVisibility(..),
@@ -117,11 +120,21 @@ data ParserPrefs = ParserPrefs
                                   -- subcommand fails (default: Backtrack)
   , prefColumns :: Int            -- ^ number of columns in the terminal, used to
                                   -- format the help page (default: 80)
+  , prefHelpLongEquals :: Bool    -- ^ when displaying long names in usage and help,
+                                  -- use an '=' sign for long names, rather than a
+                                  -- single space (default: False)
   } deriving (Eq, Show)
 
 data OptName = OptShort !Char
              | OptLong !String
   deriving (Eq, Ord, Show)
+
+isShortName :: OptName -> Bool
+isShortName (OptShort _) = True
+isShortName (OptLong _)  = False
+
+isLongName :: OptName -> Bool
+isLongName = not . isShortName
 
 -- | Visibility of an option in the help text.
 data OptVisibility

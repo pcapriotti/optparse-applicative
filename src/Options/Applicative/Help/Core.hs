@@ -18,9 +18,11 @@ import Control.Applicative
 import Control.Monad (guard)
 import Data.Function (on)
 import Data.List (sort, intersperse, groupBy)
+import Data.Foldable (any)
 import Data.Maybe (maybeToList, catMaybes, fromMaybe)
-import Data.Monoid
-import Prelude
+import Data.Monoid (mempty)
+import Data.Semigroup (Semigroup (..))
+import Prelude hiding (any)
 
 import Options.Applicative.Common
 import Options.Applicative.Types
@@ -32,13 +34,25 @@ data OptDescStyle = OptDescStyle
   { descSep :: Doc
   , descHidden :: Bool }
 
+safelast :: [a] -> Maybe a
+safelast = foldl (const Just) Nothing
+
 -- | Generate description for a single option.
 optDesc :: ParserPrefs -> OptDescStyle -> OptHelpInfo -> Option a -> (Chunk Doc, Wrapping)
 optDesc pprefs style info opt =
-  let ns = optionNames $ optMain opt
-      mv = stringChunk $ optMetaVar opt
-      descs = map (string . showOption) (sort ns)
-      desc  = listToChunk (intersperse (descSep style) descs) <<+>> mv
+  let names
+        = sort . optionNames . optMain $ opt
+      meta
+        = stringChunk $ optMetaVar opt
+      descs
+        = map (string . showOption) names
+      descriptions
+        = listToChunk (intersperse (descSep style) descs)
+      desc
+        | prefHelpLongEquals pprefs && not (isEmpty meta) && any isLongName (safelast names)
+        = descriptions <> stringChunk "=" <> meta
+        | otherwise
+        = descriptions <<+>> meta
       show_opt
         | optVisibility opt == Hidden
         = descHidden style
@@ -50,12 +64,12 @@ optDesc pprefs style info opt =
         | otherwise
         = mempty
       wrapping
-        = wrapIf (length ns > 1)
+        = wrapIf (length names > 1)
       rendered
         | not show_opt
         = mempty
         | otherwise
-        = desc `mappend` suffix
+        = desc <> suffix
       modified
         = maybe id fmap (optDescMod opt) rendered
   in  (modified, wrapping)
