@@ -1,3 +1,27 @@
+## Version 0.15.0.0 (05 Jul 2019)
+
+- Add support for GHC 8.8.1.
+
+- Add `subparserInline` modifier as additional way of
+  executing subparsers. When activated, the subparser
+  parse tree will be inserted into that of the parent
+  instead of being run independently, allowing mixing
+  of child and parent options.
+
+- Improve rendering of complex nested parse structures.
+  Previously, brackets and parenthesis did not respect
+  whether or not options had to be defined together.
+  Now the parse tree is more accurately represeted in
+  the help text.
+
+- Add `helpLongEquals` modifier, which will change how
+  long options are printed in the help text, adding an
+  equals sign, for example "--input=FILE".
+
+- Updated dependency bounds.
+
+- Clean ups and Documentation.
+
 ## Version 0.14.3.0 (03 Oct 2018)
 
 - Updated dependency bounds.
