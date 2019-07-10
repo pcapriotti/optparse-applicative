@@ -5,8 +5,8 @@
 [![Hackage-Deps][hackage-deps-png]][hackage-deps]
 
 optparse-applicative is a haskell library for parsing options on
-the command line, providing a powerful [applicative] interface
-for composing these options.
+the command line, and providing a powerful [applicative] interface
+for composing them.
 
 optparse-applicative takes care of reading and validating the
 arguments passed to the command line, handling and reporting errors,
