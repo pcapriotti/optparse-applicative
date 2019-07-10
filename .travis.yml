@@ -54,7 +54,6 @@ matrix:
       env: GHCHEAD=true
   allow_failures:
     - compiler: ghc-head
-    - compiler: ghc-8.8.1
 before_install:
   - HC=$(echo "/opt/$CC/bin/ghc" | sed 's/-/\//')
   - HCPKG="$HC-pkg"
