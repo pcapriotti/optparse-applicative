@@ -112,7 +112,7 @@ briefDesc' showOptional pprefs
       , descHidden = False }
 
 -- | Wrap a doc in parentheses or brackets if required.
-wrap :: AltNodeType ->  (Chunk Doc, Wrapping) -> Chunk Doc
+wrap :: AltNodeType -> (Chunk Doc, Wrapping) -> Chunk Doc
 wrap altnode (chunk, wrapping)
   | altnode == MarkDefault
   = fmap brackets chunk
@@ -130,11 +130,13 @@ foldTree (MultNode xs)
   = (foldr ((<</>>) . wrap NoDefault . foldTree) mempty xs, Bare)
 foldTree (AltNode b xs)
   = (\x -> (x, Bare))
+  . fmap groupOrLine
   . wrap b
   . alt_node
   . filter (not . isEmpty . fst)
   . map foldTree $ xs
     where
+
   alt_node :: [(Chunk Doc, Wrapping)] -> (Chunk Doc, Wrapping)
   alt_node [n] = n
   alt_node ns = (\y -> (y, Wrapped))
