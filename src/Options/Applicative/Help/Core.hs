@@ -130,7 +130,7 @@ foldTree (MultNode xs)
   = (foldr ((<</>>) . wrap NoDefault . foldTree) mempty xs, Bare)
 foldTree (AltNode b xs)
   = (\x -> (x, Bare))
-  . fmap groupOrLine
+  . fmap groupOrNestLine
   . wrap b
   . alt_node
   . filter (not . isEmpty . fst)

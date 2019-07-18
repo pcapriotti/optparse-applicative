@@ -1,7 +1,7 @@
 module Options.Applicative.Help.Pretty
   ( module Text.PrettyPrint.ANSI.Leijen
   , (.$.)
-  , groupOrLine
+  , groupOrNestLine
   ) where
 
 import           Control.Applicative
@@ -16,7 +16,8 @@ import           Prelude
 (.$.) :: Doc -> Doc -> Doc
 (.$.) = (PP.<$>)
 
--- | Apply the funcion if we're not at the
+
+-- | Apply the function if we're not at the
 --   start of our nesting level.
 ifNotAtRoot :: (Doc -> Doc) -> Doc -> Doc
 ifNotAtRoot f doc =
@@ -26,10 +27,14 @@ ifNotAtRoot f doc =
         then doc
         else f doc
 
+
 -- | Render flattened text on this line, or start
 --   a new line before rendering any text.
-groupOrLine :: Doc -> Doc
-groupOrLine =
+--
+--   This will also nest subsequent lines in the
+--   group.
+groupOrNestLine :: Doc -> Doc
+groupOrNestLine =
   Union
     <$> flatten
-    <*> ifNotAtRoot (mappend line)
+    <*> ifNotAtRoot (mappend line) . nest 2
