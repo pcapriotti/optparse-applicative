@@ -130,7 +130,7 @@ foldTree (MultNode xs)
   = (foldr ((<</>>) . wrap NoDefault . foldTree) mempty xs, Bare)
 foldTree (AltNode b xs)
   = (\x -> (x, Bare))
-  . fmap groupOrLine
+  . fmap groupOrNestLine
   . wrap b
   . alt_node
   . filter (not . isEmpty . fst)
@@ -140,7 +140,7 @@ foldTree (AltNode b xs)
   alt_node :: [(Chunk Doc, Wrapping)] -> (Chunk Doc, Wrapping)
   alt_node [n] = n
   alt_node ns = (\y -> (y, Wrapped))
-              . foldr (chunked (\x y -> x </> char '|' </> y) . wrap NoDefault) mempty
+              . foldr (chunked altSep . wrap NoDefault) mempty
               $ ns
 
 -- | Generate a full help text for a parser.
