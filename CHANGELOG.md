@@ -1,3 +1,13 @@
+## Version 0.15.1.0 (12 Sep 2019)
+
+- Improve printing of brief descriptions for parsers.
+  Previously, the logical structure of the parser,
+  such as alternative groups and segments which must
+  be defined together, did not influence the layout of
+  the brief description. This could lead to some help
+  texts being difficult to read.  Now, we use nesting
+  and forced line breaks to help improve readability.
+
 ## Version 0.15.0.0 (05 Jul 2019)
 
 - Add support for GHC 8.8.1.
@@ -11,7 +21,7 @@
 - Improve rendering of complex nested parse structures.
   Previously, brackets and parenthesis did not respect
   whether or not options had to be defined together.
-  Now the parse tree is more accurately represeted in
+  Now the parse tree is more accurately represented in
   the help text.
 
 - Add `helpLongEquals` modifier, which will change how
