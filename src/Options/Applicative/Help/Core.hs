@@ -30,49 +30,46 @@ import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
 
 -- | Style for rendering an option.
-data OptDescStyle = OptDescStyle
-  { descSep :: Doc
-  , descHidden :: Bool }
+data OptDescStyle
+  = OptDescStyle
+      { descSep :: Doc,
+        descHidden :: Bool
+      }
 
 safelast :: [a] -> Maybe a
 safelast = foldl (const Just) Nothing
 
 -- | Generate description for a single option.
 optDesc :: ParserPrefs -> OptDescStyle -> OptHelpInfo -> Option a -> (Chunk Doc, Wrapping)
-optDesc pprefs style info opt =
-  let names
-        = sort . optionNames . optMain $ opt
-      meta
-        = stringChunk $ optMetaVar opt
-      descs
-        = map (string . showOption) names
-      descriptions
-        = listToChunk (intersperse (descSep style) descs)
+optDesc pprefs style _info opt =
+  let names =
+        sort . optionNames . optMain $ opt
+      meta =
+        stringChunk $ optMetaVar opt
+      descs =
+        map (string . showOption) names
+      descriptions =
+        listToChunk (intersperse (descSep style) descs)
       desc
-        | prefHelpLongEquals pprefs && not (isEmpty meta) && any isLongName (safelast names)
-        = descriptions <> stringChunk "=" <> meta
-        | otherwise
-        = descriptions <<+>> meta
+        | prefHelpLongEquals pprefs && not (isEmpty meta) && any isLongName (safelast names) =
+          descriptions <> stringChunk "=" <> meta
+        | otherwise =
+          descriptions <<+>> meta
       show_opt
-        | optVisibility opt == Hidden
-        = descHidden style
-        | otherwise
-        = optVisibility opt == Visible
-      suffix
-        | hinfoMulti info
-        = stringChunk . prefMultiSuffix $ pprefs
-        | otherwise
-        = mempty
-      wrapping
-        = wrapIf (length names > 1)
+        | optVisibility opt == Hidden =
+          descHidden style
+        | otherwise =
+          optVisibility opt == Visible
+      wrapping =
+        wrapIf (length names > 1)
       rendered
-        | not show_opt
-        = mempty
-        | otherwise
-        = desc <> suffix
-      modified
-        = maybe id fmap (optDescMod opt) rendered
-  in  (modified, wrapping)
+        | not show_opt =
+          mempty
+        | otherwise =
+          desc
+      modified =
+        maybe id fmap (optDescMod opt) rendered
+   in (modified, wrapping)
 
 -- | Generate descriptions for commands.
 cmdDesc :: Parser a -> [(Maybe String, Chunk Doc)]
@@ -80,10 +77,13 @@ cmdDesc = mapParser desc
   where
     desc _ opt =
       case optMain opt of
-        CmdReader gn cmds p -> (,) gn $
-          tabulate [(string cmd, align (extractChunk d))
-                   | cmd <- reverse cmds
-                   , d <- maybeToList . fmap infoProgDesc $ p cmd ]
+        CmdReader gn cmds p ->
+          (,) gn $
+            tabulate
+              [ (string cmd, align (extractChunk d))
+                | cmd <- reverse cmds,
+                  d <- maybeToList . fmap infoProgDesc $ p cmd
+              ]
         _ -> mempty
 
 -- | Generate a brief help text for a parser.
@@ -98,50 +98,65 @@ missingDesc = briefDesc' False
 -- | Generate a brief help text for a parser, allowing the specification
 --   of if optional arguments are show.
 briefDesc' :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
-briefDesc' showOptional pprefs
-    = wrap NoDefault . foldTree . mfilterOptional . treeMapParser (optDesc pprefs style)
+briefDesc' showOptional pprefs =
+  wrap NoDefault . (foldTree pprefs style) . mfilterOptional . treeMapParser (optDesc pprefs style)
   where
     mfilterOptional
-      | showOptional
-      = id
-      | otherwise
-      = filterOptional
-
+      | showOptional =
+        id
+      | otherwise =
+        filterOptional
     style = OptDescStyle
-      { descSep = string "|"
-      , descHidden = False }
+      { descSep = string "|",
+        descHidden = False
+      }
 
 -- | Wrap a doc in parentheses or brackets if required.
 wrap :: AltNodeType -> (Chunk Doc, Wrapping) -> Chunk Doc
 wrap altnode (chunk, wrapping)
-  | altnode == MarkDefault
-  = fmap brackets chunk
-  | needsWrapping wrapping
-  = fmap parens chunk
-  | otherwise
-  = chunk
+  | altnode == MarkDefault =
+    fmap brackets chunk
+  | needsWrapping wrapping =
+    fmap parens chunk
+  | otherwise =
+    chunk
 
 -- Fold a tree of option docs into a single doc with fully marked
 -- optional areas and groups.
-foldTree :: OptTree (Chunk Doc, Wrapping) -> (Chunk Doc, Wrapping)
-foldTree (Leaf x)
-  = x
-foldTree (MultNode xs)
-  = (foldr ((<</>>) . wrap NoDefault . foldTree) mempty xs, Bare)
-foldTree (AltNode b xs)
-  = (\x -> (x, Bare))
-  . fmap groupOrNestLine
-  . wrap b
-  . alt_node
-  . filter (not . isEmpty . fst)
-  . map foldTree $ xs
-    where
-
-  alt_node :: [(Chunk Doc, Wrapping)] -> (Chunk Doc, Wrapping)
-  alt_node [n] = n
-  alt_node ns = (\y -> (y, Wrapped))
-              . foldr (chunked altSep . wrap NoDefault) mempty
-              $ ns
+foldTree :: ParserPrefs -> OptDescStyle -> OptTree (Chunk Doc, Wrapping) -> (Chunk Doc, Wrapping)
+foldTree _ _ (Leaf x) =
+  x
+foldTree prefs s (MultNode xs) =
+  (foldr ((<</>>) . wrap NoDefault . foldTree prefs s) mempty xs, mult_wrap xs)
+  where
+    mult_wrap [_] = Bare
+    mult_wrap _ = Wrappable
+foldTree prefs s (AltNode b xs) =
+  (\x -> (x, Bare))
+    . fmap groupOrNestLine
+    . wrap b
+    . alt_node
+    . filter (not . isEmpty . fst)
+    . map (foldTree prefs s)
+    $ xs
+  where
+    alt_node :: [(Chunk Doc, Wrapping)] -> (Chunk Doc, Wrapping)
+    alt_node [n] = n
+    alt_node ns =
+      (\y -> (y, Wrapped))
+        . foldr (chunked altSep . wrap NoDefault) mempty
+        $ ns
+foldTree prefs s (BindNode x) =
+  let (rendered, innerWrap) =
+        foldTree prefs s x
+      rewrapped
+        | innerWrap == Wrappable =
+          fmap parens rendered
+        | otherwise =
+          rendered
+      withPrefix =
+        rewrapped <> stringChunk (prefMultiSuffix prefs)
+   in (withPrefix, Bare)
 
 -- | Generate a full help text for a parser.
 fullDesc :: ParserPrefs -> Parser a -> Chunk Doc
@@ -157,8 +172,9 @@ fullDesc pprefs = tabulate . catMaybes . mapParser doc
         hdef = Chunk . fmap show_def . optShowDefault $ opt
         show_def s = parens (string "default:" <+> string s)
     style = OptDescStyle
-      { descSep = string ","
-      , descHidden = True }
+      { descSep = string ",",
+        descHidden = True
+      }
 
 errorHelp :: Chunk Doc -> ParserHelp
 errorHelp chunk = mempty { helpError = chunk }
@@ -180,32 +196,44 @@ footerHelp chunk = mempty { helpFooter = chunk }
 
 -- | Generate the help text for a program.
 parserHelp :: ParserPrefs -> Parser a -> ParserHelp
-parserHelp pprefs p = bodyHelp . vsepChunks
-  $ with_title "Available options:" (fullDesc pprefs p)
-  : (group_title <$> cs)
+parserHelp pprefs p =
+  bodyHelp . vsepChunks $
+    with_title "Available options:" (fullDesc pprefs p)
+      : (group_title <$> cs)
   where
     def = "Available commands:"
-
     cs = groupBy ((==) `on` fst) $ cmdDesc p
 
-    group_title a@((n,_):_) = with_title (fromMaybe def n) $
-      vcatChunks (snd <$> a)
+    group_title a@((n, _) : _) =
+      with_title (fromMaybe def n) $
+        vcatChunks (snd <$> a)
     group_title _ = mempty
-
 
     with_title :: String -> Chunk Doc -> Chunk Doc
     with_title title = fmap (string title .$.)
 
 -- | Generate option summary.
 parserUsage :: ParserPrefs -> Parser a -> String -> Doc
-parserUsage pprefs p progn = hsep
-  [ string "Usage:"
-  , string progn
-  , align (extractChunk (briefDesc pprefs p)) ]
+parserUsage pprefs p progn =
+  hsep
+    [ string "Usage:",
+      string progn,
+      align (extractChunk (briefDesc pprefs p))
+    ]
 
+-- | Peek at the structure of the rendered tree within.
+--
+--   For example, if the inner is an option with multiple
+--   alternative, like -a or -b, we need to know before
+--   this at the outer level, because if it's optional, we
+--   don't want to have [(-a|-b)], just [-a|-b] or (-a|-b).
 data Wrapping
   = Bare
+  -- ^ Parenthesis are not required.
+  | Wrappable
+  -- ^ Parenthesis should be used if this group can be repeated
   | Wrapped
+  -- ^ Parenthesis should always be used.
   deriving (Eq, Show)
 
 wrapIf :: Bool -> Wrapping
