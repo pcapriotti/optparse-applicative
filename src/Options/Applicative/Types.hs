@@ -28,7 +28,7 @@ module Options.Applicative.Types (
   overFailure,
   Args,
   ArgPolicy(..),
-  OptHelpInfo(..),
+  ArgumentReachability(..),
   AltNodeType(..),
   OptTree(..),
   ParserHelp(..),
@@ -392,9 +392,9 @@ data ArgPolicy
   --   but are supplying just a few of their own options.
   deriving (Eq, Ord, Show)
 
-data OptHelpInfo = OptHelpInfo
-  { hinfoUnreachableArgs :: Bool -- ^ If the result is a positional, if it can't be
-                                 --   accessed in the current parser position ( first arg )
+newtype ArgumentReachability = ArgumentReachability
+  { argumentIsUnreachable :: Bool -- ^ If the result is a positional, if it can't be
+                                  --    accessed in the current parser position ( first arg )
   } deriving (Eq, Show)
 
 -- | This type encapsulates whether an 'AltNode' of an 'OptTree' should be displayed

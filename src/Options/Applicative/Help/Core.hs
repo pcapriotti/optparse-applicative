@@ -40,8 +40,8 @@ safelast :: [a] -> Maybe a
 safelast = foldl (const Just) Nothing
 
 -- | Generate description for a single option.
-optDesc :: ParserPrefs -> OptDescStyle -> OptHelpInfo -> Option a -> (Chunk Doc, Wrapping)
-optDesc pprefs style _info opt =
+optDesc :: ParserPrefs -> OptDescStyle -> ArgumentReachability -> Option a -> (Chunk Doc, Wrapping)
+optDesc pprefs style _reachability opt =
   let names =
         sort . optionNames . optMain $ opt
       meta =
@@ -60,8 +60,13 @@ optDesc pprefs style _info opt =
           descHidden style
         | otherwise =
           optVisibility opt == Visible
-      wrapping =
-        wrapIf (length names > 1)
+      wrapping
+        | null names =
+          Bare
+        | length names == 1 =
+          Wrappable
+        | otherwise =
+          Wrapped
       rendered
         | not show_opt =
           mempty
@@ -99,7 +104,10 @@ missingDesc = briefDesc' False
 --   of if optional arguments are show.
 briefDesc' :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
 briefDesc' showOptional pprefs =
-  wrap NoDefault . (foldTree pprefs style) . mfilterOptional . treeMapParser (optDesc pprefs style)
+  wrapOver NoDefault Wrappable
+    . foldTree pprefs style
+    . mfilterOptional
+    . treeMapParser (optDesc pprefs style)
   where
     mfilterOptional
       | showOptional =
@@ -112,11 +120,11 @@ briefDesc' showOptional pprefs =
       }
 
 -- | Wrap a doc in parentheses or brackets if required.
-wrap :: AltNodeType -> (Chunk Doc, Wrapping) -> Chunk Doc
-wrap altnode (chunk, wrapping)
+wrapOver :: AltNodeType -> Wrapping -> (Chunk Doc, Wrapping) -> Chunk Doc
+wrapOver altnode mustWrapBeyond (chunk, wrapping)
   | altnode == MarkDefault =
     fmap brackets chunk
-  | needsWrapping wrapping =
+  | wrapping > mustWrapBeyond =
     fmap parens chunk
   | otherwise =
     chunk
@@ -127,14 +135,20 @@ foldTree :: ParserPrefs -> OptDescStyle -> OptTree (Chunk Doc, Wrapping) -> (Chu
 foldTree _ _ (Leaf x) =
   x
 foldTree prefs s (MultNode xs) =
-  (foldr ((<</>>) . wrap NoDefault . foldTree prefs s) mempty xs, mult_wrap xs)
+  let go =
+        (<</>>) . wrapOver NoDefault Wrappable . foldTree prefs s
+      x =
+        foldr go mempty xs
+      wrapLevel =
+        mult_wrap xs
+   in (x, wrapLevel)
   where
     mult_wrap [_] = Bare
     mult_wrap _ = Wrappable
 foldTree prefs s (AltNode b xs) =
   (\x -> (x, Bare))
     . fmap groupOrNestLine
-    . wrap b
+    . wrapOver b Wrappable
     . alt_node
     . filter (not . isEmpty . fst)
     . map (foldTree prefs s)
@@ -144,18 +158,13 @@ foldTree prefs s (AltNode b xs) =
     alt_node [n] = n
     alt_node ns =
       (\y -> (y, Wrapped))
-        . foldr (chunked altSep . wrap NoDefault) mempty
+        . foldr (chunked altSep . wrapOver NoDefault Wrappable) mempty
         $ ns
 foldTree prefs s (BindNode x) =
-  let (rendered, innerWrap) =
-        foldTree prefs s x
-      rewrapped
-        | innerWrap == Wrappable =
-          fmap parens rendered
-        | otherwise =
-          rendered
+  let rendered =
+        wrapOver NoDefault Bare (foldTree prefs s x)
       withPrefix =
-        rewrapped <> stringChunk (prefMultiSuffix prefs)
+        rendered <> stringChunk (prefMultiSuffix prefs)
    in (withPrefix, Bare)
 
 -- | Generate a full help text for a parser.
@@ -223,9 +232,9 @@ parserUsage pprefs p progn =
 
 -- | Peek at the structure of the rendered tree within.
 --
---   For example, if the inner is an option with multiple
---   alternative, like -a or -b, we need to know before
---   this at the outer level, because if it's optional, we
+--   For example, if a child is an option with multiple
+--   alternatives, such as -a or -b, we need to know this
+--   when wrapping it. For example, if it's optional, we
 --   don't want to have [(-a|-b)], just [-a|-b] or (-a|-b).
 data Wrapping
   = Bare
@@ -234,10 +243,4 @@ data Wrapping
   -- ^ Parenthesis should be used if this group can be repeated
   | Wrapped
   -- ^ Parenthesis should always be used.
-  deriving (Eq, Show)
-
-wrapIf :: Bool -> Wrapping
-wrapIf b = if b then Wrapped else Bare
-
-needsWrapping :: Wrapping -> Bool
-needsWrapping = (==) Wrapped
+  deriving (Eq, Ord, Show)

@@ -242,7 +242,7 @@ evalParser (BindP p k) = evalParser p >>= evalParser . k
 
 -- | Map a polymorphic function over all the options of a parser, and collect
 -- the results in a list.
-mapParser :: (forall x. OptHelpInfo -> Option x -> b)
+mapParser :: (forall x. ArgumentReachability -> Option x -> b)
           -> Parser a -> [b]
 mapParser f = flatten . treeMapParser f
   where
@@ -252,7 +252,7 @@ mapParser f = flatten . treeMapParser f
     flatten (BindNode x) = flatten x
 
 -- | Like 'mapParser', but collect the results in a tree structure.
-treeMapParser :: (forall x . OptHelpInfo -> Option x -> b)
+treeMapParser :: (forall x. ArgumentReachability -> Option x -> b)
           -> Parser a
           -> OptTree b
 treeMapParser g = simplify . go False g
@@ -261,13 +261,13 @@ treeMapParser g = simplify . go False g
     has_default p = isJust (evalParser p)
 
     go :: Bool
-       -> (forall x . OptHelpInfo -> Option x -> b)
+       -> (forall x. ArgumentReachability -> Option x -> b)
        -> Parser a
        -> OptTree b
     go _ _ (NilP _) = MultNode []
     go r f (OptP opt)
       | optVisibility opt > Internal
-      = Leaf (f (OptHelpInfo r) opt)
+      = Leaf (f (ArgumentReachability r) opt)
       | otherwise
       = MultNode []
     go r f (MultP p1 p2) =
@@ -287,7 +287,7 @@ treeMapParser g = simplify . go False g
     go r f (BindP p k) =
       let go' = go r f p
       in case evalParser p of
-        Nothing -> BindNode (go')
+        Nothing -> BindNode go'
         Just aa -> BindNode (MultNode [ go', go r f (k aa) ])
 
     hasArg :: Parser a -> Bool
