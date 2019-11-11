@@ -40,7 +40,7 @@ safelast :: [a] -> Maybe a
 safelast = foldl (const Just) Nothing
 
 -- | Generate description for a single option.
-optDesc :: ParserPrefs -> OptDescStyle -> ArgumentReachability -> Option a -> (Chunk Doc, Wrapping)
+optDesc :: ParserPrefs -> OptDescStyle -> ArgumentReachability -> Option a -> (Chunk Doc, Parenthetic)
 optDesc pprefs style _reachability opt =
   let names =
         sort . optionNames . optMain $ opt
@@ -62,11 +62,11 @@ optDesc pprefs style _reachability opt =
           optVisibility opt == Visible
       wrapping
         | null names =
-          Bare
+          NeverRequired
         | length names == 1 =
-          Wrappable
+          MaybeRequired
         | otherwise =
-          Wrapped
+          AlwaysRequired
       rendered
         | not show_opt =
           mempty
@@ -104,7 +104,7 @@ missingDesc = briefDesc' False
 --   of if optional arguments are show.
 briefDesc' :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
 briefDesc' showOptional pprefs =
-  wrapOver NoDefault Wrappable
+  wrapOver NoDefault MaybeRequired
     . foldTree pprefs style
     . mfilterOptional
     . treeMapParser (optDesc pprefs style)
@@ -120,7 +120,7 @@ briefDesc' showOptional pprefs =
       }
 
 -- | Wrap a doc in parentheses or brackets if required.
-wrapOver :: AltNodeType -> Wrapping -> (Chunk Doc, Wrapping) -> Chunk Doc
+wrapOver :: AltNodeType -> Parenthetic -> (Chunk Doc, Parenthetic) -> Chunk Doc
 wrapOver altnode mustWrapBeyond (chunk, wrapping)
   | altnode == MarkDefault =
     fmap brackets chunk
@@ -131,41 +131,41 @@ wrapOver altnode mustWrapBeyond (chunk, wrapping)
 
 -- Fold a tree of option docs into a single doc with fully marked
 -- optional areas and groups.
-foldTree :: ParserPrefs -> OptDescStyle -> OptTree (Chunk Doc, Wrapping) -> (Chunk Doc, Wrapping)
+foldTree :: ParserPrefs -> OptDescStyle -> OptTree (Chunk Doc, Parenthetic) -> (Chunk Doc, Parenthetic)
 foldTree _ _ (Leaf x) =
   x
 foldTree prefs s (MultNode xs) =
   let go =
-        (<</>>) . wrapOver NoDefault Wrappable . foldTree prefs s
+        (<</>>) . wrapOver NoDefault MaybeRequired . foldTree prefs s
       x =
         foldr go mempty xs
       wrapLevel =
         mult_wrap xs
    in (x, wrapLevel)
   where
-    mult_wrap [_] = Bare
-    mult_wrap _ = Wrappable
+    mult_wrap [_] = NeverRequired
+    mult_wrap _ = MaybeRequired
 foldTree prefs s (AltNode b xs) =
-  (\x -> (x, Bare))
+  (\x -> (x, NeverRequired))
     . fmap groupOrNestLine
-    . wrapOver b Wrappable
+    . wrapOver b MaybeRequired
     . alt_node
     . filter (not . isEmpty . fst)
     . map (foldTree prefs s)
     $ xs
   where
-    alt_node :: [(Chunk Doc, Wrapping)] -> (Chunk Doc, Wrapping)
+    alt_node :: [(Chunk Doc, Parenthetic)] -> (Chunk Doc, Parenthetic)
     alt_node [n] = n
     alt_node ns =
-      (\y -> (y, Wrapped))
-        . foldr (chunked altSep . wrapOver NoDefault Wrappable) mempty
+      (\y -> (y, AlwaysRequired))
+        . foldr (chunked altSep . wrapOver NoDefault MaybeRequired) mempty
         $ ns
 foldTree prefs s (BindNode x) =
   let rendered =
-        wrapOver NoDefault Bare (foldTree prefs s x)
+        wrapOver NoDefault NeverRequired (foldTree prefs s x)
       withPrefix =
         rendered <> stringChunk (prefMultiSuffix prefs)
-   in (withPrefix, Bare)
+   in (withPrefix, NeverRequired)
 
 -- | Generate a full help text for a parser.
 fullDesc :: ParserPrefs -> Parser a -> Chunk Doc
@@ -234,13 +234,14 @@ parserUsage pprefs p progn =
 --
 --   For example, if a child is an option with multiple
 --   alternatives, such as -a or -b, we need to know this
---   when wrapping it. For example, if it's optional, we
---   don't want to have [(-a|-b)], just [-a|-b] or (-a|-b).
-data Wrapping
-  = Bare
+--   when wrapping it. For example, whether it's optional:
+--   we don't want to have [(-a|-b)], rather [-a|-b] or
+--   (-a|-b).
+data Parenthetic
+  = NeverRequired
   -- ^ Parenthesis are not required.
-  | Wrappable
+  | MaybeRequired
   -- ^ Parenthesis should be used if this group can be repeated
-  | Wrapped
+  | AlwaysRequired
   -- ^ Parenthesis should always be used.
   deriving (Eq, Ord, Show)
