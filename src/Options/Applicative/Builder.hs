@@ -55,6 +55,8 @@ module Options.Applicative.Builder (
   -- | A collection of basic 'Option' readers.
   auto,
   str,
+  integral,
+  numeric,
   maybeReader,
   eitherReader,
   disabled,
@@ -118,15 +120,47 @@ import Options.Applicative.Help.Chunk
 
 -- | 'Option' reader based on the 'Read' type class.
 auto :: Read a => ReadM a
-auto = eitherReader $ \arg -> case reads arg of
-  [(r, "")] -> return r
-  _         -> Left $ "cannot parse value `" ++ arg ++ "'"
+auto =
+  eitherReader $ \arg ->
+    case reads arg of
+      [(r, "")] ->
+        return r
+      _ ->
+        Left $ "cannot parse value `" ++ arg ++ "'"
+
 
 -- | String 'Option' reader.
 --
 --   Polymorphic over the `IsString` type class since 0.14.
 str :: IsString s => ReadM s
 str = fromString <$> readerAsk
+
+
+-- | Integral 'Option' reader.
+--
+--   Safe ReadM for integral types.
+integral :: Integral i => ReadM i
+integral =
+  eitherReader $ \arg ->
+    case reads arg of
+      [(r, "")] ->
+        Right $ fromInteger r
+      _ ->
+        Left $ "cannot parse value `" ++ arg ++ "' as integral type"
+
+
+-- | Numeric 'Option' reader.
+--
+--   Safe ReadM for numbers.
+numeric :: (Read n, Num n) => ReadM n
+numeric =
+  eitherReader $ \arg ->
+    case reads arg of
+      [(r, "")] ->
+        Right r
+      _ ->
+        Left $ "cannot parse `" ++ arg ++ "' as a number"
+
 
 -- | Convert a function producing an 'Either' into a reader.
 --
