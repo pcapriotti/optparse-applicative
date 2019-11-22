@@ -201,6 +201,8 @@ metavar :: HasMetavar f => String -> Mod f a
 metavar var = optionMod $ \p -> p { propMetaVar = var }
 
 -- | Hide this option from the brief description.
+--
+-- Use 'internal' to hide the option from the help text too.
 hidden :: Mod f a
 hidden = optionMod $ \p ->
   p { propVisibility = min Hidden (propVisibility p) }

@@ -180,6 +180,8 @@ mkProps (DefaultProp def sdef) g = props
     props = (g baseProps)
       { propShowDefault = sdef <*> def }
 
--- | Hide this option from the help text
+-- | Hide this option completely from the help text
+--
+-- Use 'hidden' if the option should remain visible in the full description.
 internal :: Mod f a
 internal = optionMod $ \p -> p { propVisibility = Internal }
