@@ -28,7 +28,7 @@ module Options.Applicative.Types (
   overFailure,
   Args,
   ArgPolicy(..),
-  OptHelpInfo(..),
+  ArgumentReachability(..),
   AltNodeType(..),
   OptTree(..),
   ParserHelp(..),
@@ -392,10 +392,9 @@ data ArgPolicy
   --   but are supplying just a few of their own options.
   deriving (Eq, Ord, Show)
 
-data OptHelpInfo = OptHelpInfo
-  { hinfoMulti :: Bool           -- ^ Whether this is part of a many or some (approximately)
-  , hinfoUnreachableArgs :: Bool -- ^ If the result is a positional, if it can't be
-                                 --   accessed in the current parser position ( first arg )
+newtype ArgumentReachability = ArgumentReachability
+  { argumentIsUnreachable :: Bool -- ^ If the result is a positional, if it can't be
+                                  --    accessed in the current parser position ( first arg )
   } deriving (Eq, Show)
 
 -- | This type encapsulates whether an 'AltNode' of an 'OptTree' should be displayed
@@ -407,6 +406,7 @@ data OptTree a
   = Leaf a
   | MultNode [OptTree a]
   | AltNode AltNodeType [OptTree a]
+  | BindNode (OptTree a)
   deriving Show
 
 filterOptional :: OptTree a -> OptTree a
@@ -419,6 +419,8 @@ filterOptional t = case t of
     -> AltNode MarkDefault []
   AltNode NoDefault xs
     -> AltNode NoDefault (map filterOptional xs)
+  BindNode xs
+    -> BindNode (filterOptional xs)
 
 optVisibility :: Option a -> OptVisibility
 optVisibility = propVisibility . optProps

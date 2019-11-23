@@ -91,7 +91,7 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
     --
     -- For options and flags, ensure that the user
     -- hasn't disabled them with `--`.
-    opt_completions argPolicy hinfo opt = case optMain opt of
+    opt_completions argPolicy reachability opt = case optMain opt of
       OptReader ns _ _
          | argPolicy /= AllPositionals
         -> return . add_opt_help opt $ show_names ns
@@ -103,12 +103,12 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
          | otherwise
         -> return []
       ArgReader rdr
-         | hinfoUnreachableArgs hinfo
+         | argumentIsUnreachable reachability
         -> return []
          | otherwise
         -> run_completer (crCompleter rdr)
       CmdReader _ ns p
-         | hinfoUnreachableArgs hinfo
+         | argumentIsUnreachable reachability
         -> return []
          | otherwise
         -> return . add_cmd_help p $ filter_names ns

@@ -242,39 +242,39 @@ evalParser (BindP p k) = evalParser p >>= evalParser . k
 
 -- | Map a polymorphic function over all the options of a parser, and collect
 -- the results in a list.
-mapParser :: (forall x. OptHelpInfo -> Option x -> b)
+mapParser :: (forall x. ArgumentReachability -> Option x -> b)
           -> Parser a -> [b]
 mapParser f = flatten . treeMapParser f
   where
     flatten (Leaf x) = [x]
     flatten (MultNode xs) = xs >>= flatten
     flatten (AltNode _ xs) = xs >>= flatten
+    flatten (BindNode x) = flatten x
 
 -- | Like 'mapParser', but collect the results in a tree structure.
-treeMapParser :: (forall x . OptHelpInfo -> Option x -> b)
+treeMapParser :: (forall x. ArgumentReachability -> Option x -> b)
           -> Parser a
           -> OptTree b
-treeMapParser g = simplify . go False False g
+treeMapParser g = simplify . go False g
   where
     has_default :: Parser a -> Bool
     has_default p = isJust (evalParser p)
 
     go :: Bool
-       -> Bool
-       -> (forall x . OptHelpInfo -> Option x -> b)
+       -> (forall x. ArgumentReachability -> Option x -> b)
        -> Parser a
        -> OptTree b
-    go _ _ _ (NilP _) = MultNode []
-    go m r f (OptP opt)
+    go _ _ (NilP _) = MultNode []
+    go r f (OptP opt)
       | optVisibility opt > Internal
-      = Leaf (f (OptHelpInfo m r) opt)
+      = Leaf (f (ArgumentReachability r) opt)
       | otherwise
       = MultNode []
-    go m r f (MultP p1 p2) =
-      MultNode [go m r f p1, go m r' f p2]
+    go r f (MultP p1 p2) =
+      MultNode [go r f p1, go r' f p2]
       where r' = r || hasArg p1
-    go m r f (AltP p1 p2) =
-      AltNode altNodeType [go m r f p1, go m r f p2]
+    go r f (AltP p1 p2) =
+      AltNode altNodeType [go r f p1, go r f p2]
       where
         -- The 'AltNode' indicates if one of the branches has a default.
         -- This is used for rendering brackets, as well as filtering
@@ -284,11 +284,11 @@ treeMapParser g = simplify . go False False g
             then MarkDefault
             else NoDefault
 
-    go _ r f (BindP p k) =
-      let go' = go True r f p
+    go r f (BindP p k) =
+      let go' = go r f p
       in case evalParser p of
-        Nothing -> go'
-        Just aa -> MultNode [ go', go True r f (k aa) ]
+        Nothing -> BindNode go'
+        Just aa -> BindNode (MultNode [ go', go r f (k aa) ])
 
     hasArg :: Parser a -> Bool
     hasArg (NilP _) = False
@@ -312,3 +312,5 @@ simplify (AltNode b xs) =
     remove_alt (AltNode _ ts) = ts
     remove_alt (MultNode []) = []
     remove_alt t = [t]
+simplify (BindNode x) =
+  BindNode $ simplify x

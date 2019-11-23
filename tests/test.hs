@@ -24,6 +24,8 @@ import           Test.QuickCheck.Property
 
 import           Options.Applicative
 import           Options.Applicative.Types
+
+import qualified Options.Applicative.Help as H
 import           Options.Applicative.Help.Pretty (Doc, SimpleDoc(..))
 import qualified Options.Applicative.Help.Pretty as Doc
 import           Options.Applicative.Help.Chunk
@@ -771,6 +773,84 @@ prop_bytestring_reader = once $
       i = info p idm
       result = run i ["testValue"]
   in assertResult result $ \xs -> BS8.pack t === xs
+
+prop_grouped_some_option_ellipsis :: Property
+prop_grouped_some_option_ellipsis = once $
+  let x :: Parser String
+      x = strOption (short 'x' <> metavar "X")
+      p = prefs (multiSuffix "...")
+      r = show . extractChunk $ H.briefDesc p (x *> some x)
+  in r === "-x X (-x X)..."
+
+prop_grouped_many_option_ellipsis :: Property
+prop_grouped_many_option_ellipsis = once $
+  let x :: Parser String
+      x = strOption (short 'x' <> metavar "X")
+      p = prefs (multiSuffix "...")
+      r = show . extractChunk $ H.briefDesc p (x *> many x)
+  in r === "-x X [-x X]..."
+
+prop_grouped_some_argument_ellipsis :: Property
+prop_grouped_some_argument_ellipsis = once $
+  let x :: Parser String
+      x = strArgument (metavar "X")
+      p = prefs (multiSuffix "...")
+      r = show . extractChunk $ H.briefDesc p (x *> some x)
+  in r === "X X..."
+
+prop_grouped_many_argument_ellipsis :: Property
+prop_grouped_many_argument_ellipsis = once $
+  let x :: Parser String
+      x = strArgument (metavar "X")
+      p = prefs (multiSuffix "...")
+      r = show . extractChunk $ H.briefDesc p (x *> many x)
+  in r === "X [X]..."
+
+prop_grouped_some_pairs_argument_ellipsis :: Property
+prop_grouped_some_pairs_argument_ellipsis = once $
+  let x :: Parser String
+      x = strArgument (metavar "X")
+      p = prefs (multiSuffix "...")
+      r = show . extractChunk $ H.briefDesc p (x *> some (x *> x))
+  in r === "X (X X)..."
+
+prop_grouped_many_pairs_argument_ellipsis :: Property
+prop_grouped_many_pairs_argument_ellipsis = once $
+  let x :: Parser String
+      x = strArgument (metavar "X")
+      p = prefs (multiSuffix "...")
+      r = show . extractChunk $ H.briefDesc p (x *> many (x *> x))
+  in r === "X [X X]..."
+
+prop_grouped_some_dual_option_ellipsis :: Property
+prop_grouped_some_dual_option_ellipsis = once $
+  let x :: Parser String
+      x = strOption (short 'a' <> short 'b' <> metavar "X")
+      p = prefs (multiSuffix "...")
+      r = show . extractChunk $ H.briefDesc p (x *> some x)
+  in r === "(-a|-b X) (-a|-b X)..."
+
+prop_grouped_many_dual_option_ellipsis :: Property
+prop_grouped_many_dual_option_ellipsis = once $
+  let x :: Parser String
+      x = strOption (short 'a' <> short 'b' <> metavar "X")
+      p = prefs (multiSuffix "...")
+      r = show . extractChunk $ H.briefDesc p (x *> many x)
+  in r === "(-a|-b X) [-a|-b X]..."
+
+prop_grouped_some_dual_flag_ellipsis :: Property
+prop_grouped_some_dual_flag_ellipsis = once $
+  let x = flag' () (short 'a' <> short 'b')
+      p = prefs (multiSuffix "...")
+      r = show . extractChunk $ H.briefDesc p (x *> some x)
+  in r === "(-a|-b) (-a|-b)..."
+
+prop_grouped_many_dual_flag_ellipsis :: Property
+prop_grouped_many_dual_flag_ellipsis = once $
+  let x = flag' () (short 'a' <> short 'b')
+      p = prefs (multiSuffix "...")
+      r = show . extractChunk $ H.briefDesc p (x *> many x)
+  in r === "(-a|-b) [-a|-b]..."
 
 ---
 

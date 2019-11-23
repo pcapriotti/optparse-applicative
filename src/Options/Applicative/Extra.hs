@@ -257,11 +257,11 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
             -- things the user could type. If it's a command
             -- reader also ensure that it can be immediately
             -- reachable from where the error was given.
-            opt_completions hinfo opt = case optMain opt of
+            opt_completions reachability opt = case optMain opt of
               OptReader ns _ _ -> fmap showOption ns
               FlagReader ns _  -> fmap showOption ns
               ArgReader _      -> []
-              CmdReader _ ns _  | hinfoUnreachableArgs hinfo
+              CmdReader _ ns _  | argumentIsUnreachable reachability
                                -> []
                                 | otherwise
                                -> ns
