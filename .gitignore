@@ -7,3 +7,6 @@ cabal.project.local
 cabal.sandbox.config
 
 .ghc.environment.*
+
+.stack-work/
+stack.yaml.lock

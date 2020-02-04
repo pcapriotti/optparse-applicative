@@ -104,7 +104,6 @@ module Options.Applicative.Builder (
   ) where
 
 import Control.Applicative
-import Data.Semigroup hiding (option)
 import Data.String (fromString, IsString)
 
 import Options.Applicative.Builder.Completer
