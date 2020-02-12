@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module Options.Applicative.Builder (
   -- * Parser builders
   --
@@ -104,6 +106,9 @@ module Options.Applicative.Builder (
   ) where
 
 import Control.Applicative
+#if __GLASGOW_HASKELL__ <= 802
+import Data.Semigroup hiding (option)
+#endif
 import Data.String (fromString, IsString)
 
 import Options.Applicative.Builder.Completer
