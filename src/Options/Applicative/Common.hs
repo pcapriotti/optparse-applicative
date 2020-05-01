@@ -209,10 +209,12 @@ runParser policy isCmdStart p args = case args of
       Nothing -> hoistMaybe result <|> parseError arg p
       Just p' -> runParser (newPolicy arg) CmdCont p' args'
   where
-    result = (,) <$> evalParser p <*> pure args
-    do_step prefs arg argt = (`runStateT` argt)
-                           . disamb (not (prefDisambiguate prefs))
-                           $ stepParser prefs policy arg p
+    result =
+      (,) <$> evalParser p <*> pure args
+    do_step prefs arg =
+      runStateT
+        $ disamb (not (prefDisambiguate prefs))
+        $ stepParser prefs policy arg p
 
     newPolicy a = case policy of
       NoIntersperse -> if isJust (parseWord a) then NoIntersperse else AllPositionals
