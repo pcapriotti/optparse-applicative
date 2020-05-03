@@ -15,6 +15,7 @@ import           Control.Monad
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS8
 import           Data.List hiding (group)
+import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           Data.Semigroup hiding (option)
 import           Data.String
 
@@ -24,6 +25,8 @@ import           Test.QuickCheck.Property
 
 import           Options.Applicative
 import           Options.Applicative.Types
+import qualified Options.Applicative.NonEmpty
+
 
 import qualified Options.Applicative.Help as H
 import           Options.Applicative.Help.Pretty (Doc, SimpleDoc(..))
@@ -851,6 +854,23 @@ prop_grouped_many_dual_flag_ellipsis = once $
       p = prefs (multiSuffix "...")
       r = show . extractChunk $ H.briefDesc p (x *> many x)
   in r === "(-a|-b) [-a|-b]..."
+
+prop_nice_some1 :: Property
+prop_nice_some1 = once $
+  let x = Options.Applicative.NonEmpty.some1 (flag' () (short 'a'))
+      p = prefs (multiSuffix "...")
+      r = show . extractChunk $ H.briefDesc p x
+  in r === "(-a)..."
+
+
+prop_some1_works :: Property
+prop_some1_works = once $
+  let p = Options.Applicative.NonEmpty.some1 (flag' () (short 'a'))
+      i = info p idm
+      result = run i ["-a", "-a"]
+  in assertResult result $ \xs -> () :| [()] === xs
+
+
 
 ---
 
