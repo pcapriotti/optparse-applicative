@@ -329,7 +329,7 @@ newtype ParserFailure h = ParserFailure
 instance Show h => Show (ParserFailure h) where
   showsPrec p (ParserFailure f)
     = showParen (p > 10)
-    $ showString "ParserFailure "
+    $ showString "ParserFailure"
     . showsPrec 11 (f "<program>")
 
 instance Functor ParserFailure where
