@@ -11,7 +11,7 @@ for composing them.
 optparse-applicative takes care of reading and validating the
 arguments passed to the command line, handling and reporting errors,
 generating a usage line, a comprehensive help screen, and enabling
-context-sensitive bash, zsh, and fish completions.
+context-sensitive `bash`, `zsh`, and `fish` completions.
 
 **Table of Contents**
 
