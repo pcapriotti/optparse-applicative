@@ -4,11 +4,11 @@
 [![Hackage page (downloads and API reference)][hackage-png]][hackage]
 [![Hackage-Deps][hackage-deps-png]][hackage-deps]
 
-optparse-applicative is a haskell library for parsing options on
+`optparse-applicative` is a haskell library for parsing options on
 the command line, and providing a powerful [applicative] interface
 for composing them.
 
-optparse-applicative takes care of reading and validating the
+`optparse-applicative` takes care of reading and validating the
 arguments passed to the command line, handling and reporting errors,
 generating a usage line, a comprehensive help screen, and enabling
 context-sensitive bash, zsh, and fish completions.
@@ -45,7 +45,7 @@ context-sensitive bash, zsh, and fish completions.
 
 ## Introduction
 
-The core type in optparse-applicative is a `Parser`
+The core type in `optparse-applicative` is a `Parser`
 
 ```haskell
 data Parser a
@@ -61,7 +61,7 @@ arguments are successfully parsed.
 
 If you are familiar with parser combinator libraries like [parsec],
 [attoparsec], or the json parser [aeson] you will feel right at
-home with optparse-applicative.
+home with `optparse-applicative`.
 
 If not, don't worry! All you really need to learn are a few basic
 parsers, and how to compose them as instances of `Applicative` and
@@ -154,7 +154,7 @@ containing a detailed list of options with descriptions
 ## Basics
 ### Parsers
 
-optparse-applicative provides a number of primitive parsers,
+`optparse-applicative` provides a number of primitive parsers,
 corresponding to different posix style options, through its *Builder*
 interface. These are detailed in their [own section](#builders)
 below, for now, here's a look at a few more examples to get a feel
@@ -297,7 +297,7 @@ like
 
 will be rejected.
 
-Having `Applicative` and `Alternative` instances, optparse-applicative
+Having `Applicative` and `Alternative` instances, `optparse-applicative`
 parsers are also able to be composed with standard combinators. For
 example: `optional :: Alternative f => f a -> f (Maybe a)` will
 mean the user is not required to provide input for the affected
@@ -666,7 +666,7 @@ that take an `ParserPrefs` parameter, like `customExecParser`.
 
 ### Disambiguation
 
-It is possible to configure optparse-applicative to perform automatic
+It is possible to configure `optparse-applicative` to perform automatic
 disambiguation of prefixes of long options. For example, given a
 program `foo` with options `--filename` and `--filler`, typing
 
@@ -702,7 +702,7 @@ main = customExecParser p opts
 
 ### Customising the help screen
 
-optparse-applicative has a number of combinators to help customise
+`optparse-applicative` has a number of combinators to help customise
 the usage text, and determine when it should be displayed.
 
 The `progDesc`, `header`, and `footer` functions can be used to
@@ -905,7 +905,7 @@ cumbersome to use in certain cases.
 
 ## Applicative do
 
-Some may find using optparse-applicative easier using do notation.
+Some may find using `optparse-applicative` easier using do notation.
 However, as `Parser` is not an instance of `Monad`, this can only
 be done in recent versions of GHC using the *ApplicativeDo* extension.
 For example, a parser specified in this manner might be
@@ -941,7 +941,7 @@ and the `pure` value should instead be wrapped parenthetically).
   way to traverse the parser and generate a usage string, or for
   us to allow for options to be parsed in any order. Therefore it
   is intentionally unsupported to write a `Parser` in this manner
-  with optparse-applicative, and the `Parser` type does not have
+  with `optparse-applicative`, and the `Parser` type does not have
   an instance for `Monad`.
 
 * Overlapping flags and options / options with optional arguments?
