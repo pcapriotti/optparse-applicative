@@ -15,23 +15,25 @@ data ParserHelp = ParserHelp
   , helpHeader :: Chunk Doc
   , helpUsage :: Chunk Doc
   , helpBody :: Chunk Doc
-  , helpFooter :: Chunk Doc }
+  , helpFooter :: Chunk Doc
+  , helpGlobals :: Chunk Doc }
 
 instance Show ParserHelp where
   showsPrec _ h = showString (renderHelp 80 h)
 
 instance Monoid ParserHelp where
-  mempty = ParserHelp mempty mempty mempty mempty mempty mempty
+  mempty = ParserHelp mempty mempty mempty mempty mempty mempty mempty
   mappend = (<>)
 
 instance Semigroup ParserHelp where
-  (ParserHelp e1 s1 h1 u1 b1 f1) <> (ParserHelp e2 s2 h2 u2 b2 f2)
+  (ParserHelp e1 s1 h1 u1 b1 f1 g1) <> (ParserHelp e2 s2 h2 u2 b2 f2 g2)
     = ParserHelp (mappend e1 e2) (mappend s1 s2)
                  (mappend h1 h2) (mappend u1 u2)
                  (mappend b1 b2) (mappend f1 f2)
+                 (mappend g1 g2)
 
 helpText :: ParserHelp -> Doc
-helpText (ParserHelp e s h u b f) = extractChunk . vsepChunks $ [e, s, h, u, b, f]
+helpText (ParserHelp e s h u b f g) = extractChunk . vsepChunks $ [e, s, h, u, b, f, g]
 
 -- | Convert a help text to 'String'.
 renderHelp :: Int -> ParserHelp -> String

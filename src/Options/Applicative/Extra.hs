@@ -151,6 +151,7 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
             [ base_help pinfo'
             , usage_help progn names pinfo'
             , suggestion_help
+            , globals ctx
             , error_help ]
   in (h, exit_code, prefColumns pprefs)
   where
@@ -169,6 +170,11 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
                  -> c
     with_context [] i f = f [] i
     with_context c@(Context _ i:_) _ f = f (contextNames c) i
+
+    globals :: [Context] -> ParserHelp
+    globals =
+      globalsHelp .
+        mconcat . fmap (\(Context (_, s) _) -> Options.Applicative.Help.fullDesc pprefs s)
 
     usage_help progn names i = case msg of
       InfoMsg _
@@ -233,9 +239,10 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
             --
             -- We won't worry about the 0 case, it won't be
             -- shown anyway.
-            prose       = if length good < 2
-                            then stringChunk "Did you mean this?"
-                            else stringChunk "Did you mean one of these?"
+            prose       = if length good < 2 then
+                            stringChunk "Did you mean this?"
+                          else
+                            stringChunk "Did you mean one of these?"
             --
             -- Suggestions we will show, they're close enough
             -- to what the user wrote

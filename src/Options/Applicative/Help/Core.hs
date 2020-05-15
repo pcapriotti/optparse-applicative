@@ -10,6 +10,7 @@ module Options.Applicative.Help.Core (
   usageHelp,
   bodyHelp,
   footerHelp,
+  globalsHelp,
   parserHelp,
   parserUsage,
   ) where
@@ -193,6 +194,9 @@ headerHelp chunk = mempty { helpHeader = chunk }
 
 suggestionsHelp :: Chunk Doc -> ParserHelp
 suggestionsHelp chunk = mempty { helpSuggestions = chunk }
+
+globalsHelp :: Chunk Doc -> ParserHelp
+globalsHelp chunk = mempty { helpGlobals = chunk }
 
 usageHelp :: Chunk Doc -> ParserHelp
 usageHelp chunk = mempty { helpUsage = chunk }

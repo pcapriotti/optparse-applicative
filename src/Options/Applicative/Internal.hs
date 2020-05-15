@@ -38,7 +38,7 @@ import Control.Monad.Trans.State (StateT, get, put, modify, evalStateT, runState
 import Options.Applicative.Types
 
 class (Alternative m, MonadPlus m) => MonadP m where
-  enterContext :: String -> ParserInfo a -> m ()
+  enterContext :: (String, Parser x) -> ParserInfo a -> m ()
   exitContext :: m ()
   getPrefs :: m ParserPrefs
 
@@ -69,7 +69,7 @@ instance MonadPlus P where
 
 contextNames :: [Context] -> [String]
 contextNames ns =
-  let go (Context n _) = n
+  let go (Context (n, _) _) = n
   in  reverse $ go <$> ns
 
 instance MonadP P where
