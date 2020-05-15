@@ -149,16 +149,18 @@ data OptProperties = OptProperties
   , propHelp :: Chunk Doc                 -- ^ help text for this option
   , propMetaVar :: String                 -- ^ metavariable for this option
   , propShowDefault :: Maybe String       -- ^ what to show in the help text as the default
+  , propShowGlobal :: Bool                -- ^ whether the option is presented in global options text
   , propDescMod :: Maybe ( Doc -> Doc )   -- ^ a function to run over the brief description
   }
 
 instance Show OptProperties where
-  showsPrec p (OptProperties pV pH pMV pSD _)
+  showsPrec p (OptProperties pV pH pMV pSD pSG _)
     = showParen (p >= 11)
     $ showString "OptProperties { propVisibility = " . shows pV
     . showString ", propHelp = " . shows pH
     . showString ", propMetaVar = " . shows pMV
     . showString ", propShowDefault = " . shows pSD
+    . showString ", propShowGlobal = " . shows pSG
     . showString ", propDescMod = _ }"
 
 -- | A single option of a parser.

@@ -3,6 +3,7 @@ module Options.Applicative.Help.Core (
   briefDesc,
   missingDesc,
   fullDesc,
+  globalDesc,
   ParserHelp(..),
   errorHelp,
   headerHelp,
@@ -35,7 +36,8 @@ import Options.Applicative.Help.Chunk
 data OptDescStyle
   = OptDescStyle
       { descSep :: Doc,
-        descHidden :: Bool
+        descHidden :: Bool,
+        descGlobal :: Bool
       }
 
 safelast :: [a] -> Maybe a
@@ -58,6 +60,8 @@ optDesc pprefs style _reachability opt =
         | otherwise =
           descriptions <<+>> meta
       show_opt
+        | descGlobal style && not (propShowGlobal (optProps opt)) =
+          False
         | optVisibility opt == Hidden =
           descHidden style
         | otherwise =
@@ -118,7 +122,8 @@ briefDesc' showOptional pprefs =
         filterOptional
     style = OptDescStyle
       { descSep = string "|",
-        descHidden = False
+        descHidden = False,
+        descGlobal = False
       }
 
 -- | Wrap a doc in parentheses or brackets if required.
@@ -171,7 +176,15 @@ foldTree prefs s (BindNode x) =
 
 -- | Generate a full help text for a parser.
 fullDesc :: ParserPrefs -> Parser a -> Chunk Doc
-fullDesc pprefs = tabulate . catMaybes . mapParser doc
+fullDesc = fullDesc' False
+
+-- | Generate a full help text for a parser.
+globalDesc :: ParserPrefs -> Parser a -> Chunk Doc
+globalDesc = fullDesc' True
+
+-- | Generate a full help text for a parser.
+fullDesc' :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
+fullDesc' global pprefs = tabulate . catMaybes . mapParser doc
   where
     doc info opt = do
       guard . not . isEmpty $ n
@@ -184,7 +197,8 @@ fullDesc pprefs = tabulate . catMaybes . mapParser doc
         show_def s = parens (string "default:" <+> string s)
     style = OptDescStyle
       { descSep = string ",",
-        descHidden = True
+        descHidden = True,
+        descGlobal = global
       }
 
 errorHelp :: Chunk Doc -> ParserHelp
@@ -231,7 +245,7 @@ parserGlobals :: ParserPrefs -> Parser a -> ParserHelp
 parserGlobals pprefs p =
   globalsHelp $
     (.$.) <$> stringChunk "Global options:"
-          <*> (fullDesc pprefs p)
+          <*> globalDesc pprefs p
 
 
 
