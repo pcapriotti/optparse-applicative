@@ -174,17 +174,18 @@ foldTree prefs s (BindNode x) =
         rendered <> stringChunk (prefMultiSuffix prefs)
    in (withPrefix, NeverRequired)
 
--- | Generate a full help text for a parser.
+-- | Generate a full help text for a parser
 fullDesc :: ParserPrefs -> Parser a -> Chunk Doc
-fullDesc = fullDesc' False
+fullDesc = optionsDesc False
 
--- | Generate a full help text for a parser.
+-- | Generate a help text for the parser, showing
+--   only what is relevant in the "Global options: section"
 globalDesc :: ParserPrefs -> Parser a -> Chunk Doc
-globalDesc = fullDesc' True
+globalDesc = optionsDesc True
 
--- | Generate a full help text for a parser.
-fullDesc' :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
-fullDesc' global pprefs = tabulate . catMaybes . mapParser doc
+-- | Common generator for full descriptions and globals
+optionsDesc :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
+optionsDesc global pprefs = tabulate . catMaybes . mapParser doc
   where
     doc info opt = do
       guard . not . isEmpty $ n

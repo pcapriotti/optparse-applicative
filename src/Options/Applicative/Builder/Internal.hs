@@ -20,7 +20,8 @@ module Options.Applicative.Builder.Internal (
   mkOption,
   mkProps,
 
-  internal
+  internal,
+  noGlobal
   ) where
 
 import Control.Applicative
@@ -186,3 +187,8 @@ mkProps (DefaultProp def sdef) g = props
 -- Use 'hidden' if the option should remain visible in the full description.
 internal :: Mod f a
 internal = optionMod $ \p -> p { propVisibility = Internal }
+
+
+-- | Suppress this option from appearing in global options
+noGlobal :: Mod f a
+noGlobal = optionMod $ \pp -> pp { propShowGlobal = False }

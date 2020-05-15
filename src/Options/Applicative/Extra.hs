@@ -50,7 +50,7 @@ helper = abortOption ShowHelpText $ mconcat
   [ long "help"
   , short 'h'
   , help "Show this help text"
-  , optionMod $ \p -> p { propShowGlobal = False }
+  , noGlobal
   , hidden ]
 
 -- | Builder for a command parser with a \"helper\" option attached.
