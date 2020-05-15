@@ -22,6 +22,7 @@ module Options.Applicative.Extra (
   ) where
 
 import Control.Applicative
+import Control.Monad (void)
 import Data.Monoid
 import Data.Traversable
 import Prelude
@@ -175,7 +176,7 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
 
     globals :: [Context] -> ParserHelp
     globals cs =
-      parserGlobals pprefs (traverse (\(Context (_, x) _) -> fmap (const ()) x) cs)
+      parserGlobals pprefs (traverse (\(Context (_, x) _) -> void x) cs)
 
     usage_help progn names i = case msg of
       InfoMsg _
