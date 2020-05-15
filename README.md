@@ -180,7 +180,7 @@ above will require an option like
 
     --hello world
 
-on the command line. The `help` and `metavar` text will appear
+on the command line. The `help` and `metavar` values will appear
 in the generated help text, but don't otherwise affect the behaviour
 of the parser.
 
