@@ -102,7 +102,7 @@ sample = Sample
 
 The parser is built using an [applicative] style starting from a
 set of basic combinators. In this example, hello is defined as an
-option with a `String` argument, while quiet is a boolean flag
+option with a `String` argument, while quiet is a Boolean flag
 (called a switch) and enthusiasm gets parsed as an `Int` with help
 of the `Read` type class.
 
@@ -189,7 +189,7 @@ composed using the [semigroup] operation `(<>)`.
 
 Options with an argument such as `target` are referred to as *regular
 options*, and are very common.  Another type of option is a *flag*,
-the simplest of which is a boolean *switch*, for example:
+the simplest of which is a Boolean *switch*, for example:
 
 ```haskell
 quiet :: Parser Bool
@@ -463,7 +463,7 @@ flag Normal Verbose
 
 is a flag parser returning a `Verbosity` value.
 
-Simple boolean flags can be specified using the `switch` builder, like so:
+Simple Boolean flags can be specified using the `switch` builder, like so:
 
 ```haskell
 switch
