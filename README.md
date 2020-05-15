@@ -62,7 +62,7 @@ options, which will yield a value of type `a` when the command line
 arguments are successfully parsed.
 
 If you are familiar with parser combinator libraries like [parsec],
-[attoparsec], or the json parser [aeson] you will feel right at
+[attoparsec], or the JSON parser [aeson] you will feel right at
 home with optparse-applicative.
 
 If not, don't worry! All you really need to learn are a few basic
