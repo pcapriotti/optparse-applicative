@@ -23,6 +23,7 @@ module Options.Applicative.Extra (
 
 import Control.Applicative
 import Data.Monoid
+import Data.Traversable
 import Prelude
 import System.Environment (getArgs, getProgName)
 import System.Exit (exitSuccess, exitWith, ExitCode(..))
