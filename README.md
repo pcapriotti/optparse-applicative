@@ -8,10 +8,12 @@ optparse-applicative is a Haskell library for parsing options on
 the command line, and providing a powerful [applicative] interface
 for composing them.
 
-optparse-applicative takes care of reading and validating the
-arguments passed to the command line, handling and reporting errors,
-generating a usage line, a comprehensive help screen, and enabling
-context-sensitive `bash`, `zsh`, and `fish` completions.
+optparse-applicative is created to:
+  - read and validate the arguments passed to the command line;
+  - handle and report errors;
+  - generate lines that explain usage;
+  - have a comprehensive help screen;
+  - create context-sensitive complettions for `bash`, `zsh`, `fish`.
 
 **Table of Contents**
 
