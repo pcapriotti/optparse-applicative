@@ -69,11 +69,11 @@ instance MonadPlus P where
 
 contextNames :: [Context] -> [String]
 contextNames ns =
-  let go (Context (n, _) _) = n
+  let go (Context n _ _) = n
   in  reverse $ go <$> ns
 
 instance MonadP P where
-  enterContext name pinfo = P $ lift $ modify $ (:) $ Context name pinfo
+  enterContext (name, parent) pinfo = P $ lift $ modify $ (:) $ Context name parent pinfo
   exitContext = P $ lift $ modify $ drop 1
   getPrefs = P . lift . lift $ ask
 

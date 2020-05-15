@@ -172,11 +172,11 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
                  -> (forall b . [String] -> ParserInfo b -> c)
                  -> c
     with_context [] i f = f [] i
-    with_context c@(Context _ i:_) _ f = f (contextNames c) i
+    with_context c@(Context _ _ i:_) _ f = f (contextNames c) i
 
     globals :: [Context] -> ParserHelp
     globals cs =
-      parserGlobals pprefs (traverse (\(Context (_, x) _) -> void x) cs)
+      parserGlobals pprefs (traverse (\(Context _ p _) -> void p) cs)
 
     usage_help progn names i = case msg of
       InfoMsg _
