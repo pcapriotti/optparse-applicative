@@ -13,6 +13,7 @@ module Options.Applicative.Help.Core (
   globalsHelp,
   parserHelp,
   parserUsage,
+  parserGlobals
   ) where
 
 import Control.Applicative
@@ -224,6 +225,15 @@ parserHelp pprefs p =
 
     with_title :: String -> Chunk Doc -> Chunk Doc
     with_title title = fmap (string title .$.)
+
+
+parserGlobals :: ParserPrefs -> Parser a -> ParserHelp
+parserGlobals pprefs p =
+  globalsHelp $
+    (.$.) <$> stringChunk "Global options:"
+          <*> (fullDesc pprefs p)
+
+
 
 -- | Generate option summary.
 parserUsage :: ParserPrefs -> Parser a -> String -> Doc

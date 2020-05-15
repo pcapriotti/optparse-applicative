@@ -172,9 +172,8 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
     with_context c@(Context _ i:_) _ f = f (contextNames c) i
 
     globals :: [Context] -> ParserHelp
-    globals =
-      globalsHelp .
-        mconcat . fmap (\(Context (_, s) _) -> Options.Applicative.Help.fullDesc pprefs s)
+    globals cs =
+      parserGlobals pprefs (traverse (\(Context (_, x) _) -> fmap (const ()) x) cs)
 
     usage_help progn names i = case msg of
       InfoMsg _
