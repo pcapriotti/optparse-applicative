@@ -69,7 +69,7 @@ If not, don't worry! All you really need to learn are a few basic
 parsers, and how to compose them as instances of `Applicative` and
 `Alternative`.
 
-## Quick Start
+## Quick start
 
 Here's a simple example of a parser.
 
