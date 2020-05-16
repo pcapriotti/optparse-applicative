@@ -38,7 +38,7 @@ import Control.Monad.Trans.State (StateT, get, put, modify, evalStateT, runState
 import Options.Applicative.Types
 
 class (Alternative m, MonadPlus m) => MonadP m where
-  enterContext :: (String, Parser x) -> ParserInfo a -> m ()
+  enterContext :: String -> Parser x -> ParserInfo a -> m ()
   exitContext :: m ()
   getPrefs :: m ParserPrefs
 
@@ -73,7 +73,7 @@ contextNames ns =
   in  reverse $ go <$> ns
 
 instance MonadP P where
-  enterContext (name, parent) pinfo = P $ lift $ modify $ (:) $ Context name parent pinfo
+  enterContext name parent pinfo = P $ lift $ modify $ (:) $ Context name parent pinfo
   exitContext = P $ lift $ modify $ drop 1
   getPrefs = P . lift . lift $ ask
 
@@ -145,7 +145,7 @@ instance MonadPlus Completion where
   mplus (Completion x) (Completion y) = Completion $ mplus x y
 
 instance MonadP Completion where
-  enterContext _ _ = return ()
+  enterContext _ _ _ = return ()
   exitContext = return ()
   getPrefs = Completion $ lift ask
 

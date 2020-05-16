@@ -170,13 +170,13 @@ searchArg prefs arg parent =
           case (f arg, prefBacktrack prefs) of
             (Just subp, NoBacktrack) -> lift $ do
               args <- get <* put []
-              fmap pure . lift $ enterContext (arg, parent) subp *> runParserInfo subp args <* exitContext
+              fmap pure . lift $ enterContext arg parent subp *> runParserInfo subp args <* exitContext
 
             (Just subp, Backtrack) -> fmap pure . lift . StateT $ \args ->
-              enterContext (arg, parent) subp *> runParser (infoPolicy subp) CmdStart (infoParser subp) args <* exitContext
+              enterContext arg parent subp *> runParser (infoPolicy subp) CmdStart (infoParser subp) args <* exitContext
 
             (Just subp, SubparserInline) -> lift $ do
-              lift $ enterContext (arg, parent) subp
+              lift $ enterContext arg parent subp
               return $ infoParser subp
 
             (Nothing, _)  -> mzero
