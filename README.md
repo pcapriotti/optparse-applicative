@@ -172,7 +172,7 @@ target = strOption
   <> help "Target for the greeting" )
 ```
 
-This defines an option parser with the *long* shell option type,
+This defines an option parser. That has only the *long* key,
 named "hello" (resulting in `--hello`).
 It assepts a `String` as an argument, which would be marked by its
 *metavariable* "TARGET" in the documentations.
