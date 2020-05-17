@@ -172,8 +172,8 @@ target = strOption
   <> help "Target for the greeting" )
 ```
 
-One can see that we are defining an option parser for a `String`
-argument, with *long* option name "hello", *metavariable* "TARGET",
+This defines an option parser that assepts a `String` argument,
+with *long* option name "hello", *metavariable* "TARGET",
 and the given help text. This means that the `target` parser defined
 above will require an option like
 
