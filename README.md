@@ -196,9 +196,8 @@ quiet :: Parser Bool
 quiet = switch ( long "quiet" <> short 'q' <> help "Whether to be quiet" )
 ```
 
-Here we used a `short` modifier to specify a one-letter name for
-the option. This means that this switch can be set either with
-`--quiet` or `-q`.
+`short` modifier specifies a one-letter name for the option.
+This means that this switch can be set either with `--quiet` or `-q`.
 
 Flags, unlike regular options, have no arguments. They simply return
 a predetermined value. For the simple switch above, this is `True`
