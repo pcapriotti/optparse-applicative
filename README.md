@@ -158,8 +158,7 @@ containing a detailed list of options with descriptions
 
 optparse-applicative provides a number of primitive parsers,
 corresponding to different POSIX style options, through its *Builder*
-interface. These are detailed in their [own section](#builders)
-below, for now, here's a look at a few more examples to get a feel
+interface. Please attend to a few more examples to get a feel
 for how parsers can be defined.
 
 
