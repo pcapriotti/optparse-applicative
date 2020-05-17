@@ -188,7 +188,7 @@ The attributes passed to the option are called *modifiers*, and are
 composed using the [semigroup] operation `(<>)`.
 
 Options with an argument such as `target` are referred to as *regular
-options*, and are very common.  Another type of option is a *flag*,
+options*, and are very common. Another type of option is a *flag*,
 the simplest of which is a Boolean *switch*, for example:
 
 ```haskell
