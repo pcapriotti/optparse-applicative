@@ -181,9 +181,8 @@ So result works like:
 
     --hello world
 
-on the command line. The `help` and `metavar` values going to appear
-in the generated help text, but don't otherwise affect the behaviour
-of the parser.
+The `help` and `metavar` values going to appear in the generated help
+text, but don't otherwise affect the behaviour of the parser.
 
 The attributes passed to the option are called *modifiers*, and are
 composed using the [semigroup] operation `(<>)`.
