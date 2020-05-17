@@ -68,7 +68,7 @@ import Options.Applicative.Help.Chunk
 data ParseError
   = ErrorMsg String
   | InfoMsg String
-  | ShowHelpText
+  | ShowHelpText (Maybe String)
   | UnknownError
   | MissingError IsCmdStart SomeParser
   | ExpectsArgError String
