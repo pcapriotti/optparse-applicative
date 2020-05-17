@@ -182,7 +182,7 @@ parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
               (runParserStep (infoPolicy pinfo) (infoParser pinfo) pprefs potentialCommand [])
               pprefs
         in
-          ctx1 <> ctx0
+          ctx1 `mappend` ctx0
       _ ->
         ctx0
 
