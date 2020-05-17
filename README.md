@@ -204,7 +204,7 @@ a predetermined value. For the simple switch above, this is `True`
 if the user types the flag, and `False` otherwise.
 
 There are other kinds of basic parsers, and several ways to configure
-them.  These are covered in the [Builders](#builders) section.
+them. These are covered in the [Builders](#builders) section.
 
 ### Applicative
 
