@@ -189,7 +189,7 @@ composed using the [semigroup] operation `(<>)`.
 
 Options with an argument such as `target` are referred to as *regular
 options*, and are very common. Another type of option is a *flag*,
-the simplest of which is a Boolean *switch*, for example:
+the simplest of which is a Boolean *switch*. Example:
 
 ```haskell
 quiet :: Parser Bool
