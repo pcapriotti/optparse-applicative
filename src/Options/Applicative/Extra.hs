@@ -171,18 +171,15 @@ parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
   where
     -- If the error is a help command with a sub-command as an argument we want to
     -- try and display the sub-command's help text instead.
-    -- Here, we try to take a parse step with the argument as if the --help isn't
-    -- there. We don't care about if it's a failure or success, just whether it
-    -- enters a new context.
+    -- We try to take a parse step with the argument to --help, gathering just the
+    -- new context that might be found, and add it to the original contexts.
     ctx = case msg of
       ShowHelpText (Just potentialCommand) ->
-       let
-          (_, ctx1) =
-            runP
-              (runParserStep (infoPolicy pinfo) (infoParser pinfo) pprefs potentialCommand [])
-              pprefs
-        in
-          ctx1 `mappend` ctx0
+        let ctx1 = with_context ctx0 pinfo $ \_ pinfo' ->
+              snd
+                $ flip runP defaultPrefs { prefBacktrack = SubparserInline }
+                $ runParserStep (infoPolicy pinfo') (infoParser pinfo') potentialCommand []
+        in ctx1 `mappend` ctx0
       _ ->
         ctx0
 
