@@ -48,12 +48,23 @@ import Options.Applicative.Types
 -- > opts = info (sample <**> helper) mempty
 
 helper :: Parser (a -> a)
-helper = abortOption ShowHelpText $ mconcat
-  [ long "help"
-  , short 'h'
-  , help "Show this help text"
-  , noGlobal
-  , hidden ]
+helper =
+  option helpReader $
+    mconcat
+      [ long "help",
+        short 'h',
+        help "Show this help text",
+        value id,
+        metavar "",
+        noGlobal,
+        noArgError (ShowHelpText Nothing),
+        hidden
+      ]
+  where
+    helpReader = do
+      potentialCommand <- readerAsk
+      readerAbort $
+        ShowHelpText (Just potentialCommand)
 
 -- | Builder for a command parser with a \"helper\" option attached.
 -- Used in the same way as `subparser`, but includes a \"--help|-h\" inside
@@ -149,7 +160,7 @@ execParserPure pprefs pinfo args =
 parserFailure :: ParserPrefs -> ParserInfo a
               -> ParseError -> [Context]
               -> ParserFailure ParserHelp
-parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
+parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
   let h = with_context ctx pinfo $ \names pinfo' -> mconcat
             [ base_help pinfo'
             , usage_help progn names pinfo'
@@ -158,13 +169,26 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
             , error_help ]
   in (h, exit_code, prefColumns pprefs)
   where
+    --
+    -- Add another context layer if the argument to --help is
+    -- a valid command.
+    ctx = case msg of
+      ShowHelpText (Just potentialCommand) ->
+        let ctx1 = with_context ctx0 pinfo $ \_ pinfo' ->
+              snd
+                $ flip runP defaultPrefs { prefBacktrack = SubparserInline }
+                $ runParserStep (infoPolicy pinfo') (infoParser pinfo') potentialCommand []
+        in ctx1 `mappend` ctx0
+      _ ->
+        ctx0
+
     exit_code = case msg of
       ErrorMsg {}        -> ExitFailure (infoFailureCode pinfo)
       UnknownError       -> ExitFailure (infoFailureCode pinfo)
       MissingError {}    -> ExitFailure (infoFailureCode pinfo)
       ExpectsArgError {} -> ExitFailure (infoFailureCode pinfo)
       UnexpectedError {} -> ExitFailure (infoFailureCode pinfo)
-      ShowHelpText       -> ExitSuccess
+      ShowHelpText {}    -> ExitSuccess
       InfoMsg {}         -> ExitSuccess
 
     with_context :: [Context]
@@ -187,7 +211,7 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
           , fmap (indent 2) . infoProgDesc $ i ]
 
     error_help = errorHelp $ case msg of
-      ShowHelpText
+      ShowHelpText {}
         -> mempty
 
       ErrorMsg m
@@ -288,7 +312,7 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
         f = footerHelp (infoFooter i)
 
     show_full_help = case msg of
-      ShowHelpText             -> True
+      ShowHelpText {}          -> True
       MissingError CmdStart  _  | prefShowHelpOnEmpty pprefs
                                -> True
       InfoMsg _                -> False

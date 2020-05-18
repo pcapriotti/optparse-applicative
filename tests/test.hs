@@ -862,7 +862,6 @@ prop_nice_some1 = once $
       r = show . extractChunk $ H.briefDesc p x
   in r === "(-a)..."
 
-
 prop_some1_works :: Property
 prop_some1_works = once $
   let p = Options.Applicative.NonEmpty.some1 (flag' () (short 'a'))
@@ -870,7 +869,31 @@ prop_some1_works = once $
       result = run i ["-a", "-a"]
   in assertResult result $ \xs -> () :| [()] === xs
 
+prop_help_contexts :: Property
+prop_help_contexts = once $
+  let
+    grabHelpMessage (Failure failure) =
+      let (msg, ExitSuccess) = renderFailure failure "<text>"
+      in msg
+    grabHelpMessage _ = error "Parse did not render help text"
 
+    i = Cabal.pinfo
+    pre = run i ["install", "--help"]
+    post = run i ["--help", "install"]
+  in grabHelpMessage pre === grabHelpMessage post
+
+prop_help_unknown_context :: Property
+prop_help_unknown_context = once $
+  let
+    grabHelpMessage (Failure failure) =
+      let (msg, ExitSuccess) = renderFailure failure "<text>"
+      in msg
+    grabHelpMessage _ = error "Parse did not render help text"
+
+    i = Cabal.pinfo
+    pre = run i ["--help"]
+    post = run i ["--help", "not-a-command"]
+  in grabHelpMessage pre === grabHelpMessage post
 
 ---
 

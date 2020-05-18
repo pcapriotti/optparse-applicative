@@ -68,7 +68,7 @@ import Options.Applicative.Help.Chunk
 data ParseError
   = ErrorMsg String
   | InfoMsg String
-  | ShowHelpText
+  | ShowHelpText (Maybe String)
   | UnknownError
   | MissingError IsCmdStart SomeParser
   | ExpectsArgError String
@@ -299,8 +299,8 @@ someM p = (:) <$> oneM p <*> manyM p
 instance Alternative Parser where
   empty = NilP Nothing
   (<|>) = AltP
-  many p = fromM $ manyM p
-  some p = fromM $ (:) <$> oneM p <*> manyM p
+  many = fromM . manyM
+  some = fromM . someM
 
 -- | A shell complete function.
 newtype Completer = Completer

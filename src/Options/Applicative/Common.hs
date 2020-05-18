@@ -41,6 +41,7 @@ module Options.Applicative.Common (
   -- * Running parsers
   runParserInfo,
   runParserFully,
+  runParserStep,
   runParser,
   evalParser,
 
@@ -205,22 +206,26 @@ runParser policy _ p ("--" : argt) | policy /= AllPositionals
 runParser policy isCmdStart p args = case args of
   [] -> exitP isCmdStart policy p result
   (arg : argt) -> do
-    prefs <- getPrefs
-    (mp', args') <- do_step prefs arg argt
+    (mp', args') <- do_step arg argt
     case mp' of
       Nothing -> hoistMaybe result <|> parseError arg p
       Just p' -> runParser (newPolicy arg) CmdCont p' args'
   where
     result =
       (,) <$> evalParser p <*> pure args
-    do_step prefs arg =
-      runStateT
-        $ disamb (not (prefDisambiguate prefs))
-        $ stepParser prefs policy arg p
+    do_step =
+      runParserStep policy p
 
     newPolicy a = case policy of
       NoIntersperse -> if isJust (parseWord a) then NoIntersperse else AllPositionals
       x             -> x
+
+runParserStep :: MonadP m => ArgPolicy -> Parser a -> String -> Args -> m (Maybe (Parser a), Args)
+runParserStep policy p arg args = do
+  prefs <- getPrefs
+  flip runStateT args
+    $ disamb (not (prefDisambiguate prefs))
+    $ stepParser prefs policy arg p
 
 parseError :: MonadP m => String -> Parser x -> m a
 parseError arg = errorP . UnexpectedError arg . SomeParser
