@@ -3,6 +3,7 @@ module Options.Applicative.Help.Core (
   briefDesc,
   missingDesc,
   fullDesc,
+  globalDesc,
   ParserHelp(..),
   errorHelp,
   headerHelp,
@@ -10,8 +11,10 @@ module Options.Applicative.Help.Core (
   usageHelp,
   bodyHelp,
   footerHelp,
+  globalsHelp,
   parserHelp,
   parserUsage,
+  parserGlobals
   ) where
 
 import Control.Applicative
@@ -33,7 +36,8 @@ import Options.Applicative.Help.Chunk
 data OptDescStyle
   = OptDescStyle
       { descSep :: Doc,
-        descHidden :: Bool
+        descHidden :: Bool,
+        descGlobal :: Bool
       }
 
 safelast :: [a] -> Maybe a
@@ -56,6 +60,8 @@ optDesc pprefs style _reachability opt =
         | otherwise =
           descriptions <<+>> meta
       show_opt
+        | descGlobal style && not (propShowGlobal (optProps opt)) =
+          False
         | optVisibility opt == Hidden =
           descHidden style
         | otherwise =
@@ -116,7 +122,8 @@ briefDesc' showOptional pprefs =
         filterOptional
     style = OptDescStyle
       { descSep = string "|",
-        descHidden = False
+        descHidden = False,
+        descGlobal = False
       }
 
 -- | Wrap a doc in parentheses or brackets if required.
@@ -167,9 +174,18 @@ foldTree prefs s (BindNode x) =
         rendered <> stringChunk (prefMultiSuffix prefs)
    in (withPrefix, NeverRequired)
 
--- | Generate a full help text for a parser.
+-- | Generate a full help text for a parser
 fullDesc :: ParserPrefs -> Parser a -> Chunk Doc
-fullDesc pprefs = tabulate . catMaybes . mapParser doc
+fullDesc = optionsDesc False
+
+-- | Generate a help text for the parser, showing
+--   only what is relevant in the "Global options: section"
+globalDesc :: ParserPrefs -> Parser a -> Chunk Doc
+globalDesc = optionsDesc True
+
+-- | Common generator for full descriptions and globals
+optionsDesc :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
+optionsDesc global pprefs = tabulate . catMaybes . mapParser doc
   where
     doc info opt = do
       guard . not . isEmpty $ n
@@ -182,7 +198,8 @@ fullDesc pprefs = tabulate . catMaybes . mapParser doc
         show_def s = parens (string "default:" <+> string s)
     style = OptDescStyle
       { descSep = string ",",
-        descHidden = True
+        descHidden = True,
+        descGlobal = global
       }
 
 errorHelp :: Chunk Doc -> ParserHelp
@@ -193,6 +210,9 @@ headerHelp chunk = mempty { helpHeader = chunk }
 
 suggestionsHelp :: Chunk Doc -> ParserHelp
 suggestionsHelp chunk = mempty { helpSuggestions = chunk }
+
+globalsHelp :: Chunk Doc -> ParserHelp
+globalsHelp chunk = mempty { helpGlobals = chunk }
 
 usageHelp :: Chunk Doc -> ParserHelp
 usageHelp chunk = mempty { helpUsage = chunk }
@@ -220,6 +240,15 @@ parserHelp pprefs p =
 
     with_title :: String -> Chunk Doc -> Chunk Doc
     with_title title = fmap (string title .$.)
+
+
+parserGlobals :: ParserPrefs -> Parser a -> ParserHelp
+parserGlobals pprefs p =
+  globalsHelp $
+    (.$.) <$> stringChunk "Global options:"
+          <*> globalDesc pprefs p
+
+
 
 -- | Generate option summary.
 parserUsage :: ParserPrefs -> Parser a -> String -> Doc

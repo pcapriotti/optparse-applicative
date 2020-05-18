@@ -22,7 +22,9 @@ module Options.Applicative.Extra (
   ) where
 
 import Control.Applicative
+import Control.Monad (void)
 import Data.Monoid
+import Data.Traversable
 import Prelude
 import System.Environment (getArgs, getProgName)
 import System.Exit (exitSuccess, exitWith, ExitCode(..))
@@ -50,6 +52,7 @@ helper = abortOption ShowHelpText $ mconcat
   [ long "help"
   , short 'h'
   , help "Show this help text"
+  , noGlobal
   , hidden ]
 
 -- | Builder for a command parser with a \"helper\" option attached.
@@ -151,6 +154,7 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
             [ base_help pinfo'
             , usage_help progn names pinfo'
             , suggestion_help
+            , globals ctx
             , error_help ]
   in (h, exit_code, prefColumns pprefs)
   where
@@ -168,7 +172,11 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
                  -> (forall b . [String] -> ParserInfo b -> c)
                  -> c
     with_context [] i f = f [] i
-    with_context c@(Context _ i:_) _ f = f (contextNames c) i
+    with_context c@(Context _ _ i:_) _ f = f (contextNames c) i
+
+    globals :: [Context] -> ParserHelp
+    globals cs =
+      parserGlobals pprefs (traverse (\(Context _ p _) -> void p) cs)
 
     usage_help progn names i = case msg of
       InfoMsg _
@@ -233,9 +241,10 @@ parserFailure pprefs pinfo msg ctx = ParserFailure $ \progn ->
             --
             -- We won't worry about the 0 case, it won't be
             -- shown anyway.
-            prose       = if length good < 2
-                            then stringChunk "Did you mean this?"
-                            else stringChunk "Did you mean one of these?"
+            prose       = if length good < 2 then
+                            stringChunk "Did you mean this?"
+                          else
+                            stringChunk "Did you mean one of these?"
             --
             -- Suggestions we will show, they're close enough
             -- to what the user wrote

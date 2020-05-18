@@ -281,8 +281,9 @@ subparser m = mkParser d g rdr
 
 -- | Builder for an argument parser.
 argument :: ReadM a -> Mod ArgumentFields a -> Parser a
-argument p (Mod f d g) = mkParser d g (ArgReader rdr)
+argument p m = mkParser d g (ArgReader rdr)
   where
+    (Mod f d g) = noGlobal `mappend` m
     ArgumentFields compl = f (ArgumentFields mempty)
     rdr = CReader compl p
 
