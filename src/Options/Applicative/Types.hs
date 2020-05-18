@@ -299,8 +299,8 @@ someM p = (:) <$> oneM p <*> manyM p
 instance Alternative Parser where
   empty = NilP Nothing
   (<|>) = AltP
-  many p = fromM $ manyM p
-  some p = fromM $ (:) <$> oneM p <*> manyM p
+  many = fromM . manyM
+  some = fromM . someM
 
 -- | A shell complete function.
 newtype Completer = Completer

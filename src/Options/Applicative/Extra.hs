@@ -169,10 +169,9 @@ parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
             , error_help ]
   in (h, exit_code, prefColumns pprefs)
   where
-    -- If the error is a help command with a sub-command as an argument we want to
-    -- try and display the sub-command's help text instead.
-    -- We try to take a parse step with the argument to --help, gathering just the
-    -- new context that might be found, and add it to the original contexts.
+    --
+    -- Add another context layer if the argument to --help is
+    -- a valid command.
     ctx = case msg of
       ShowHelpText (Just potentialCommand) ->
         let ctx1 = with_context ctx0 pinfo $ \_ pinfo' ->
