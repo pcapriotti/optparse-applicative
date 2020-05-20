@@ -162,28 +162,27 @@ searchOpt pprefs w = searchParser $ \opt -> do
 
 searchArg :: MonadP m => ParserPrefs -> String -> Parser a
           -> NondetT (StateT Args m) (Parser a)
-searchArg prefs arg parent =
-  apply parent $
-    searchParser $ \opt -> do
-      when (isArg (optMain opt)) cut
-      case optMain opt of
-        CmdReader _ _ f ->
-          case (f arg, prefBacktrack prefs) of
-            (Just subp, NoBacktrack) -> lift $ do
-              args <- get <* put []
-              fmap pure . lift $ enterContext arg parent subp *> runParserInfo subp args <* exitContext
+searchArg prefs arg =
+  searchParser $ \opt -> do
+    when (isArg (optMain opt)) cut
+    case optMain opt of
+      CmdReader _ _ f ->
+        case (f arg, prefBacktrack prefs) of
+          (Just subp, NoBacktrack) -> lift $ do
+            args <- get <* put []
+            fmap pure . lift $ enterContext arg subp *> runParserInfo subp args <* exitContext
 
-            (Just subp, Backtrack) -> fmap pure . lift . StateT $ \args ->
-              enterContext arg parent subp *> runParser (infoPolicy subp) CmdStart (infoParser subp) args <* exitContext
+          (Just subp, Backtrack) -> fmap pure . lift . StateT $ \args ->
+            enterContext arg subp *> runParser (infoPolicy subp) CmdStart (infoParser subp) args <* exitContext
 
-            (Just subp, SubparserInline) -> lift $ do
-              lift $ enterContext arg parent subp
-              return $ infoParser subp
+          (Just subp, SubparserInline) -> lift $ do
+            lift $ enterContext arg subp
+            return $ infoParser subp
 
-            (Nothing, _)  -> mzero
-        ArgReader rdr ->
-          fmap pure . lift . lift $ runReadM (crReader rdr) arg
-        _ -> mzero
+          (Nothing, _)  -> mzero
+      ArgReader rdr ->
+        fmap pure . lift . lift $ runReadM (crReader rdr) arg
+      _ -> mzero
 
 stepParser :: MonadP m => ParserPrefs -> ArgPolicy -> String
            -> Parser a -> NondetT (StateT Args m) (Parser a)
@@ -323,7 +322,3 @@ simplify (AltNode b xs) =
     remove_alt t = [t]
 simplify (BindNode x) =
   BindNode $ simplify x
-
-
-apply :: a -> (a -> c) -> c
-apply = flip ($)

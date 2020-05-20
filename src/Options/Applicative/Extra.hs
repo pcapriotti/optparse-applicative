@@ -24,7 +24,7 @@ module Options.Applicative.Extra (
 import Control.Applicative
 import Control.Monad (void)
 import Data.Monoid
-import Data.Traversable
+import Data.Foldable (traverse_)
 import Prelude
 import System.Environment (getArgs, getProgName)
 import System.Exit (exitSuccess, exitWith, ExitCode(..))
@@ -196,11 +196,19 @@ parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
                  -> (forall b . [String] -> ParserInfo b -> c)
                  -> c
     with_context [] i f = f [] i
-    with_context c@(Context _ _ i:_) _ f = f (contextNames c) i
+    with_context c@(Context _ i:_) _ f = f (contextNames c) i
 
     globals :: [Context] -> ParserHelp
     globals cs =
-      parserGlobals pprefs (traverse (\(Context _ p _) -> void p) cs)
+      let
+        voided =
+          fmap (\(Context _ p) -> void p) cs `mappend` pure (void pinfo)
+
+        globalParsers =
+          traverse_ infoParser $
+            drop 1 voided
+      in
+        parserGlobals pprefs globalParsers
 
     usage_help progn names i = case msg of
       InfoMsg _
