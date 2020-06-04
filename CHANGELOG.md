@@ -1,3 +1,43 @@
+## Unreleased
+
+- Add `Options.Applicative.NonEmpty.some1` function, which
+  parses options the same as `some1` from base, but doesn't
+  cause duplicates in the usage texts.
+
+- Further improve help text generation in the presence
+  of optional values when nesting is involved.
+
+  For example, a mutually exclusive, but optional set of
+  flags would have been shown as "([-a] | [-b])", while
+  now it will be the more clear "[-a | -b]".
+
+- Add "global" options to the usage texts for subcommands.
+  When using subcommands, a "global options" section will
+  now appear below the options and commands sections.
+
+  The builder `noGlobal` will suppress this for a single
+  option, while the entire section can be turned off using
+  `overFailure` to set `helpGlobals` to `mempty`.
+
+  Fixes issues:
+    * \# 175 - List detailed subparser documentation with `--help`
+    * \# 294 - Displaying global options when listing options for a command.
+    * \# 359 - Subcommand help text lacks required parent command arguments
+
+- Allow the `--help` option to take the name of a command.
+  Usage without any arguments is the same, but now, when an
+  argument is given, if it is the name of a currently
+  reachable command, the help text for that command will
+  be show.
+
+  Fixes issues:
+    * \# 379 - cmd --help subcmd is not the same as cmd subcmd --help
+
+- Updated dependency bounds.
+
+- Add support for GHC 8.10.1 (backported).
+
+
 ## Version 0.15.1.0 (12 Sep 2019)
 
 - Improve printing of brief descriptions for parsers.
