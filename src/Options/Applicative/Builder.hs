@@ -28,7 +28,6 @@ module Options.Applicative.Builder (
   infoOption,
   strOption,
   option,
-  nullOption,
 
   -- * Modifiers
   short,
@@ -357,11 +356,6 @@ infoOption = abortOption . InfoMsg
 -- | Builder for an option taking a 'String' argument.
 strOption :: IsString s => Mod OptionFields s -> Parser s
 strOption = option str
-
--- | Same as 'option'.
-{-# DEPRECATED nullOption "Use 'option' instead" #-}
-nullOption :: ReadM a -> Mod OptionFields a -> Parser a
-nullOption = option
 
 -- | Builder for an option using the given reader.
 --

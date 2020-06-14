@@ -6,9 +6,7 @@ module Options.Applicative.Extra (
   helper,
   hsubparser,
   execParser,
-  execParserMaybe,
   customExecParser,
-  customExecParserMaybe,
   execParserPure,
   getParseResult,
   handleParseResult,
@@ -117,24 +115,6 @@ handleParseResult (CompletionInvoked compl) = do
 getParseResult :: ParserResult a -> Maybe a
 getParseResult (Success a) = Just a
 getParseResult _ = Nothing
-
--- | Run a program description in pure code.
---
--- This function behaves like 'execParser', but can be called from pure code.
--- Note that, in case of errors, no message is displayed, and this function
--- simply returns 'Nothing'.
---
--- If you need to keep track of error messages, use 'execParserPure' instead.
-{-# DEPRECATED execParserMaybe "Use execParserPure together with getParseResult instead" #-}
-execParserMaybe :: ParserInfo a -> [String] -> Maybe a
-execParserMaybe = customExecParserMaybe defaultPrefs
-
--- | Run a program description with custom preferences in pure code.
---
--- See 'execParserMaybe' for details.
-{-# DEPRECATED customExecParserMaybe "Use execParserPure together with getParseResult instead" #-}
-customExecParserMaybe :: ParserPrefs -> ParserInfo a -> [String] -> Maybe a
-customExecParserMaybe pprefs pinfo args = getParseResult $ execParserPure pprefs pinfo args
 
 -- | The most general way to run a program description in pure code.
 execParserPure :: ParserPrefs       -- ^ Global preferences for this parser
