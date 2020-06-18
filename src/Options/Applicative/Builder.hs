@@ -75,6 +75,7 @@ module Options.Applicative.Builder (
   failureCode,
   noIntersperse,
   forwardOptions,
+  allPositional,
   info,
 
   -- * Builder for 'ParserPrefs'
@@ -439,6 +440,14 @@ noIntersperse = InfoMod $ \p -> p { infoPolicy = NoIntersperse }
 --   yield a parse error and cause confusion.
 forwardOptions :: InfoMod a
 forwardOptions = InfoMod $ \p -> p { infoPolicy = ForwardOptions }
+
+-- | Disable parsing of regular options completely. All options and arguments
+--   will be treated as a positional arguments. Obviously not recommended in
+--   general as options will be unreachable.
+--   This is the same behaviour one sees after the "--" pseudo-argument.
+allPositional :: InfoMod a
+allPositional = InfoMod $ \p -> p { infoPolicy = AllPositionals }
+
 
 -- | Create a 'ParserInfo' given a 'Parser' and a modifier.
 info :: Parser a -> InfoMod a -> ParserInfo a
