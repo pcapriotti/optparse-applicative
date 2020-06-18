@@ -208,7 +208,10 @@ parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
           traverse_ infoParser $
             drop 1 voided
       in
-        parserGlobals pprefs globalParsers
+        if prefHelpShowGlobal pprefs then
+          parserGlobals pprefs globalParsers
+        else
+          mempty
 
     usage_help progn names i = case msg of
       InfoMsg _

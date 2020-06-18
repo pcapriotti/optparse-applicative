@@ -123,6 +123,9 @@ data ParserPrefs = ParserPrefs
   , prefHelpLongEquals :: Bool    -- ^ when displaying long names in usage and help,
                                   -- use an '=' sign for long names, rather than a
                                   -- single space (default: False)
+  , prefHelpShowGlobal :: Bool    -- ^ when displaying subparsers' usage help,
+                                  -- show parent options under a "global options"
+                                  -- section (default: True)
   } deriving (Eq, Show)
 
 data OptName = OptShort !Char
@@ -171,7 +174,7 @@ data Option a = Option
 
 data SomeParser = forall a . SomeParser (Parser a)
 
--- | Subparser context, containing the 'name' of the subparser, its parent parser, and its parser info.
+-- | Subparser context, containing the 'name' of the subparser and its parser info.
 --   Used by parserFailure to display relevant usage information when parsing inside a subparser fails.
 data Context = forall a. Context String (ParserInfo a)
 
