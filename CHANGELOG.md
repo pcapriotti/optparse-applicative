@@ -1,23 +1,22 @@
-## Unreleased
+## Version 0.16.0.0 (14 Aug 2020)
 
 - Add `Options.Applicative.NonEmpty.some1` function, which
   parses options the same as `some1` from base, but doesn't
   cause duplicates in the usage texts.
 
 - Further improve help text generation in the presence
-  of optional values when nesting is involved.
-
-  For example, a mutually exclusive, but optional set of
-  flags would have been shown as "([-a] | [-b])", while
-  now it will be the more clear "[-a | -b]".
+  of optional values when nesting is involved, and many and
+  some when displayed with a suffix.
 
 - Add "global" options to the usage texts for subcommands.
-  When using subcommands, a "global options" section will
+  When using subcommands, a "global options" section can
   now appear below the options and commands sections.
 
-  The builder `noGlobal` will suppress this for a single
-  option, while the entire section can be turned off using
-  `overFailure` to set `helpGlobals` to `mempty`.
+  Global options are *off* by default, to enable them, use
+  the `helpShowGlobals` modifier.
+
+  The `noGlobal` builder will suppress a single option being
+  displayed in the global options list.
 
   Fixes issues:
     * \# 175 - List detailed subparser documentation with `--help`
@@ -35,8 +34,12 @@
 
 - Updated dependency bounds.
 
-- Add support for GHC 8.10.1 (backported).
+- Add builder for the all positional parser policy.
 
+- Remove deprecated functions
+    * nullOption
+    * execParserMaybe
+    * customExecParserMaybe
 
 ## Version 0.15.1.0 (12 Sep 2019)
 
