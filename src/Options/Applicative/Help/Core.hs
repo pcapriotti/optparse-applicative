@@ -21,7 +21,7 @@ import Control.Applicative
 import Control.Monad (guard)
 import Data.Function (on)
 import Data.List (sort, intersperse, groupBy)
-import Data.Foldable (any)
+import Data.Foldable (any, foldl')
 import Data.Maybe (maybeToList, catMaybes, fromMaybe)
 import Data.Monoid (mempty)
 import Data.Semigroup (Semigroup (..))
@@ -41,7 +41,7 @@ data OptDescStyle
       }
 
 safelast :: [a] -> Maybe a
-safelast = foldl (const Just) Nothing
+safelast = foldl' (const Just) Nothing
 
 -- | Generate description for a single option.
 optDesc :: ParserPrefs -> OptDescStyle -> ArgumentReachability -> Option a -> (Chunk Doc, Parenthetic)
