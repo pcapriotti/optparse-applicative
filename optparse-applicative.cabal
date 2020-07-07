@@ -21,7 +21,7 @@ maintainer:          huw.campbell@gmail.com
 copyright:           (c) 2012-2017 Paolo Capriotti <paolo@capriotti.io>
 category:            System, CLI, Options, Parsing
 build-type:          Simple
-cabal-version:       >= 1.8
+cabal-version:       >= 1.10
 extra-source-files:  CHANGELOG.md
                      README.md
                      tests/alt.err.txt
@@ -63,6 +63,7 @@ source-repository head
 library
   hs-source-dirs:      src
   ghc-options:         -Wall
+  default-language:    Haskell98
 
   -- See https://ghc.haskell.org/trac/ghc/wiki/Migration/8.0#base-4.9.0.0
   if impl(ghc >= 8.0)
@@ -105,8 +106,9 @@ test-suite tests
 
   ghc-options:         -Wall -threaded -O2 -funbox-strict-fields
 
-  hs-source-dirs:
-                       tests
+  hs-source-dirs:      tests
+
+  default-language:    Haskell98
 
   other-modules:       Examples.Alternatives
                      , Examples.Cabal
