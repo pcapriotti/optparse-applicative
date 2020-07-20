@@ -89,7 +89,7 @@ prop_cmd_header = once $
 
 prop_cabal_conf :: Property
 prop_cabal_conf = once $
-  checkHelpText "cabal" Cabal.pinfo ["configure", "--help"]
+  checkHelpTextWith ExitSuccess (prefs helpShowGlobals) "cabal" Cabal.pinfo ["configure", "--help"]
 
 prop_args :: Property
 prop_args = once $
