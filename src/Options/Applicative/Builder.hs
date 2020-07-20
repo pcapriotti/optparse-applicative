@@ -88,7 +88,7 @@ module Options.Applicative.Builder (
   subparserInline,
   columns,
   helpLongEquals,
-  helpNoGlobals,
+  helpShowGlobals,
   prefs,
   defaultPrefs,
 
@@ -517,9 +517,9 @@ columns cols = PrefsMod $ \p -> p { prefColumns = cols }
 helpLongEquals :: PrefsMod
 helpLongEquals = PrefsMod $ \p -> p { prefHelpLongEquals = True }
 
--- | Don't show global help information in subparser usage
-helpNoGlobals :: PrefsMod
-helpNoGlobals = PrefsMod $ \p -> p { prefHelpShowGlobal = False}
+-- | Show global help information in subparser usage
+helpShowGlobals :: PrefsMod
+helpShowGlobals = PrefsMod $ \p -> p { prefHelpShowGlobal = True}
 
 
 -- | Create a `ParserPrefs` given a modifier
@@ -534,7 +534,7 @@ prefs m = applyPrefsMod m base
       , prefBacktrack = Backtrack
       , prefColumns = 80
       , prefHelpLongEquals = False
-      , prefHelpShowGlobal = True }
+      , prefHelpShowGlobal = False }
 
 -- Convenience shortcuts
 

@@ -196,6 +196,7 @@ module Options.Applicative (
   subparserInline,
   columns,
   helpLongEquals,
+  helpShowGlobals,
   defaultPrefs,
 
   -- * Completions
