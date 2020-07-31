@@ -170,9 +170,12 @@ foldTree prefs s (AltNode b xs) =
 foldTree prefs s (BindNode x) =
   let rendered =
         wrapOver NoDefault NeverRequired (foldTree prefs s x)
-      withPrefix =
-        rendered <> stringChunk (prefMultiSuffix prefs)
-   in (withPrefix, NeverRequired)
+
+      -- We always want to display the rendered option
+      -- if it exists, and only attach the suffix then.
+      withSuffix =
+        rendered >>= (\r -> pure r <> stringChunk (prefMultiSuffix prefs))
+   in (withSuffix, NeverRequired)
 
 -- | Generate a full help text for a parser
 fullDesc :: ParserPrefs -> Parser a -> Chunk Doc
