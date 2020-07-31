@@ -173,7 +173,7 @@ foldTree prefs s (BindNode x) =
 
       -- We always want to display the rendered option
       -- if it exists, and only attach the suffix then.
-      withSuffix = do
+      withSuffix =
         rendered >>= (\r -> pure r <> stringChunk (prefMultiSuffix prefs))
    in (withSuffix, NeverRequired)
 

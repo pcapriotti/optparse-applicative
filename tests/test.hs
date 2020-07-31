@@ -855,6 +855,13 @@ prop_grouped_many_dual_flag_ellipsis = once $
       r = show . extractChunk $ H.briefDesc p (x *> many x)
   in r === "(-a|-b) [-a|-b]..."
 
+prop_issue_402 :: Property
+prop_issue_402 = once $
+  let x = some (flag' () (short 'a')) <|> some (flag' () (short 'b' <> internal))
+      p = prefs (multiSuffix "...")
+      r = show . extractChunk $ H.briefDesc p x
+  in r === "(-a)..."
+
 prop_nice_some1 :: Property
 prop_nice_some1 = once $
   let x = Options.Applicative.NonEmpty.some1 (flag' () (short 'a'))
