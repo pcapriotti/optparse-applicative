@@ -1,8 +1,10 @@
 # optparse-applicative
 
 [![Continuous Integration status][status-png]][status]
+[![Hackage matrix][hackage-matrix-png]][hackage-matrix]
 [![Hackage page (downloads and API reference)][hackage-png]][hackage]
 [![Hackage-Deps][hackage-deps-png]][hackage-deps]
+
 
 optparse-applicative is a haskell library for parsing options on
 the command line, and providing a powerful [applicative] interface
@@ -1011,6 +1013,8 @@ simplified implementation.
  [blog]: http://paolocapriotti.com/blog/2012/04/27/applicative-option-parser/
  [hackage]: http://hackage.haskell.org/package/optparse-applicative
  [hackage-png]: http://img.shields.io/hackage/v/optparse-applicative.svg
+ [hackage-matrix]: https://matrix.hackage.haskell.org/package/optparse-applicative
+ [hackage-matrix-png]: https://matrix.hackage.haskell.org/api/v2/packages/optparse-applicative/badge
  [hackage-deps]: http://packdeps.haskellers.com/reverse/optparse-applicative
  [hackage-deps-png]: https://img.shields.io/hackage-deps/v/optparse-applicative.svg
  [monoid]: http://hackage.haskell.org/package/base/docs/Data-Monoid.html
