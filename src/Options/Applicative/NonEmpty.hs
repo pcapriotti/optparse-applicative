@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP, Rank2Types, ExistentialQuantification #-}
 module Options.Applicative.NonEmpty (
   some1
 ) where

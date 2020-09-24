@@ -126,6 +126,7 @@ data ParserPrefs = ParserPrefs
   , prefHelpShowGlobal :: Bool    -- ^ when displaying subparsers' usage help,
                                   -- show parent options under a "global options"
                                   -- section (default: True)
+  , prefTabulateFill ::Int       -- ^ Indentation width for tables
   } deriving (Eq, Show)
 
 data OptName = OptShort !Char
