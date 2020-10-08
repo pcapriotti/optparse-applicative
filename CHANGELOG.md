@@ -1,3 +1,7 @@
+## Unreleased
+
+- Make tabulation width configurable in usage texts.
+
 ## Version 0.16.0.0 (14 Aug 2020)
 
 - Add `Options.Applicative.NonEmpty.some1` function, which
