@@ -83,14 +83,14 @@ optDesc pprefs style _reachability opt =
    in (modified, wrapping)
 
 -- | Generate descriptions for commands.
-cmdDesc :: Parser a -> [(Maybe String, Chunk Doc)]
-cmdDesc = mapParser desc
+cmdDesc :: ParserPrefs -> Parser a -> [(Maybe String, Chunk Doc)]
+cmdDesc pprefs = mapParser desc
   where
     desc _ opt =
       case optMain opt of
         CmdReader gn cmds p ->
           (,) gn $
-            tabulate
+            tabulate (prefTabulateFill pprefs)
               [ (string cmd, align (extractChunk d))
                 | cmd <- reverse cmds,
                   d <- maybeToList . fmap infoProgDesc $ p cmd
@@ -188,7 +188,7 @@ globalDesc = optionsDesc True
 
 -- | Common generator for full descriptions and globals
 optionsDesc :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
-optionsDesc global pprefs = tabulate . catMaybes . mapParser doc
+optionsDesc global pprefs = tabulate (prefTabulateFill pprefs) . catMaybes . mapParser doc
   where
     doc info opt = do
       guard . not . isEmpty $ n
@@ -234,7 +234,7 @@ parserHelp pprefs p =
       : (group_title <$> cs)
   where
     def = "Available commands:"
-    cs = groupBy ((==) `on` fst) $ cmdDesc p
+    cs = groupBy ((==) `on` fst) $ cmdDesc pprefs p
 
     group_title a@((n, _) : _) =
       with_title (fromMaybe def n) $

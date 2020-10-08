@@ -128,12 +128,9 @@ paragraph :: String -> Chunk Doc
 paragraph = foldr (chunked (</>) . stringChunk) mempty
           . words
 
-tabulate' :: Int -> [(Doc, Doc)] -> Chunk Doc
-tabulate' _ [] = mempty
-tabulate' size table = pure $ vcat
+-- | Display pairs of strings in a table.
+tabulate :: Int -> [(Doc, Doc)] -> Chunk Doc
+tabulate _ [] = mempty
+tabulate size table = pure $ vcat
   [ indent 2 (fillBreak size key <+> value)
   | (key, value) <- table ]
-
--- | Display pairs of strings in a table.
-tabulate :: [(Doc, Doc)] -> Chunk Doc
-tabulate = tabulate' 24
