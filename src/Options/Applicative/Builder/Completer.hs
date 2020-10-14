@@ -9,8 +9,9 @@ module Options.Applicative.Builder.Completer
 import Control.Applicative
 import Prelude
 import Control.Exception (IOException, try)
-import Data.List (isPrefixOf)
+import Data.List (isPrefixOf, isSuffixOf)
 import System.Process (readProcess)
+import System.Environment (lookupEnv)
 
 import Options.Applicative.Types
 
@@ -33,8 +34,22 @@ listCompleter = listIOCompleter . pure
 bashCompleter :: String -> Completer
 bashCompleter action = Completer $ \word -> do
   let cmd = unwords ["compgen", "-A", action, "--", requote word]
-  result <- tryIO $ readProcess "bash" ["-c", cmd] ""
+  bash <- getBash
+  result <- tryIO $ readProcess bash ["-c", cmd] ""
   return . lines . either (const []) id $ result
+
+-- | Determines the bash executable. Ideally we'd invoke the same bash that
+-- is currently active. If $SHELL does not seem to be set to a bash executable
+-- we don't assume $SHELL is bash and we take bash from the $PATH.
+-- This fixes file completion in cases where a virtual environment with a
+-- non-interactive bash is loaded with direnv, nix-shell or similar.
+getBash :: IO String
+getBash = do
+  shellEnv <- lookupEnv "SHELL"
+  pure (case shellEnv of
+      Just exe | "/bash" `isSuffixOf` exe -> exe
+      _ -> "bash"
+    )
 
 tryIO :: IO a -> IO (Either IOException a)
 tryIO = try
