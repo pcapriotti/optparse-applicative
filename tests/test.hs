@@ -12,8 +12,6 @@ import qualified Examples.Formatting as Formatting
 
 import           Control.Applicative
 import           Control.Monad
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Char8 as BS8
 import           Data.List hiding (group)
 import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           Data.Semigroup hiding (option)
@@ -767,15 +765,6 @@ prop_suggest = once $
     let (msg, _)  = renderFailure failure "prog"
     in  counterexample msg
        $  isInfixOf "Did you mean one of these?\n    first\n    fst" msg
-
-prop_bytestring_reader :: Property
-prop_bytestring_reader = once $
-  let t = "testValue"
-      p :: Parser ByteString
-      p = argument str idm
-      i = info p idm
-      result = run i ["testValue"]
-  in assertResult result $ \xs -> BS8.pack t === xs
 
 prop_grouped_some_option_ellipsis :: Property
 prop_grouped_some_option_ellipsis = once $
