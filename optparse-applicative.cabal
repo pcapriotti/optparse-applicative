@@ -1,5 +1,5 @@
 name:                optparse-applicative
-version:             0.16.0.0
+version:             0.16.1.0
 synopsis:            Utilities and combinators for parsing command line options
 description:
     optparse-applicative is a haskell library for parsing options
@@ -60,6 +60,11 @@ source-repository head
   type:     git
   location: https://github.com/pcapriotti/optparse-applicative.git
 
+flag process
+  description:
+    Depend on the process package for Bash autocompletion
+  default: True
+
 library
   hs-source-dirs:      src
   ghc-options:         -Wall
@@ -92,8 +97,10 @@ library
   build-depends:       base                            == 4.*
                      , transformers                    >= 0.2 && < 0.6
                      , transformers-compat             >= 0.3 && < 0.7
-                     , process                         >= 1.0 && < 1.7
                      , ansi-wl-pprint                  >= 0.6.8 && < 0.7
+
+  if flag(process)
+    build-depends:     process                         >= 1.0 && < 1.7
 
   if !impl(ghc >= 8)
     build-depends:     semigroups                      >= 0.10 && < 0.20
@@ -117,7 +124,6 @@ test-suite tests
                      , Examples.Hello
 
   build-depends:       base
-                     , bytestring                      >= 0.9 && < 0.11
                      , optparse-applicative
                      , QuickCheck                      >= 2.8 && < 2.15
 

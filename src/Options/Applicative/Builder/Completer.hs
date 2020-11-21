@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module Options.Applicative.Builder.Completer
   ( Completer
   , mkCompleter
@@ -10,7 +12,9 @@ import Control.Applicative
 import Prelude
 import Control.Exception (IOException, try)
 import Data.List (isPrefixOf)
+#ifdef MIN_VERSION_process
 import System.Process (readProcess)
+#endif
 
 import Options.Applicative.Types
 
@@ -31,10 +35,14 @@ listCompleter = listIOCompleter . pure
 -- <http://www.gnu.org/software/bash/manual/html_node/Programmable-Completion-Builtins.html#Programmable-Completion-Builtins>
 -- for a complete list.
 bashCompleter :: String -> Completer
+#ifdef MIN_VERSION_process
 bashCompleter action = Completer $ \word -> do
   let cmd = unwords ["compgen", "-A", action, "--", requote word]
   result <- tryIO $ readProcess "bash" ["-c", cmd] ""
   return . lines . either (const []) id $ result
+#else
+bashCompleter = const $ Completer $ const $ return []
+#endif
 
 tryIO :: IO a -> IO (Either IOException a)
 tryIO = try

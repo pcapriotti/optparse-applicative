@@ -2,6 +2,14 @@
 
 - Make tabulation width configurable in usage texts.
 
+## Version 0.16.1.0 (21 Nov 2020)
+
+- Guard `process` dependency behind an on by default flag.
+  This allows one to shrink the dependency tree significantly
+  by turning off the ability to use bash completion actions.
+
+- Remove `bytestring` dependency from the test suite.
+
 ## Version 0.16.0.0 (14 Aug 2020)
 
 - Add `Options.Applicative.NonEmpty.some1` function, which
