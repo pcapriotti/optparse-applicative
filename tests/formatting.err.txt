@@ -1,4 +1,5 @@
 Usage: formatting [-t|--test FOO_BAR_BAZ_LONG_METAVARIABLE]
+
   This is a very long program description. This
   text should be automatically wrapped to fit the
   size of the terminal

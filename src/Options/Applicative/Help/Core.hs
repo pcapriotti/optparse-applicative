@@ -9,6 +9,7 @@ module Options.Applicative.Help.Core (
   headerHelp,
   suggestionsHelp,
   usageHelp,
+  descriptionHelp,
   bodyHelp,
   footerHelp,
   globalsHelp,
@@ -219,6 +220,9 @@ globalsHelp chunk = mempty { helpGlobals = chunk }
 
 usageHelp :: Chunk Doc -> ParserHelp
 usageHelp chunk = mempty { helpUsage = chunk }
+
+descriptionHelp :: Chunk Doc -> ParserHelp
+descriptionHelp chunk = mempty { helpDescription = chunk }
 
 bodyHelp :: Chunk Doc -> ParserHelp
 bodyHelp chunk = mempty { helpBody = chunk }
