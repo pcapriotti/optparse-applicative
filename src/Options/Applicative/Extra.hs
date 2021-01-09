@@ -197,9 +197,10 @@ parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
       InfoMsg _
         -> mempty
       _
-        -> usageHelp $ vcatChunks
-          [ pure . parserUsage pprefs (infoParser i) . unwords $ progn : names
-          , fmap (indent 2) . infoProgDesc $ i ]
+        -> mconcat [
+            usageHelp (pure . parserUsage pprefs (infoParser i) . unwords $ progn : names)
+          , descriptionHelp (infoProgDesc i)
+          ]
 
     error_help = errorHelp $ case msg of
       ShowHelpText {}

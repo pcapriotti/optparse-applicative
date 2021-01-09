@@ -1,6 +1,7 @@
 hello - a test for optparse-applicative
 
 Usage: hello --hello TARGET [-q|--quiet] [--repeat INT]
+
   Print a greeting for TARGET
 
 Available options:
