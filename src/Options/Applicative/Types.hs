@@ -322,15 +322,21 @@ data CompletionItemOptions = CompletionItemOptions {
   --
   -- Set this value to 'False' if the completion is only a prefix of the final
   -- valid values.
-  cioAddSpace :: Bool
+  cioAddSpace :: Bool,
+
+  -- | Whether to treat the completions as file names (if they exists) and
+  -- add a trailing slash to completions that are directories.
+  -- Defaults to 'True'
+  cioFiles :: Bool
 }
 instance Semigroup CompletionItemOptions where
   a <> b =
     CompletionItemOptions {
-      cioAddSpace = cioAddSpace a && cioAddSpace b
+      cioAddSpace = cioAddSpace a && cioAddSpace b,
+      cioFiles = cioFiles a && cioFiles b
     }
 instance Monoid CompletionItemOptions where
-  mempty = CompletionItemOptions True
+  mempty = CompletionItemOptions True True
   mappend = (<>)
 
 -- | A shell complete function.
