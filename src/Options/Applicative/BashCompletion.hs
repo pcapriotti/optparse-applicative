@@ -73,9 +73,9 @@ bashCompletionParser pinfo pprefs = complParser
 bashCompletionQuery :: ParserInfo a -> ParserPrefs -> Richness -> [String] -> Int -> String -> IO [String]
 bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl pprefs of
   Just (Left (SomeParser p, a))
-    -> list_options a p
+    -> render_items <$> list_options a p
   Just (Right c)
-    -> run_completer c
+    -> render_items <$> run_completer c
   Nothing
     -> return []
   where
@@ -100,12 +100,12 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
     opt_completions argPolicy reachability opt = case optMain opt of
       OptReader ns _ _
          | argPolicy /= AllPositionals
-        -> return . add_opt_help opt $ show_names ns
+        -> return . fmap defaultCompletionItem . add_opt_help opt $ show_names ns
          | otherwise
         -> return []
       FlagReader ns _
          | argPolicy /= AllPositionals
-        -> return . add_opt_help opt $ show_names ns
+        -> return . fmap defaultCompletionItem . add_opt_help opt $ show_names ns
          | otherwise
         -> return []
       ArgReader rdr
@@ -117,7 +117,7 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
          | argumentIsUnreachable reachability
         -> return []
          | otherwise
-        -> return . with_cmd_help $ filter (is_completion . fst) ns
+        -> return . fmap defaultCompletionItem . with_cmd_help $ filter (is_completion . fst) ns
 
     -- When doing enriched completions, add any help specified
     -- to the completion variables (tab separated).
@@ -154,7 +154,7 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
       [x] -> x
       x : _ -> x ++ "..."
 
-    run_completer :: Completer -> IO [String]
+    run_completer :: Completer -> IO [CompletionItem]
     run_completer c = runCompleter c (fromMaybe "" (listToMaybe ws''))
 
     (ws', ws'') = splitAt i ws
@@ -165,12 +165,22 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
         w:_ -> isPrefixOf w
         _ -> const True
 
+    render_items :: [CompletionItem] -> [String]
+    render_items = concatMap render_item
+
+    render_item :: CompletionItem -> [String]
+    render_item CompletionItem { ciOptions = opts, ciValue = val } =
+      [ "%addspace" | cioAddSpace opts ]
+      ++ ["%value", val]
+
 -- | Generated bash shell completion script
 bashCompletionScript :: String -> String -> String
 bashCompletionScript prog progn = unlines
+  -- compopt: see complete -o at https://www.gnu.org/software/bash/manual/html_node/Programmable-Completion-Builtins.html
   [ "_" ++ progn ++ "()"
   , "{"
   , "    local CMDLINE"
+  , "    local value_mode=false"
   , "    local IFS=$'\\n'"
   , "    CMDLINE=(--bash-completion-index $COMP_CWORD)"
   , ""
@@ -178,7 +188,23 @@ bashCompletionScript prog progn = unlines
   , "        CMDLINE=(${CMDLINE[@]} --bash-completion-word $arg)"
   , "    done"
   , ""
-  , "    COMPREPLY=( $(" ++ prog ++ " \"${CMDLINE[@]}\") )"
+  , "    compopt -o nospace"
+  , "    COMPREPLY=()"
+  , "    for ln in $(" ++ prog ++ " \"${CMDLINE[@]}\"); do"
+  , "        if $value_mode; then"
+  , "            COMPREPLY+=($ln)"
+  , "            value_mode=false"
+  , "        else"
+  , "            case $ln in"
+  , "                %value)"
+  , "                    value_mode=true"
+  , "                    ;;"
+  , "                %addspace)"
+  , "                    compopt +o nospace"
+  , "                    ;;"
+  , "            esac"
+  , "        fi"
+  , "    done"
   , "}"
   , ""
   , "complete -o filenames -F _" ++ progn ++ " " ++ progn ]
@@ -214,11 +240,23 @@ fishCompletionScript prog progn = unlines
   , "    for arg in $cl"
   , "      set tmpline $tmpline --bash-completion-word $arg"
   , "    end"
-  , "    for opt in (" ++ prog ++ " $tmpline)"
-  , "      if test -d $opt"
-  , "        echo -E \"$opt/\""
+  , "    set -l value_mode false"
+  , "    for ln in (" ++ prog ++ " $tmpline)"
+  , "      if $value_mode"
+  , "        if test -d $ln"
+  , "          echo -E \"$ln/\""
+  , "        else"
+  , "          echo -E \"$ln\""
+  , "        end"
+  , "        set value_mode false"
   , "      else"
-  , "        echo -E \"$opt\""
+  , "        switch $ln"
+  , "          case '%value'"
+  , "            set value_mode true"
+    --         Ignore %addspace, because fish does not let us remove the end
+    --         space. Dynamic control has not been implemented as of 2020, see
+    --         https://github.com/fish-shell/fish-shell/issues/6928#issuecomment-618012509
+  , "        end"
   , "      end"
   , "    end"
   , "end"
@@ -229,11 +267,15 @@ fishCompletionScript prog progn = unlines
 -- | Generated zsh shell completion script
 zshCompletionScript :: String -> String -> String
 zshCompletionScript prog progn = unlines
+  -- compadd: http://zsh.sourceforge.net/Doc/Release/Completion-Widgets.html#Completion-Builtin-Commands
   [ "#compdef " ++ progn
   , ""
   , "local request"
   , "local completions"
   , "local word"
+  , "local value_mode=false"
+  , "local addspace=false"
+  , "local files=false"
   , "local index=$((CURRENT - 1))"
   , ""
   , "request=(--bash-completion-enriched --bash-completion-index $index)"
@@ -241,24 +283,41 @@ zshCompletionScript prog progn = unlines
   , "  request=(${request[@]} --bash-completion-word $arg)"
   , "done"
   , ""
-  , "IFS=$'\\n' completions=($( " ++ prog ++ " \"${request[@]}\" ))"
+  , "IFS=$'\\n' completionLines=($( " ++ prog ++ " \"${request[@]}\" ))"
   , ""
-  , "for word in $completions; do"
-  , "  local -a parts"
+  , "for word in $completionLines; do"
+  , "  if $value_mode; then"
+  , "    local -a parts args"
   , ""
-  , "  # Split the line at a tab if there is one."
-  , "  IFS=$'\\t' parts=($( echo $word ))"
+  , "    # Split the line at a tab if there is one."
+  , "    IFS=$'\\t' parts=($( echo $word ))"
   , ""
-  , "  if [[ -n $parts[2] ]]; then"
-  , "     if [[ $word[1] == \"-\" ]]; then"
-  , "       local desc=(\"$parts[1] ($parts[2])\")"
-  , "       compadd -d desc -- $parts[1]"
-  , "     else"
-  , "       local desc=($(print -f  \"%-019s -- %s\" $parts[1] $parts[2]))"
-  , "       compadd -l -d desc -- $parts[1]"
-  , "     fi"
+  , "    if $addspace; then"
+  , "      args+=( -S' ' )"
+  , "    fi"
+  , ""
+  , "    if [[ -n $parts[2] ]]; then"
+  , "       if [[ $word[1] == \"-\" ]]; then"
+  , "         local desc=(\"$parts[1] ($parts[2])\")"
+  , "         compadd $args -d desc -- $parts[1]"
+  , "       else"
+  , "         local desc=($(print -f  \"%-019s -- %s\" $parts[1] $parts[2]))"
+  , "         compadd $args -l -d desc -- $parts[1]"
+  , "       fi"
+  , "    else"
+  , "      compadd $args -f -- $word"
+  , "    fi"
+  , "    value_mode=false"
+  , "    addspace=false"
   , "  else"
-  , "    compadd -f -- $word"
+  , "    case $word in"
+  , "      %value)"
+  , "        value_mode=true"
+  , "        ;;"
+  , "      %addspace)"
+  , "        addspace=true"
+  , "        ;;"
+  , "    esac"
   , "  fi"
   , "done"
   ]

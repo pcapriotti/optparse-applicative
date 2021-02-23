@@ -22,6 +22,10 @@ module Options.Applicative.Types (
   ParserM(..),
   Completer(..),
   mkCompleter,
+  mkCompleterWithOptions,
+  CompletionItem(..),
+  defaultCompletionItem,
+  CompletionItemOptions(..),
   CompletionResult(..),
   ParserFailure(..),
   ParserResult(..),
@@ -306,13 +310,40 @@ instance Alternative Parser where
   many = fromM . manyM
   some = fromM . someM
 
+data CompletionItem = CompletionItem {
+  ciOptions :: CompletionItemOptions,
+  ciValue :: String
+}
+defaultCompletionItem :: String -> CompletionItem
+defaultCompletionItem = CompletionItem mempty
+
+data CompletionItemOptions = CompletionItemOptions {
+  -- | Whether to add a space after the completion. Defaults to 'True'.
+  --
+  -- Set this value to 'False' if the completion is only a prefix of the final
+  -- valid values.
+  cioAddSpace :: Bool
+}
+instance Semigroup CompletionItemOptions where
+  a <> b =
+    CompletionItemOptions {
+      cioAddSpace = cioAddSpace a && cioAddSpace b
+    }
+instance Monoid CompletionItemOptions where
+  mempty = CompletionItemOptions True
+  mappend = (<>)
+
 -- | A shell complete function.
 newtype Completer = Completer
-  { runCompleter :: String -> IO [String] }
+  { runCompleter :: String -> IO [CompletionItem] }
 
 -- | Smart constructor for a 'Completer'
 mkCompleter :: (String -> IO [String]) -> Completer
-mkCompleter = Completer
+mkCompleter f = Completer (fmap (map (CompletionItem mempty)) . f)
+
+-- | Smart constructor for a 'Completer'
+mkCompleterWithOptions :: (String -> IO [CompletionItem]) -> Completer
+mkCompleterWithOptions = Completer
 
 instance Semigroup Completer where
   (Completer c1) <> (Completer c2) =
