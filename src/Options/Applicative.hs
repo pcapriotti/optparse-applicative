@@ -215,6 +215,7 @@ module Options.Applicative (
   Completer,
   mkCompleter,
   CompletionItem(..),
+  CompletionItemOptions(..),
   mkCompleterWithOptions,
   listIOCompleter,
 

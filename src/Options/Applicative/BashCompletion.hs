@@ -31,6 +31,12 @@ data Features = Features
   , protocolVersion :: Int
   }
 
+-- | Version of the output format that the shell integration script
+-- expects optparse-applicative to write to stdout.
+--
+-- Version increases should be rare, because most changes
+-- can be handled by adding a new % keyword. Unknown keywords
+-- are ignored by the shell integration scripts.
 currentProtocolVerson :: Int
 currentProtocolVerson = 1
 
