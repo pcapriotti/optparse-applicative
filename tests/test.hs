@@ -468,10 +468,10 @@ prop_completion_rich_lengths = once . ioProperty $
     Failure _   -> return $ counterexample "unexpected failure" failed
     Success val -> return $ counterexample ("unexpected result " ++ show val) failed
 
-prop_completion_v1_default :: Property
-prop_completion_v1_default = once . ioProperty $
+prop_completion_v1_legacy :: Property
+prop_completion_v1_legacy = once . ioProperty $
   let p :: Parser String
-      p = strArgument (completer (mkCompleterWithOptions (pure (pure [CompletionItem mempty "reachable"]))))
+      p = strArgument (completer (mkCompleterWithOptions (pure (pure [legacyCompletionItem "reachable"]))))
       i = info p idm
       result = run i [ "--optparse-completion-version", "1"
                      , "--bash-completion-index=0"
@@ -486,7 +486,7 @@ prop_completion_v1_default = once . ioProperty $
 prop_completion_v1_minimal :: Property
 prop_completion_v1_minimal = once . ioProperty $
   let p :: Parser String
-      p = strArgument (completer (mkCompleterWithOptions (pure (pure [CompletionItem (mempty { cioAddSpace = False, cioFiles = False }) "reachable"]))))
+      p = strArgument (completer (mkCompleterWithOptions (pure (pure [CompletionItem mempty "reachable"]))))
       i = info p idm
       result = run i [ "--optparse-completion-version", "1"
                      , "--bash-completion-index=0"

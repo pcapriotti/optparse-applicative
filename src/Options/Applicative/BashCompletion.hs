@@ -126,12 +126,12 @@ bashCompletionQuery pinfo pprefs features ws i _ = case runCompletion compl ppre
     opt_completions argPolicy reachability opt = case optMain opt of
       OptReader ns _ _
          | argPolicy /= AllPositionals
-        -> return . fmap defaultCompletionItem . add_opt_help opt $ show_names ns
+        -> return . fmap legacyCompletionItem . add_opt_help opt $ show_names ns
          | otherwise
         -> return []
       FlagReader ns _
          | argPolicy /= AllPositionals
-        -> return . fmap defaultCompletionItem . add_opt_help opt $ show_names ns
+        -> return . fmap legacyCompletionItem . add_opt_help opt $ show_names ns
          | otherwise
         -> return []
       ArgReader rdr
@@ -143,7 +143,7 @@ bashCompletionQuery pinfo pprefs features ws i _ = case runCompletion compl ppre
          | argumentIsUnreachable reachability
         -> return []
          | otherwise
-        -> return . fmap defaultCompletionItem . with_cmd_help $ filter (is_completion . fst) ns
+        -> return . fmap legacyCompletionItem . with_cmd_help $ filter (is_completion . fst) ns
 
     -- When doing enriched completions, add any help specified
     -- to the completion variables (tab separated).

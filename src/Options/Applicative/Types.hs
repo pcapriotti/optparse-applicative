@@ -21,11 +21,12 @@ module Options.Applicative.Types (
   Parser(..),
   ParserM(..),
   Completer(..),
-  mkCompleter,
   mkCompleterWithOptions,
+  mkCompleter,
   CompletionItem(..),
-  defaultCompletionItem,
+  legacyCompletionItem,
   CompletionItemOptions(..),
+  legacyCompletionItemOptions,
   CompletionResult(..),
   ParserFailure(..),
   ParserResult(..),
@@ -314,42 +315,63 @@ data CompletionItem = CompletionItem {
   ciOptions :: CompletionItemOptions,
   ciValue :: String
 }
-defaultCompletionItem :: String -> CompletionItem
-defaultCompletionItem = CompletionItem mempty
+-- | A set of defaults that includes the bells and whistles that
+-- were previously added by the shell.
+--
+-- For the minimal shell behavior, use @'CompletionItem' mempty@
+--
+-- This adds spaces to unambiguous completions (@'cioAddSpace' = True@) and
+-- treats the completions as files (@'cioFiles' = True@).
+legacyCompletionItem :: String -> CompletionItem
+legacyCompletionItem = CompletionItem CompletionItemOptions { cioAddSpace = True, cioFiles = True }
 
 data CompletionItemOptions = CompletionItemOptions {
-  -- | Whether to add a space after the completion. Defaults to 'True'.
+  -- | Whether to add a space after the completion.
   --
   -- Set this value to 'False' if the completion is only a prefix of the final
   -- valid values.
+  --
+  -- 'mempty': 'False'.
+  --
+  -- 'legacyCompletionItemOptions': 'True'.
+  --
   cioAddSpace :: Bool,
 
   -- | Whether to treat the completions as file names (if they exists) and
   -- add a trailing slash to completions that are directories.
-  -- Defaults to 'True'
+  --
+  -- 'mempty': 'False'.
+  --
+  -- 'legacyCompletionItemOptions': 'True'.
+  --
   cioFiles :: Bool
 }
+-- | Combines field-wise. Uses '||' for fields that have 'False' for 'mempty'.
 instance Semigroup CompletionItemOptions where
   a <> b =
     CompletionItemOptions {
-      cioAddSpace = cioAddSpace a && cioAddSpace b,
-      cioFiles = cioFiles a && cioFiles b
+      cioAddSpace = cioAddSpace a || cioAddSpace b,
+      cioFiles = cioFiles a || cioFiles b
     }
+-- | 'mempty' is minimal. See per-field docs.
 instance Monoid CompletionItemOptions where
-  mempty = CompletionItemOptions True True
+  mempty = CompletionItemOptions False False
   mappend = (<>)
+
+legacyCompletionItemOptions :: CompletionItemOptions
+legacyCompletionItemOptions = CompletionItemOptions { cioAddSpace = True, cioFiles = True }
 
 -- | A shell complete function.
 newtype Completer = Completer
   { runCompleter :: String -> IO [CompletionItem] }
 
 -- | Smart constructor for a 'Completer'
-mkCompleter :: (String -> IO [String]) -> Completer
-mkCompleter f = Completer (fmap (map (CompletionItem mempty)) . f)
-
--- | Smart constructor for a 'Completer'
 mkCompleterWithOptions :: (String -> IO [CompletionItem]) -> Completer
 mkCompleterWithOptions = Completer
+
+-- | Smart constructor for a 'Completer' via 'legacyCompletionItem'.
+mkCompleter :: (String -> IO [String]) -> Completer
+mkCompleter f = Completer (fmap (map legacyCompletionItem) . f)
 
 instance Semigroup Completer where
   (Completer c1) <> (Completer c2) =
