@@ -51,11 +51,14 @@ optDesc pprefs style _reachability opt =
         sort . optionNames . optMain $ opt
       meta =
         stringChunk $ optMetaVar opt
+      meta2 =
+        stringChunk $ optMetaVar2 opt
       descs =
         map (string . showOption) names
       descriptions =
         listToChunk (intersperse (descSep style) descs)
       desc
+        | not (isEmpty meta) && not (isEmpty meta2) = descriptions <<+>> meta <<+>> meta2
         | prefHelpLongEquals pprefs && not (isEmpty meta) && any isLongName (safelast names) =
           descriptions <> stringChunk "=" <> meta
         | otherwise =

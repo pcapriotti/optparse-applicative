@@ -28,6 +28,8 @@ module Options.Applicative.Builder (
   strOption,
   option,
 
+  biOption,
+
   -- * Modifiers
   short,
   long,
@@ -37,6 +39,7 @@ module Options.Applicative.Builder (
   showDefaultWith,
   showDefault,
   metavar,
+  metavar2,
   noArgError,
   ParseError(..),
   hidden,
@@ -47,6 +50,7 @@ module Options.Applicative.Builder (
   completeWith,
   action,
   completer,
+  completer2,
   idm,
   mappend,
 
@@ -102,8 +106,10 @@ module Options.Applicative.Builder (
 
   HasName,
   HasCompleter,
+  HasCompleter2,
   HasValue,
-  HasMetavar
+  HasMetavar,
+  HasMetavar2
   ) where
 
 import Control.Applicative
@@ -205,6 +211,13 @@ noArgError e = fieldMod $ \p -> p { optNoArgError = const e }
 metavar :: HasMetavar f => String -> Mod f a
 metavar var = optionMod $ \p -> p { propMetaVar = var }
 
+-- | Specify a metavariable for the second argument of a 'biOption'.
+--
+-- Metavariables have no effect on the actual parser, and only serve to specify
+-- the symbolic name for an argument to be displayed in the help text.
+metavar2 :: HasMetavar2 f => String -> Mod f a
+metavar2 var = optionMod $ \p -> p { propMetaVar2 = var }
+
 -- | Hide this option from the brief description.
 --
 -- Use 'internal' to hide the option from the help text too.
@@ -268,6 +281,14 @@ action = completer . bashCompleter
 -- argument, returns all possible completions for that argument.
 completer :: HasCompleter f => Completer -> Mod f a
 completer f = fieldMod $ modCompleter (`mappend` f)
+
+-- | Add a completer to the second argument of a 'biOption'.
+--
+-- A completer is a function String -> IO String which, given a partial
+-- argument, returns all possible completions for that argument.
+completer2 :: HasCompleter2 f => Completer -> Mod f a
+completer2 f = fieldMod $ modCompleter2 (`mappend` f)
+
 
 -- parsers --
 
@@ -370,9 +391,25 @@ option :: ReadM a -> Mod OptionFields a -> Parser a
 option r m = mkParser d g rdr
   where
     Mod f d g = metavar "ARG" `mappend` m
-    fields = f (OptionFields [] mempty ExpectsArgError)
+    fields = f (OptionFields [] mempty mempty ExpectsArgError)
     crdr = CReader (optCompleter fields) r
     rdr = OptReader (optNames fields) crdr (optNoArgError fields)
+
+-- | Builder for a two-argument option using the given two readers.
+--
+-- It should always have either a @long@ or
+-- @short@ name specified in the modifiers (or both).
+--
+-- > nameParser = option str ( long "name" <> short 'n' )
+--
+biOption :: ReadM a -> ReadM b -> Mod OptionFields (a, b) -> Parser (a, b)
+biOption r r2 m = mkParser d g rdr
+  where
+    Mod f d g = metavar "ARG" `mappend` metavar2 "ARG" `mappend` m
+    fields = f (OptionFields [] mempty mempty ExpectsArgError2)
+    crdr = CReader (optCompleter fields) r
+    crdr2 = CReader (optCompleter2 fields) r2
+    rdr = BiOptReader (optNames fields) crdr crdr2 (optNoArgError fields)
 
 -- | Modifier for 'ParserInfo'.
 newtype InfoMod a = InfoMod

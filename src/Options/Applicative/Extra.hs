@@ -1,4 +1,5 @@
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE GADTs #-}
 module Options.Applicative.Extra (
   -- * Extra parser utilities
   --
@@ -167,6 +168,7 @@ parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
       UnknownError       -> ExitFailure (infoFailureCode pinfo)
       MissingError {}    -> ExitFailure (infoFailureCode pinfo)
       ExpectsArgError {} -> ExitFailure (infoFailureCode pinfo)
+      ExpectsArgError2 {}-> ExitFailure (infoFailureCode pinfo)
       UnexpectedError {} -> ExitFailure (infoFailureCode pinfo)
       ShowHelpText {}    -> ExitSuccess
       InfoMsg {}         -> ExitSuccess
@@ -193,6 +195,7 @@ parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
         else
           mempty
 
+    usage_help :: String -> [String] -> ParserInfo a -> ParserHelp
     usage_help progn names i = case msg of
       InfoMsg _
         -> mempty
@@ -221,6 +224,9 @@ parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
 
       ExpectsArgError x
         -> stringChunk $ "The option `" ++ x ++ "` expects an argument."
+
+      ExpectsArgError2 x
+        -> stringChunk $ "The option `" ++ x ++ "` expects two arguments."
 
       UnexpectedError arg _
         -> stringChunk msg'
@@ -282,8 +288,12 @@ parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
             -- things the user could type. If it's a command
             -- reader also ensure that it can be immediately
             -- reachable from where the error was given.
+            opt_completions :: ArgumentReachability -> Option a -> [String]
             opt_completions reachability opt = case optMain opt of
               OptReader ns _ _ -> fmap showOption ns
+              BiOptReader ns _ _ _ ->
+                                  fmap showOption ns
+              MapReader _f r   -> opt_completions reachability (opt { optMain = r })
               FlagReader ns _  -> fmap showOption ns
               ArgReader _      -> []
               CmdReader _ ns _  | argumentIsUnreachable reachability
