@@ -28,10 +28,10 @@ instance Monoid ParserHelp where
   mappend = (<>)
 
 instance Semigroup ParserHelp where
-  (ParserHelp e1 s1 h1 u1 d1 b1 g1 f1) <> (ParserHelp e2 s2 h2 d2 u2 b2 g2 f2)
+  (ParserHelp e1 s1 h1 u1 d1 b1 g1 f1) <> (ParserHelp e2 s2 h2 u2 d2 b2 g2 f2)
     = ParserHelp (mappend e1 e2) (mappend s1 s2)
-                 (mappend h1 h2) (mappend d1 d2)
-                 (mappend u1 u2) (mappend b1 b2)
+                 (mappend h1 h2) (mappend u1 u2)
+                 (mappend d1 d2) (mappend b1 b2)
                  (mappend g1 g2) (mappend f1 f2)
 
 helpText :: ParserHelp -> Doc
