@@ -144,6 +144,16 @@ searchParser f (MultP p1 p2) = foldr1 (<!>)
 searchParser f (AltP p1 p2) = msum
   [ searchParser f p1
   , searchParser f p2 ]
+searchParser f (SelectP p k) = msum
+  [ do p' <- searchParser f p
+       return $ SelectP p' k
+  , case evalParser p of
+      Nothing -> do
+        k' <- searchParser f k
+        return $ SelectP p k'
+      Just (Left a) -> fmap ($ a) <$> searchParser f k
+      Just (Right _) -> mzero
+  ]
 searchParser f (BindP p k) = msum
   [ do p' <- searchParser f p
        return $ BindP p' k
@@ -246,6 +256,7 @@ evalParser (NilP r) = r
 evalParser (OptP _) = Nothing
 evalParser (MultP p1 p2) = evalParser p1 <*> evalParser p2
 evalParser (AltP p1 p2) = evalParser p1 <|> evalParser p2
+evalParser (SelectP p k) = evalParser p >>= either (\a -> ($ a) <$> evalParser k) pure
 evalParser (BindP p k) = evalParser p >>= evalParser . k
 
 -- | Map a polymorphic function over all the options of a parser, and collect
@@ -292,6 +303,15 @@ treeMapParser g = simplify . go False g
             then MarkDefault
             else NoDefault
 
+    go r f (SelectP p k) =
+      case evalParser p of
+        Nothing -> do
+          MultNode [go r f p, AltNode MarkDefault [go r f k]]
+        Just (Left _) ->
+          MultNode [go r f p, go r f k]
+        Just (Right _) ->
+          MultNode []
+
     go r f (BindP p k) =
       let go' = go r f p
       in case evalParser p of
@@ -303,6 +323,7 @@ treeMapParser g = simplify . go False g
     hasArg (OptP p) = (isArg . optMain) p
     hasArg (MultP p1 p2) = hasArg p1 || hasArg p2
     hasArg (AltP p1 p2) = hasArg p1 || hasArg p2
+    hasArg (SelectP p1 p2) = hasArg p1 || hasArg p2
     hasArg (BindP p _) = hasArg p
 
 simplify :: OptTree a -> OptTree a
