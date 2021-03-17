@@ -4,6 +4,7 @@ module Options.Applicative.Extra (
   --
   -- | This module contains high-level functions to run parsers.
   helper,
+  helperWith,
   hsubparser,
   execParser,
   customExecParser,
@@ -47,16 +48,32 @@ import Options.Applicative.Types
 
 helper :: Parser (a -> a)
 helper =
+  helperWith (mconcat [
+    long "help",
+    short 'h',
+    help "Show this help text"
+  ])
+
+-- | Like helper, but with a minimal set of modifiers that can be extended
+-- as desired.
+--
+-- > opts :: ParserInfo Sample
+-- > opts = info (sample <**> helperWith (mconcat [
+-- >          long "help",
+-- >          short 'h',
+-- >          help "Show this help text",
+-- >          hidden
+-- >        ])) mempty
+helperWith :: Mod OptionFields (a -> a) -> Parser (a -> a)
+helperWith modifiers =
   option helpReader $
     mconcat
-      [ long "help",
-        short 'h',
-        help "Show this help text",
-        value id,
+      [ value id,
         metavar "",
         noGlobal,
         noArgError (ShowHelpText Nothing),
-        hidden
+        hidden,
+        modifiers
       ]
   where
     helpReader = do
