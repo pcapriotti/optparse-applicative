@@ -425,6 +425,36 @@ prop_completion_rich_lengths = once . ioProperty $
     Failure _   -> return $ counterexample "unexpected failure" failed
     Success val -> return $ counterexample ("unexpected result " ++ show val) failed
 
+prop_completion_v1_legacy :: Property
+prop_completion_v1_legacy = once . ioProperty $
+  let p :: Parser String
+      p = strArgument (completer (mkCompleterWithOptions (pure (pure [legacyCompletionItem "reachable"]))))
+      i = info p idm
+      result = run i [ "--optparse-completion-version", "1"
+                     , "--bash-completion-index=0"
+                     ]
+  in case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      return $ ["%addspace", "%files", "%value", "reachable"] === completions
+    Failure _   -> return $ counterexample "unexpected failure" failed
+    Success val -> return $ counterexample ("unexpected result " ++ show val) failed
+
+prop_completion_v1_minimal :: Property
+prop_completion_v1_minimal = once . ioProperty $
+  let p :: Parser String
+      p = strArgument (completer (mkCompleterWithOptions (pure (pure [CompletionItem mempty "reachable"]))))
+      i = info p idm
+      result = run i [ "--optparse-completion-version", "1"
+                     , "--bash-completion-index=0"
+                     ]
+  in case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      return $ ["%value", "reachable"] === completions
+    Failure _   -> return $ counterexample "unexpected failure" failed
+    Success val -> return $ counterexample ("unexpected result " ++ show val) failed
+
 prop_bind_usage :: Property
 prop_bind_usage = once $
   let p :: Parser [String]

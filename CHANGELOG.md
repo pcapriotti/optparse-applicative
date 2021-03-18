@@ -2,6 +2,11 @@
 
 - Make tabulation width configurable in usage texts.
 
+- Add `mkCompleterWithOptions`, allowing completers to
+  request that no space is added after the completion.
+  This is useful in situations where not all completions
+  can be computed efficiently, or when they are too many.
+
 ## Version 0.16.1.0 (21 Nov 2020)
 
 - Guard `process` dependency behind an on by default flag.

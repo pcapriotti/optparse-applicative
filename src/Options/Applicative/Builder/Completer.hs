@@ -20,7 +20,7 @@ import Options.Applicative.Types
 
 -- | Create a 'Completer' from an IO action
 listIOCompleter :: IO [String] -> Completer
-listIOCompleter ss = Completer $ \s ->
+listIOCompleter ss = mkCompleter $ \s ->
   filter (isPrefixOf s) <$> ss
 
 -- | Create a 'Completer' from a constant
@@ -36,7 +36,7 @@ listCompleter = listIOCompleter . pure
 -- for a complete list.
 bashCompleter :: String -> Completer
 #ifdef MIN_VERSION_process
-bashCompleter action = Completer $ \word -> do
+bashCompleter action = mkCompleter $ \word -> do
   let cmd = unwords ["compgen", "-A", action, "--", requote word]
   result <- tryIO $ readProcess "bash" ["-c", cmd] ""
   return . lines . either (const []) id $ result
