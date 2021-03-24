@@ -2,6 +2,11 @@
 
 - Make tabulation width configurable in usage texts.
 
+- Separate program name and description in ParserHelp type.
+
+- Add `helperWith` function, which can be easily used to
+  localize the help flag.
+
 ## Version 0.16.1.0 (21 Nov 2020)
 
 - Guard `process` dependency behind an on by default flag.

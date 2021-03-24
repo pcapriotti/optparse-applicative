@@ -1020,6 +1020,6 @@ simplified implementation.
  [monoid]: http://hackage.haskell.org/package/base/docs/Data-Monoid.html
  [semigroup]: http://hackage.haskell.org/package/base/docs/Data-Semigroup.html
  [parsec]: http://hackage.haskell.org/package/parsec
- [status]: http://travis-ci.org/pcapriotti/optparse-applicative?branch=master
- [status-png]: https://api.travis-ci.org/pcapriotti/optparse-applicative.svg?branch=master
+ [status]: https://github.com/pcapriotti/optparse-applicative/actions/workflows/haskell-ci.yml
+ [status-png]: https://github.com/pcapriotti/optparse-applicative/workflows/Haskell-CI/badge.svg
  [ansi-wl-pprint]: http://hackage.haskell.org/package/ansi-wl-pprint
