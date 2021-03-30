@@ -219,7 +219,7 @@ hidden = optionMod $ \p ->
 --
 -- /NOTE/: This builder is more flexible than its name and example
 -- allude. One of the motivating examples for its addition was to
--- used `const` to completely replace the usage text of an option.
+-- use `const` to completely replace the usage text of an option.
 style :: ( Doc -> Doc ) -> Mod f a
 style x = optionMod $ \p ->
   p { propDescMod = Just x }
