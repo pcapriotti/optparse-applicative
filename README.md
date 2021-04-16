@@ -801,10 +801,10 @@ French commands:
   au-revoir                Say goodbye
 ```
 
-## Bash, Zsh, and Fish Completions
+## Bash, Zsh, Fish, and Pwsh Completions
 
 `optparse-applicative` has built-in support for the completion of
-command line options and arguments in bash, zsh, and fish shells.
+command line options and arguments in bash, zsh, fish, and pwsh shells.
 Any parser, when run using the `execParser` family of functions,
 is automatically extended with a few (hidden) options for the
 completion system:
@@ -827,13 +827,25 @@ completion system:
 
  - `--fish-completion-script`: which is analogous for fish shell;
 
+ - `--pwsh-completion-script`: which is analogous for powershell/pwsh.
+   You might want to generate a script and then dot-source it as
+
+   ```console
+   PS> foo --pwsh-completion-script (Get-Command foo).Source >> _foo.ps1
+   PS> . _foo.ps1
+   ```
+   Note for windows users - this will generate completion script for `foo.exe`,
+   which is not equivalent to `foo` from tab-completion engine's point of view,
+   even though from usage point view they are equivalent. You might want to edit
+   the file `_foo.ps1` if you prefer to use `foo` and not `foo.exe`. 
+
  - `--bash-completion-index`, `--bash-completion-word`: internal options used
    by the completion script to obtain a list of possible completions for a
    given command line;
 
  - `--bash-completion-enriched`: a flag to tell the completion system to emit
    descriptions along with possible completions. This is used to provide help
-   along with the completion for `zsh` and `fish`.
+   along with the completion for `zsh`, `fish`, and `pwsh`.
 
 ### Actions and completers
 
