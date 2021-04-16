@@ -68,6 +68,8 @@ bashCompletionParser pinfo pprefs = complParser
             strOption (long "fish-completion-script" `mappend` internal)
       , scriptRequest . zshCompletionScript <$>
             strOption (long "zsh-completion-script" `mappend` internal)
+      , scriptRequest . pwshCompletionScript <$>
+            strOption (long "pwsh-completion-script" `mappend` internal)
       ]
 
 bashCompletionQuery :: ParserInfo a -> ParserPrefs -> Richness -> [String] -> Int -> String -> IO [String]
@@ -202,7 +204,7 @@ words.
 Tab characters separate items from descriptions.
 -}
 
--- | Generated fish shell completion script 
+-- | Generated fish shell completion script
 fishCompletionScript :: String -> String -> String
 fishCompletionScript prog progn = unlines
   [ " function _" ++ progn
@@ -261,4 +263,39 @@ zshCompletionScript prog progn = unlines
   , "    compadd -f -- $word"
   , "  fi"
   , "done"
+  ]
+
+pwshCompletionScript :: String -> String -> String
+pwshCompletionScript prog progn = unlines
+  [ "using namespace System.Management.Automation"
+  , "using namespace System.Management.Automation.Language"
+  , "Register-ArgumentCompleter -Native -CommandName '" ++ progn ++ "' -ScriptBlock {"
+  , "    param($wordToComplete, $commandAst)"
+  , "    [string[]]$localCommand = @('\"--bash-completion-enriched\"')"
+  , "    $hay = [System.Collections.Generic.List[string]]::new()"
+  , "    foreach ($item in $commandAst.CommandElements) {"
+  , "        $localCommand += '\"--bash-completion-word\"'"
+  , "        $localCommand += \"\"\"$item\"\"\""
+  , "        $hay.Add($item.ToString())"
+  , "    }"
+  , ""
+  , ""
+  , "    $localCommand += '\"--bash-completion-index\"'"
+  , "    if ($wordToComplete.Equals(\"\")) {"
+  , "        $localCommand += '\"0\"'"
+  , "    }"
+  , "    else {"
+  , "        $localCommand += '\"' + $hay.IndexOf($wordToComplete) + '\"'"
+  , "    }"
+  , "    $inp = & '" ++ prog ++ "' @localCommand"
+  , "    [CompletionResult[]]$out = @()"
+  , "    foreach ($item in $inp) {"
+  , "        $spl = $item.Split(\"`t\")"
+  , "        $show = $spl[0]"
+  , "        $tooltip = if ($spl.Length -eq 1) { $spl[0] } else { $spl[1] }"
+  , "        $crt = if ($show.StartsWith('-')) { [CompletionResultType]::ParameterName } else { [CompletionResultType]::ParameterValue }"
+  , "        $out += [CompletionResult]::new($show, $show.Trim('-'), $crt, $tooltip)"
+  , "    }"
+  , "    $out"
+  , "}"
   ]
