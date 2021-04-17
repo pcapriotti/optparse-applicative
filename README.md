@@ -527,22 +527,6 @@ functions, each with its own set of options, and possibly some
 global options that apply to all of them. Typical examples are
 version control systems like `git`, or build tools like `cabal`.
 
-A command can be created using the `subparser` builder (or `hsubparser`,
-which is identical but for an additional `--help` option on each
-command), and commands can be added with the `command` modifier.
-For example
-
-```haskell
-subparser
-  ( command "add" (info addOptions ( progDesc "Add a file to the repository" ))
- <> command "commit" (info commitOptions ( progDesc "Record changes to the repository" ))
-  )
-```
-
-Each command takes a full `ParserInfo` structure, which will be
-used to extract a description for this command when generating a
-help text.
-
 Note that all the parsers appearing in a command need to have the
 same type.  For this reason, it is often best to use a sum type
 which has the same structure as the command itself. For example,
@@ -558,6 +542,22 @@ data Command
   | Commit CommitOptions
   ...
 ```
+
+A command can then be created using the `subparser` builder (or
+`hsubparser`, which is identical but for an additional `--help` option
+on each command), and commands can be added with the `command`
+modifier. For example,
+
+```haskell
+subparser
+  ( command "add" (info addCommand ( progDesc "Add a file to the repository" ))
+ <> command "commit" (info commitCommand ( progDesc "Record changes to the repository" ))
+  )
+```
+
+Each command takes a full `ParserInfo` structure, which will be
+used to extract a description for this command when generating a
+help text.
 
 Alternatively, you can directly return an `IO` action from a parser,
 and execute it using `join` from `Control.Monad`.
