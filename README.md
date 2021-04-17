@@ -702,6 +702,11 @@ main = customExecParser p opts
 
 ```
 
+**Note**. If an option name is a prefix of another option, then it
+will never be matched when disambiguation is on. See
+[#419](https://github.com/pcapriotti/optparse-applicative/issues/419)
+for more details.
+
 ### Customising the help screen
 
 optparse-applicative has a number of combinators to help customise
