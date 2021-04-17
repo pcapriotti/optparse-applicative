@@ -514,7 +514,7 @@ prop_error_context = once $
     pk :: Int -> Int -> (Int, Int)
     pk = (,)
 
-condr :: (Int -> Bool) -> ReadM Int
+condr :: (Int -> Bool) -> ReadM s Int
 condr f = do
   x <- auto
   guard (f x)

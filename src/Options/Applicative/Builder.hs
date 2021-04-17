@@ -122,7 +122,7 @@ import Options.Applicative.Help.Chunk
 -- Readers --
 
 -- | 'Option' reader based on the 'Read' type class.
-auto :: Read a => ReadM a
+auto :: Read a => ReadM s a
 auto = eitherReader $ \arg -> case reads arg of
   [(r, "")] -> return r
   _         -> Left $ "cannot parse value `" ++ arg ++ "'"
@@ -130,7 +130,7 @@ auto = eitherReader $ \arg -> case reads arg of
 -- | String 'Option' reader.
 --
 --   Polymorphic over the `IsString` type class since 0.14.
-str :: IsString s => ReadM s
+str :: IsString a => ReadM s a
 str = fromString <$> readerAsk
 
 -- | Convert a function producing an 'Either' into a reader.
@@ -142,17 +142,17 @@ str = fromString <$> readerAsk
 -- > import qualified Data.Text as T
 -- > attoparsecReader :: A.Parser a -> ReadM a
 -- > attoparsecReader p = eitherReader (A.parseOnly p . T.pack)
-eitherReader :: (String -> Either String a) -> ReadM a
+eitherReader :: (String -> Either String a) -> ReadM s a
 eitherReader f = readerAsk >>= either readerError return . f
 
 -- | Convert a function producing a 'Maybe' into a reader.
-maybeReader :: (String -> Maybe a) -> ReadM a
+maybeReader :: (String -> Maybe a) -> ReadM s a
 maybeReader f = do
   arg  <- readerAsk
   maybe (readerError $ "cannot parse value `" ++ arg ++ "'") return . f $ arg
 
 -- | Null 'Option' reader. All arguments will fail validation.
-disabled :: ReadM a
+disabled :: ReadM s a
 disabled = readerError "disabled option"
 
 -- modifiers --
@@ -281,7 +281,7 @@ subparser m = mkParser d g rdr
     rdr = CmdReader groupName cmds subs
 
 -- | Builder for an argument parser.
-argument :: ReadM a -> Mod ArgumentFields a -> Parser a
+argument :: ReadM () a -> Mod ArgumentFields a -> Parser a
 argument p m = mkParser d g (ArgReader rdr)
   where
     (Mod f d g) = noGlobal `mappend` m
@@ -366,7 +366,7 @@ strOption = option str
 --
 -- > nameParser = option str ( long "name" <> short 'n' )
 --
-option :: ReadM a -> Mod OptionFields a -> Parser a
+option :: ReadM OptName a -> Mod OptionFields a -> Parser a
 option r m = mkParser d g rdr
   where
     Mod f d g = metavar "ARG" `mappend` m

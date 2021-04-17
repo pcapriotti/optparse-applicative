@@ -61,6 +61,7 @@ import Prelude
 
 import Options.Applicative.Internal
 import Options.Applicative.Types
+import Data.Monoid (Alt(..))
 
 showOption :: OptName -> String
 showOption (OptLong n) = "--" ++ n
@@ -83,14 +84,14 @@ liftOpt = OptP
 optMatches :: MonadP m => Bool -> OptReader a -> OptWord -> Maybe (StateT Args m a)
 optMatches disambiguate opt (OptWord arg1 val) = case opt of
   OptReader names rdr no_arg_err -> do
-    guard $ has_name arg1 names
+    name <- get_name arg1 names
     Just $ do
       args <- get
       let mb_args = uncons $ maybeToList val ++ args
       let missing_arg = missingArgP (no_arg_err $ showOption arg1) (crCompleter rdr)
       (arg', args') <- maybe (lift missing_arg) return mb_args
       put args'
-      lift $ runReadM (withReadM (errorFor arg1) (crReader rdr)) arg'
+      lift $ runReadM (withReadM (errorFor arg1) (crReader rdr)) name arg'
 
   FlagReader names x -> do
     guard $ has_name arg1 names
@@ -107,10 +108,15 @@ optMatches disambiguate opt (OptWord arg1 val) = case opt of
   _ -> Nothing
   where
     errorFor name msg = "option " ++ showOption name ++ ": " ++ msg
+    get_name name = getAlt . mconcat . map (Alt . check eq name)
+      where
+        eq | disambiguate = isOptionPrefix
+           | otherwise = (==)
 
-    has_name a
-      | disambiguate = any (isOptionPrefix a)
-      | otherwise = elem a
+    check eq n1 n2 | eq n1 n2 = pure n2
+                   | otherwise = empty
+
+    has_name name = isJust . get_name name
 
 isArg :: OptReader a -> Bool
 isArg (ArgReader _) = True
@@ -181,7 +187,7 @@ searchArg prefs arg =
 
           (Nothing, _)  -> mzero
       ArgReader rdr ->
-        fmap pure . lift . lift $ runReadM (crReader rdr) arg
+        fmap pure . lift . lift $ runReadM (crReader rdr) () arg
       _ -> mzero
 
 stepParser :: MonadP m => ParserPrefs -> ArgPolicy -> String

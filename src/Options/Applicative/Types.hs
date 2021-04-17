@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, Rank2Types, ExistentialQuantification #-}
+{-# LANGUAGE CPP, Rank2Types, ExistentialQuantification, FlexibleInstances #-}
 module Options.Applicative.Types (
   ParseError(..),
   ParserInfo(..),
@@ -15,6 +15,7 @@ module Options.Applicative.Types (
   Backtracking(..),
   ReadM(..),
   readerAsk,
+  readerName,
   readerAbort,
   readerError,
   CReader(..),
@@ -185,22 +186,22 @@ instance Show (Option a) where
 instance Functor Option where
   fmap f (Option m p) = Option (fmap f m) p
 
--- | A newtype over 'ReaderT String Except', used by option readers.
-newtype ReadM a = ReadM
-  { unReadM :: ReaderT String (Except ParseError) a }
+-- | The monad used by option readers.
+newtype ReadM s a = ReadM
+  { unReadM :: ReaderT (s, String) (Except ParseError) a }
 
-instance Functor ReadM where
+instance Functor (ReadM s) where
   fmap f (ReadM r) = ReadM (fmap f r)
 
-instance Applicative ReadM where
+instance Applicative (ReadM s) where
   pure = ReadM . pure
   ReadM x <*> ReadM y = ReadM $ x <*> y
 
-instance Alternative ReadM where
+instance Alternative (ReadM s) where
   empty = mzero
   (<|>) = mplus
 
-instance Monad ReadM where
+instance Monad (ReadM s) where
   return = pure
   ReadM r >>= f = ReadM $ r >>= unReadM . f
 
@@ -208,39 +209,43 @@ instance Monad ReadM where
   fail = Fail.fail
 #endif
 
-instance Fail.MonadFail ReadM where
+instance Fail.MonadFail (ReadM s) where
   fail = readerError
 
-instance MonadPlus ReadM where
+instance MonadPlus (ReadM s) where
   mzero = ReadM mzero
   mplus (ReadM x) (ReadM y) = ReadM $ mplus x y
 
 -- | Return the value being read.
-readerAsk :: ReadM String
-readerAsk = ReadM ask
+readerAsk :: ReadM s String
+readerAsk = snd <$> ReadM ask
+
+-- | Return the matched name of the option.
+readerName :: ReadM s s
+readerName = fst <$> ReadM ask
 
 -- | Abort option reader by exiting with a 'ParseError'.
-readerAbort :: ParseError -> ReadM a
+readerAbort :: ParseError -> ReadM s a
 readerAbort = ReadM . lift . throwE
 
 -- | Abort option reader by exiting with an error message.
-readerError :: String -> ReadM a
+readerError :: String -> ReadM s a
 readerError = readerAbort . ErrorMsg
 
-data CReader a = CReader
+data CReader s a = CReader
   { crCompleter :: Completer
-  , crReader :: ReadM a }
+  , crReader :: ReadM s a }
 
-instance Functor CReader where
+instance Functor (CReader s) where
   fmap f (CReader c r) = CReader c (fmap f r)
 
 -- | An 'OptReader' defines whether an option matches an command line argument.
 data OptReader a
-  = OptReader [OptName] (CReader a) (String -> ParseError)
+  = OptReader [OptName] (CReader OptName a) (String -> ParseError)
   -- ^ option reader
   | FlagReader [OptName] !a
   -- ^ flag reader
-  | ArgReader (CReader a)
+  | ArgReader (CReader () a)
   -- ^ argument reader
   | CmdReader (Maybe String) [String] (String -> Maybe (ParserInfo a))
   -- ^ command reader

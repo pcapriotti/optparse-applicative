@@ -94,10 +94,10 @@ uncons :: [a] -> Maybe (a, [a])
 uncons [] = Nothing
 uncons (x : xs) = Just (x, xs)
 
-runReadM :: MonadP m => ReadM a -> String -> m a
-runReadM (ReadM r) s = hoistEither . runExcept $ runReaderT r s
+runReadM :: MonadP m => ReadM s a -> s -> String -> m a
+runReadM (ReadM r) s a = hoistEither . runExcept $ runReaderT r (s, a)
 
-withReadM :: (String -> String) -> ReadM a -> ReadM a
+withReadM :: (String -> String) -> ReadM s a -> ReadM s a
 withReadM f = ReadM . mapReaderT (withExcept f') . unReadM
   where
     f' (ErrorMsg err) = ErrorMsg (f err)
