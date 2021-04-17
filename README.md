@@ -550,8 +550,8 @@ modifier. For example,
 
 ```haskell
 subparser
-  ( command "add" (info (Add <$> addOptions) ( progDesc "Add a file to the repository" ))
- <> command "commit" (info (Commit <$> commitOptions) ( progDesc "Record changes to the repository" ))
+  ( command "add" (info addCommand ( progDesc "Add a file to the repository" ))
+ <> command "commit" (info commitCommand ( progDesc "Record changes to the repository" ))
   )
 ```
 
@@ -701,6 +701,11 @@ main = customExecParser p opts
     p = prefs disambiguate
 
 ```
+
+**Note**. If an option name is a prefix of another option, then it
+will never be matched when disambiguation is on. See
+[#419](https://github.com/pcapriotti/optparse-applicative/issues/419)
+for more details.
 
 ### Customising the help screen
 
