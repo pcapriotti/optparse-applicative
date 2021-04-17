@@ -550,8 +550,8 @@ modifier. For example,
 
 ```haskell
 subparser
-  ( command "add" (info (Add <$> addOptions) ( progDesc "Add a file to the repository" ))
- <> command "commit" (info (Commit <$> commitOptions) ( progDesc "Record changes to the repository" ))
+  ( command "add" (info addCommand ( progDesc "Add a file to the repository" ))
+ <> command "commit" (info commitCommand ( progDesc "Record changes to the repository" ))
   )
 ```
 
