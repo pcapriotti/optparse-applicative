@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Options.Applicative.Help.Pretty
   ( module Text.PrettyPrint.ANSI.Leijen
   , (.$.)
@@ -6,7 +7,9 @@ module Options.Applicative.Help.Pretty
   ) where
 
 import           Control.Applicative
+#if !MIN_VERSION_base(4,11,0)
 import           Data.Semigroup ((<>))
+#endif
 
 import           Text.PrettyPrint.ANSI.Leijen hiding ((<$>), (<>), columns)
 import           Text.PrettyPrint.ANSI.Leijen.Internal (Doc (..), flatten)
