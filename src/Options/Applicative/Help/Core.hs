@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Options.Applicative.Help.Core (
   cmdDesc,
   briefDesc,
@@ -24,8 +25,12 @@ import Data.Function (on)
 import Data.List (sort, intersperse, groupBy)
 import Data.Foldable (any, foldl')
 import Data.Maybe (maybeToList, catMaybes, fromMaybe)
+#if !MIN_VERSION_base(4,8,0)
 import Data.Monoid (mempty)
+#endif
+#if !MIN_VERSION_base(4,11,0)
 import Data.Semigroup (Semigroup (..))
+#endif
 import Prelude hiding (any)
 
 import Options.Applicative.Common
