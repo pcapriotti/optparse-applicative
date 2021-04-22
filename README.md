@@ -834,6 +834,10 @@ completion system:
    PS> foo --pwsh-completion-script (Get-Command foo).Source >> _foo.ps1
    PS> . _foo.ps1
    ```
+   You might want to add `Set-PSReadlineKeyHandler -Key Tab -Function MenuComplete`
+   to your powershell/pwsh profile in order to get better experience
+   with completion tooltips.
+
    Note for windows users - this will generate completion script for `foo.exe`,
    which is not equivalent to `foo` from tab-completion engine's point of view,
    even though from usage point view they are equivalent. You might want to edit
