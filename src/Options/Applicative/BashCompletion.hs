@@ -62,6 +62,9 @@ bashCompletionParser pinfo pprefs = complParser
       , failure <$>
           (zshCompletionScript <$>
             strOption (long "zsh-completion-script" `mappend` internal))
+      , failure <$>
+          (pwshCompletionScript <$>
+            strOption (long "pwsh-completion-script" `mappend` internal))
       ]
 
 bashCompletionQuery :: ParserInfo a -> ParserPrefs -> Richness -> [String] -> Int -> String -> IO [String]
@@ -253,4 +256,40 @@ zshCompletionScript prog progn = return
   , "    compadd -f -- $word"
   , "  fi"
   , "done"
+  ]
+
+pwshCompletionScript :: String -> String -> IO [String]
+pwshCompletionScript prog progn = return
+  [ "using namespace System.Management.Automation"
+  , "using namespace System.Management.Automation.Language"
+  , "Register-ArgumentCompleter -Native -CommandName '" ++ progn ++ "' -ScriptBlock {"
+  , "    param($wordToComplete, $commandAst)"
+  , "    [string[]]$localCommand = @('\"--bash-completion-enriched\"')"
+  , "    $hay = [System.Collections.Generic.List[string]]::new()"
+  , "    foreach ($item in $commandAst.CommandElements) {"
+  , "        $localCommand += '\"--bash-completion-word\"'"
+  , "        $localCommand += \"\"\"$item\"\"\""
+  , "        $hay.Add($item.ToString())"
+  , "    }"
+  , ""
+  , ""
+  , "    $localCommand += '\"--bash-completion-index\"'"
+  , "    if ($wordToComplete.Equals(\"\")) {"
+  , "        $localCommand +=  '\"' + $commandAst.CommandElements.Count +'\"'"
+  , "    }"
+  , "    else {"
+  , "        $localCommand += '\"' + $hay.IndexOf($wordToComplete) + '\"'"
+  , "    }"
+  , "    $inp = & '" ++ prog ++ "' @localCommand"
+  , "    [CompletionResult[]]$out = @()"
+  , "    [string]$suffix =  if ($inp.Count -eq 1) {' '} else {\"\"}"
+  , "    foreach ($item in $inp) {"
+  , "        $spl = $item.Split(\"`t\")"
+  , "        $show = $spl[0]"
+  , "        $tooltip = if ($spl.Length -eq 1) { $spl[0] } else { $spl[1] }"
+  , "        $crt = if ($show.StartsWith('-')) { [CompletionResultType]::ParameterName } else { [CompletionResultType]::ParameterValue }"
+  , "        $out += [CompletionResult]::new($show + $suffix, $show, $crt, $tooltip)"
+  , "    }"
+  , "    $out"
+  , "}"
   ]
