@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, Rank2Types, ExistentialQuantification #-}
+{-# LANGUAGE CPP, Rank2Types, ExistentialQuantification, GADTs #-}
 module Options.Applicative.Types (
   ParseError(..),
   ParserInfo(..),
@@ -44,6 +44,7 @@ module Options.Applicative.Types (
   filterOptional,
   optVisibility,
   optMetaVar,
+  optMetaVar2,
   optHelp,
   optShowDefault,
   optDescMod
@@ -72,6 +73,7 @@ data ParseError
   | UnknownError
   | MissingError IsCmdStart SomeParser
   | ExpectsArgError String
+  | ExpectsArgError2 String
   | UnexpectedError String SomeParser
 
 data IsCmdStart = CmdStart | CmdCont
@@ -152,17 +154,19 @@ data OptProperties = OptProperties
   { propVisibility :: OptVisibility       -- ^ whether this flag is shown in the brief description
   , propHelp :: Chunk Doc                 -- ^ help text for this option
   , propMetaVar :: String                 -- ^ metavariable for this option
+  , propMetaVar2 :: String                -- ^ second metavariable for this 'biOption'
   , propShowDefault :: Maybe String       -- ^ what to show in the help text as the default
   , propShowGlobal :: Bool                -- ^ whether the option is presented in global options text
   , propDescMod :: Maybe ( Doc -> Doc )   -- ^ a function to run over the brief description
   }
 
 instance Show OptProperties where
-  showsPrec p (OptProperties pV pH pMV pSD pSG _)
+  showsPrec p (OptProperties pV pH pMV pMV2 pSD pSG _)
     = showParen (p >= 11)
     $ showString "OptProperties { propVisibility = " . shows pV
     . showString ", propHelp = " . shows pH
     . showString ", propMetaVar = " . shows pMV
+    . showString ", propMetaVar2 = " . shows pMV2
     . showString ", propShowDefault = " . shows pSD
     . showString ", propShowGlobal = " . shows pSG
     . showString ", propDescMod = _ }"
@@ -235,18 +239,24 @@ instance Functor CReader where
   fmap f (CReader c r) = CReader c (fmap f r)
 
 -- | An 'OptReader' defines whether an option matches an command line argument.
-data OptReader a
-  = OptReader [OptName] (CReader a) (String -> ParseError)
-  -- ^ option reader
-  | FlagReader [OptName] !a
-  -- ^ flag reader
-  | ArgReader (CReader a)
-  -- ^ argument reader
-  | CmdReader (Maybe String) [String] (String -> Maybe (ParserInfo a))
-  -- ^ command reader
+data OptReader a where
+  -- | option reader
+  OptReader :: [OptName] -> CReader a -> (String -> ParseError) -> OptReader a
+  -- | two-arg option reader
+  BiOptReader :: [OptName] -> CReader a -> CReader b -> (String -> ParseError) -> OptReader (a, b)
+  -- | fmap option reader
+  MapReader :: (a -> b) -> OptReader a -> OptReader b
+  -- | flag reader
+  FlagReader :: [OptName] -> !a -> OptReader a
+  -- | argument reader
+  ArgReader :: CReader a -> OptReader a
+  -- | command reader
+  CmdReader :: Maybe String -> [String] -> (String -> Maybe (ParserInfo a)) -> OptReader a
 
 instance Functor OptReader where
   fmap f (OptReader ns cr e) = OptReader ns (fmap f cr) e
+  fmap f r@BiOptReader {} = MapReader f r
+  fmap f (MapReader g r) = MapReader (f . g) r
   fmap f (FlagReader ns x) = FlagReader ns (f x)
   fmap f (ArgReader cr) = ArgReader (fmap f cr)
   fmap f (CmdReader n cs g) = CmdReader n cs ((fmap . fmap) f . g)
@@ -436,6 +446,9 @@ optHelp  = propHelp . optProps
 
 optMetaVar :: Option a -> String
 optMetaVar = propMetaVar . optProps
+
+optMetaVar2 :: Option a -> String
+optMetaVar2 = propMetaVar2 . optProps
 
 optShowDefault :: Option a -> Maybe String
 optShowDefault = propShowDefault . optProps

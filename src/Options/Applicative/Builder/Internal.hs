@@ -3,8 +3,10 @@ module Options.Applicative.Builder.Internal (
   Mod(..),
   HasName(..),
   HasCompleter(..),
+  HasCompleter2(..),
   HasValue(..),
   HasMetavar(..),
+  HasMetavar2(..),
   OptionFields(..),
   FlagFields(..),
   CommandFields(..),
@@ -35,6 +37,7 @@ import Options.Applicative.Types
 data OptionFields a = OptionFields
   { optNames :: [OptName]
   , optCompleter :: Completer
+  , optCompleter2 :: Completer
   , optNoArgError :: String -> ParseError }
 
 data FlagFields a = FlagFields
@@ -66,6 +69,12 @@ instance HasCompleter OptionFields where
 instance HasCompleter ArgumentFields where
   modCompleter f p = p { argCompleter = f (argCompleter p) }
 
+class HasCompleter2 f where
+  modCompleter2 :: (Completer -> Completer) -> f a -> f a
+
+instance HasCompleter2 OptionFields where
+  modCompleter2 f p = p { optCompleter2 = f (optCompleter2 p) }
+
 class HasValue f where
   -- this is just so that it is not necessary to specify the kind of f
   hasValueDummy :: f a -> ()
@@ -82,6 +91,11 @@ instance HasMetavar ArgumentFields where
   hasMetavarDummy _ = ()
 instance HasMetavar CommandFields where
   hasMetavarDummy _ = ()
+
+class HasMetavar2 f where
+  hasMetavar2Dummy :: f a -> ()
+instance HasMetavar2 OptionFields where
+  hasMetavar2Dummy _ = ()
 
 -- mod --
 
@@ -145,6 +159,7 @@ instance Semigroup (Mod f a) where
 baseProps :: OptProperties
 baseProps = OptProperties
   { propMetaVar = ""
+  , propMetaVar2 = ""
   , propVisibility = Visible
   , propHelp = mempty
   , propShowDefault = Nothing

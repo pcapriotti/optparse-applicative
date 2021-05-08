@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE Rank2Types #-}
 module Options.Applicative.Common (
   -- * Option parsers
@@ -68,6 +69,8 @@ showOption (OptShort n) = '-' : [n]
 
 optionNames :: OptReader a -> [OptName]
 optionNames (OptReader names _ _) = names
+optionNames (BiOptReader names _ _ _) = names
+optionNames (MapReader _f r) = optionNames r
 optionNames (FlagReader names _) = names
 optionNames _ = []
 
@@ -91,6 +94,23 @@ optMatches disambiguate opt (OptWord arg1 val) = case opt of
       (arg', args') <- maybe (lift missing_arg) return mb_args
       put args'
       lift $ runReadM (withReadM (errorFor arg1) (crReader rdr)) arg'
+
+  BiOptReader names rdr rdr2 no_arg_err -> do
+    guard $ has_name arg1 names
+    Just $ do
+      args <- get
+      let mb_args = uncons $ maybeToList val ++ args
+      let missing_arg = missingArgP (no_arg_err $ showOption arg1) (crCompleter rdr)
+      (arg', args') <- maybe (lift missing_arg) return mb_args
+      let missing_arg2 = missingArgP (no_arg_err $ showOption arg1) (crCompleter rdr2)
+      (arg'', args'') <- maybe (lift missing_arg2) return (uncons args')
+      put args''
+      lift $ do
+        a <- runReadM (withReadM (errorFor arg1) (crReader rdr)) arg'
+        b <- runReadM (withReadM (errorFor arg1) (crReader rdr2)) arg''
+        pure (a, b)
+
+  MapReader f r -> fmap f <$> optMatches disambiguate r (OptWord arg1 val)
 
   FlagReader names x -> do
     guard $ has_name arg1 names

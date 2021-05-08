@@ -65,6 +65,8 @@ module Options.Applicative (
   strOption,
   option,
 
+  biOption,
+
   strArgument,
   argument,
 
@@ -93,6 +95,7 @@ module Options.Applicative (
   showDefaultWith,
   showDefault,
   metavar,
+  metavar2,
   noArgError,
   hidden,
   internal,
@@ -102,6 +105,7 @@ module Options.Applicative (
   completeWith,
   action,
   completer,
+  completer2,
   idm,
   mappend,
 
@@ -112,8 +116,10 @@ module Options.Applicative (
 
   HasName,
   HasCompleter,
+  HasCompleter2,
   HasValue,
   HasMetavar,
+  HasMetavar2,
   -- ** Readers
   --
   -- | A reader is used by the 'option' and 'argument' builders to parse

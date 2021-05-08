@@ -891,6 +891,110 @@ prop_help_unknown_context = once $
     post = run i ["--help", "not-a-command"]
   in grabHelpMessage pre === grabHelpMessage post
 
+prop_biOption_example :: Property
+prop_biOption_example = once $
+  let p = biOption str str ( short 'p' <> metavar "KEY" <> metavar2 "VALUE" )
+      i = info (p <**> helper) idm
+      result = run i ["-p", "foo", "bar"]
+  in  assertResult result (("foo", "bar") ===)
+
+prop_biOption_example_many :: Property
+prop_biOption_example_many = once $
+  let p = many (biOption str auto ( long "option" ))
+      i = info (p <**> helper) idm
+      result = run i ["--option", "one", "1", "--option", "two", "2"]
+  in  assertResult result ([("one", 1), ("two", 2 :: Int)] ===)
+
+prop_biOption_fail_zero :: Property
+prop_biOption_fail_zero = once $
+  let p :: Parser (String, String)
+      p = biOption str str (long "option")
+      i = info (p <**> helper) briefDesc
+      result = run i ["--help"]
+  in assertError result $ \failure ->
+    let text = head . lines . fst $ renderFailure failure "test"
+    in  "Usage: test --option ARG ARG" === text
+
+prop_kvOption_fail_zero :: Property
+prop_kvOption_fail_zero = once $
+  let p :: Parser (String, String)
+      p = biOption str str (long "option" <> metavar "KEY" <> metavar2 "VALUE")
+      i = info (p <**> helper) briefDesc
+      result = run i ["--help"]
+  in assertError result $ \failure ->
+    let text = head . lines . fst $ renderFailure failure "test"
+    in  "Usage: test --option KEY VALUE" === text
+
+prop_many_kvOption_fail_zero :: Property
+prop_many_kvOption_fail_zero = once $
+  let p :: Parser [(String, String)]
+      p = many $ biOption str str (long "option" <> metavar "KEY" <> metavar2 "VALUE")
+      i = info (p <**> helper) briefDesc
+      result = run i ["--help"]
+  in assertError result $ \failure ->
+    let text = head . lines . fst $ renderFailure failure "test"
+    in  "Usage: test [--option KEY VALUE]" === text
+
+prop_strOption_fail_zero :: Property
+prop_strOption_fail_zero = once $
+  let p :: Parser String
+      p = strOption (long "option")
+      i = info (p <**> helper) briefDesc
+      result = run i ["--help"]
+  in assertError result $ \failure ->
+    let text = head . lines . fst $ renderFailure failure "test"
+    in  "Usage: test --option ARG" === text
+
+prop_completion_biOption_option :: Property
+prop_completion_biOption_option = once . ioProperty $
+  let p :: Parser (String,String)
+      p = biOption str str (long "option" <> completeWith ["key"] <> completer2 (listCompleter ["value"]))
+      i = info p idm
+      result = run i
+        [ "--bash-completion-index", "1"
+        ]
+  in case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      return $ ["--option"] === completions
+    Failure _   -> return $ counterexample "unexpected failure" failed
+    Success val -> return $ counterexample ("unexpected result " ++ show val) failed
+
+prop_completion_biOption_first_value :: Property
+prop_completion_biOption_first_value = once . ioProperty $
+  let p :: Parser (String,String)
+      p = biOption str str (long "option" <> completeWith ["key"] <> completer2 (listCompleter ["value"])) <* many (strArgument mempty :: Parser String)
+      i = info p idm
+      result = run i
+        [ "--bash-completion-word", "test"
+        , "--bash-completion-word", "--option"
+        , "--bash-completion-index", "2"
+        ]
+  in case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      return $ ["key"] === completions
+    Failure _   -> return $ counterexample "unexpected failure" failed
+    Success val -> return $ counterexample ("unexpected result " ++ show val) failed
+
+prop_completion_biOption_second_value :: Property
+prop_completion_biOption_second_value = once . ioProperty $
+  let p :: Parser (String,String)
+      p = biOption str str (short 'o' <> completeWith ["key"] <> completer2 (listCompleter ["value"]))
+      i = info p idm
+      result = run i
+        [ "--bash-completion-word", "test"
+        , "--bash-completion-word", "-o"
+        , "--bash-completion-word", "key"
+        , "--bash-completion-index", "3"
+        ]
+  in case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      return $ ["value"] === completions
+    Failure _   -> return $ counterexample "unexpected failure" failed
+    Success val -> return $ counterexample ("unexpected result " ++ show val) failed
+
 ---
 
 deriving instance Arbitrary a => Arbitrary (Chunk a)
