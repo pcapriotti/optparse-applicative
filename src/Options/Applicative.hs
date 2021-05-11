@@ -130,6 +130,8 @@ module Options.Applicative (
 
   auto,
   str,
+  integral,
+  numeric,
   maybeReader,
   eitherReader,
   disabled,
