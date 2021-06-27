@@ -37,6 +37,9 @@ import           Prelude
 run :: ParserInfo a -> [String] -> ParserResult a
 run = execParserPure defaultPrefs
 
+runWithEnv :: ParserInfo a -> [(String,String)] -> [String] -> ParserResult a
+runWithEnv = execParserPureEnv defaultPrefs
+
 assertError :: Show a => ParserResult a
             -> (ParserFailure ParserHelp -> Property) -> Property
 assertError x f = case x of
@@ -955,6 +958,46 @@ prop_edit_substitution as bs a b = a /= b ==>
 prop_edit_transposition :: [Char] -> [Char] -> Char -> Char -> Property
 prop_edit_transposition as bs a b = a /= b ==>
   editDistance (as ++ [a,b] ++ bs) (as ++ [b,a] ++ bs) === 1
+
+prop_environ :: Property
+prop_environ = once $
+  let p :: Parser Int
+      p = option auto $ long "foo" <> environ "FOO"
+      i = info p idm
+  in assertResult (runWithEnv i [("FOO","1"), ("BAR","2")] []) (=== 1)
+
+prop_environ_prefer_last :: Property
+prop_environ_prefer_last = once $
+  let p :: Parser Int
+      p = option auto $ long "foo" <> environ "FOO" <> environ "BAR"
+      i = info p idm
+  in assertResult (runWithEnv i [("FOO","1"), ("BAR","2")] []) (=== 2)
+
+prop_environ_read_error :: Property
+prop_environ_read_error = once $
+  let p :: Parser Int
+      p = option auto $ long "foo" <> environ "FOO"
+      i = info p idm
+      result = runWithEnv i [("FOO","bar")] []
+  in assertError result $ \failure ->
+    let (msg, _) = renderFailure failure "test"
+        fstLine = head $ lines msg
+        expected = "environment variable \"FOO\": cannot parse value `bar'"
+    in  expected === fstLine
+
+prop_environ_prefer_cmd :: Property
+prop_environ_prefer_cmd = once $
+  let p :: Parser Int
+      p = option auto $ long "foo" <> environ "FOO"
+      i = info p idm
+  in assertResult (runWithEnv i [("FOO","bar")] ["--foo", "1"]) (=== 1)
+
+prop_environ_override_default :: Property
+prop_environ_override_default = once $
+  let p :: Parser Int
+      p = option auto $ long "foo" <> environ "FOO" <> value 2
+      i = info p idm
+  in assertResult (runWithEnv i [("FOO","1")] []) (=== 1)
 
 ---
 

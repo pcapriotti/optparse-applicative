@@ -89,6 +89,7 @@ module Options.Applicative (
   long,
   help,
   helpDoc,
+  environ,
   value,
   showDefaultWith,
   showDefault,
@@ -171,6 +172,7 @@ module Options.Applicative (
   execParser,
   customExecParser,
   execParserPure,
+  execParserPureEnv,
 
   -- ** Handling parser results manually
   getParseResult,

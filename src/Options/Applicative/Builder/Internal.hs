@@ -17,6 +17,7 @@ module Options.Applicative.Builder.Internal (
   baseProps,
   mkCommand,
   mkParser,
+  mkParserEnv,
   mkOption,
   mkProps,
 
@@ -26,6 +27,7 @@ module Options.Applicative.Builder.Internal (
 
 import Control.Applicative
 import Control.Monad (mplus)
+import Data.Maybe (catMaybes)
 import Data.Semigroup hiding (Option)
 import Prelude
 
@@ -34,6 +36,7 @@ import Options.Applicative.Types
 
 data OptionFields a = OptionFields
   { optNames :: [OptName]
+  , optEnvVars :: [String]
   , optCompleter :: Completer
   , optNoArgError :: String -> ParseError }
 
@@ -162,11 +165,19 @@ mkParser :: DefaultProp a
          -> (OptProperties -> OptProperties)
          -> OptReader a
          -> Parser a
-mkParser d@(DefaultProp def _) g rdr =
-  let
-    o = liftOpt $ mkOption d g rdr
-  in
-    maybe o (\a -> o <|> pure a) def
+mkParser = mkParserEnv empty
+
+mkParserEnv :: Maybe (Parser a)
+            -> DefaultProp a
+            -> (OptProperties -> OptProperties)
+            -> OptReader a
+            -> Parser a
+mkParserEnv envP d@(DefaultProp def _) g rdr = foldr1 (<|>) $ catMaybes psrs
+  where
+    psrs =
+      [ Just $ liftOpt $ mkOption d g rdr
+      , envP
+      , pure <$> def ]
 
 mkOption :: DefaultProp a
          -> (OptProperties -> OptProperties)

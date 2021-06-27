@@ -30,6 +30,7 @@ module Options.Applicative.Types (
   ArgPolicy(..),
   ArgumentReachability(..),
   AltNodeType(..),
+  Env,
   OptTree(..),
   ParserHelp(..),
   SomeParser(..),
@@ -255,6 +256,7 @@ instance Functor OptReader where
 data Parser a
   = NilP (Maybe a)
   | OptP (Option a)
+  | EnvP [String] (ReadM a)
   | forall x . MultP (Parser (x -> a)) (Parser x)
   | AltP (Parser a) (Parser a)
   | forall x . BindP (Parser x) (x -> Parser a)
@@ -262,6 +264,7 @@ data Parser a
 instance Functor Parser where
   fmap f (NilP x) = NilP (fmap f x)
   fmap f (OptP opt) = OptP (fmap f opt)
+  fmap f (EnvP vars rdr) = EnvP vars (fmap f rdr)
   fmap f (MultP p1 p2) = MultP (fmap (f.) p1) p2
   fmap f (AltP p1 p2) = AltP (fmap f p1) (fmap f p2)
   fmap f (BindP p k) = BindP p (fmap f . k)
@@ -372,6 +375,7 @@ instance Monad ParserResult where
   CompletionInvoked c >>= _ = CompletionInvoked c
 
 type Args = [String]
+type Env = [(String,String)]
 
 -- | Policy for how to handle options within the parse
 data ArgPolicy

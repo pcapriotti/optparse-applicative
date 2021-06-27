@@ -39,10 +39,16 @@ module Options.Applicative.Common (
   ParserPrefs(..),
 
   -- * Running parsers
+  InvokedWith,
+  mkInvokedWith,
   runParserInfo,
+  runParserInfoEnv,
   runParserFully,
+  runParserFullyEnv,
   runParserStep,
+  runParserStepEnv,
   runParser,
+  runParserEnv,
   evalParser,
 
   -- * Low-level utilities
@@ -52,11 +58,11 @@ module Options.Applicative.Common (
   ) where
 
 import Control.Applicative
-import Control.Monad (guard, mzero, msum, when)
+import Control.Monad (guard, join, mzero, msum, when)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State (StateT(..), get, put, runStateT)
-import Data.List (isPrefixOf)
-import Data.Maybe (maybeToList, isJust, isNothing)
+import Control.Monad.Trans.State (StateT(..), get, gets, modify, runStateT)
+import Data.List (find, isPrefixOf)
+import Data.Maybe (catMaybes, listToMaybe, maybeToList, isJust, isNothing)
 import Prelude
 
 import Options.Applicative.Internal
@@ -80,16 +86,27 @@ isOptionPrefix _ _ = False
 liftOpt :: Option a -> Parser a
 liftOpt = OptP
 
-optMatches :: MonadP m => Bool -> OptReader a -> OptWord -> Maybe (StateT Args m a)
+data InvokedWith = InvokedWith
+  { _invArgs :: Args
+  , _invEnv :: Env
+  }
+
+mkInvokedWith :: Args -> Env -> InvokedWith
+mkInvokedWith = InvokedWith
+
+setInvArgs :: Args -> InvokedWith -> InvokedWith
+setInvArgs args inv = inv{_invArgs = args}
+
+optMatches :: MonadP m => Bool -> OptReader a -> OptWord -> Maybe (StateT InvokedWith m a)
 optMatches disambiguate opt (OptWord arg1 val) = case opt of
   OptReader names rdr no_arg_err -> do
     guard $ has_name arg1 names
     Just $ do
-      args <- get
+      args <- gets _invArgs
       let mb_args = uncons $ maybeToList val ++ args
       let missing_arg = missingArgP (no_arg_err $ showOption arg1) (crCompleter rdr)
       (arg', args') <- maybe (lift missing_arg) return mb_args
-      put args'
+      modify $ setInvArgs args'
       lift $ runReadM (withReadM (errorFor arg1) (crReader rdr)) arg'
 
   FlagReader names x -> do
@@ -100,9 +117,9 @@ optMatches disambiguate opt (OptWord arg1 val) = case opt of
     -- `--foo=val` was being parsed as `--foo -val`, which is gibberish.
     guard $ isShortName arg1 || isNothing val
     Just $ do
-      args <- get
+      args <- gets _invArgs
       let val' = ('-' :) <$> val
-      put $ maybeToList val' ++ args
+      modify $ setInvArgs $ maybeToList val' ++ args
       return x
   _ -> Nothing
   where
@@ -136,6 +153,7 @@ searchParser :: Monad m
              -> Parser a -> NondetT m (Parser a)
 searchParser _ (NilP _) = mzero
 searchParser f (OptP opt) = f opt
+searchParser _ (EnvP _ _) = mzero
 searchParser f (MultP p1 p2) = foldr1 (<!>)
   [ do p1' <- searchParser f p1
        return (p1' <*> p2)
@@ -152,7 +170,7 @@ searchParser f (BindP p k) = msum
       Just aa -> searchParser f (k aa) ]
 
 searchOpt :: MonadP m => ParserPrefs -> OptWord -> Parser a
-          -> NondetT (StateT Args m) (Parser a)
+          -> NondetT (StateT InvokedWith m) (Parser a)
 searchOpt pprefs w = searchParser $ \opt -> do
   let disambiguate = prefDisambiguate pprefs
                   && optVisibility opt > Internal
@@ -161,7 +179,7 @@ searchOpt pprefs w = searchParser $ \opt -> do
     Nothing -> mzero
 
 searchArg :: MonadP m => ParserPrefs -> String -> Parser a
-          -> NondetT (StateT Args m) (Parser a)
+          -> NondetT (StateT InvokedWith m) (Parser a)
 searchArg prefs arg =
   searchParser $ \opt -> do
     when (isArg (optMain opt)) cut
@@ -169,11 +187,12 @@ searchArg prefs arg =
       CmdReader _ _ f ->
         case (f arg, prefBacktrack prefs) of
           (Just subp, NoBacktrack) -> lift $ do
-            args <- get <* put []
-            fmap pure . lift $ enterContext arg subp *> runParserInfo subp args <* exitContext
-
-          (Just subp, Backtrack) -> fmap pure . lift . StateT $ \args ->
-            enterContext arg subp *> runParser (infoPolicy subp) CmdStart (infoParser subp) args <* exitContext
+            inv <- get <* modify (setInvArgs [])
+            fmap pure . lift $ enterContext arg subp *> runParserInfoEnv subp inv <* exitContext
+          (Just subp, Backtrack) -> fmap pure . lift . StateT $ \inv ->
+            enterContext arg subp
+              *> runParserEnv (infoPolicy subp) CmdStart (infoParser subp) inv
+              <* exitContext
 
           (Just subp, SubparserInline) -> lift $ do
             lift $ enterContext arg subp
@@ -184,8 +203,19 @@ searchArg prefs arg =
         fmap pure . lift . lift $ runReadM (crReader rdr) arg
       _ -> mzero
 
+-- | Lookup environment for option value
+searchEnv :: MonadP m => [String] -> ReadM a -> Env -> m a
+searchEnv vars rdr env = do
+  maybe mzero do_read $ listToMaybe $ catMaybes $ map (`lookupVar` env) vars
+  where
+    do_read (var,val) = runReadM (withReadM (error_for var) rdr) val
+    lookupVar var = find $ (== var) . fst
+    error_for var msg = "environment variable " ++ show var ++ ": " ++ msg
+
 stepParser :: MonadP m => ParserPrefs -> ArgPolicy -> String
-           -> Parser a -> NondetT (StateT Args m) (Parser a)
+           -> Parser a -> NondetT (StateT InvokedWith m) (Parser a)
+stepParser _ _ _ (EnvP vars rdr) =
+  lift $ pure <$> (gets _invEnv >>= lift . searchEnv vars rdr)
 stepParser pprefs AllPositionals arg p =
   searchArg pprefs arg p
 stepParser pprefs ForwardOptions arg p = case parseWord arg of
@@ -196,33 +226,53 @@ stepParser pprefs _ arg p = case parseWord arg of
   Nothing -> searchArg pprefs arg p
 
 
+runParser :: MonadP m => ArgPolicy -> IsCmdStart -> Parser a -> Args -> m (a,Args)
+runParser policy isCmdStart p args =
+  fmap _invArgs <$> runParserEnv policy isCmdStart p (InvokedWith args [])
+
 -- | Apply a 'Parser' to a command line, and return a result and leftover
 -- arguments.  This function returns an error if any parsing error occurs, or
 -- if any options are missing and don't have a default value.
-runParser :: MonadP m => ArgPolicy -> IsCmdStart -> Parser a -> Args -> m (a, Args)
-runParser policy _ p ("--" : argt) | policy /= AllPositionals
-                                   = runParser AllPositionals CmdCont p argt
-runParser policy isCmdStart p args = case args of
-  [] -> exitP isCmdStart policy p result
+runParserEnv :: MonadP m
+            => ArgPolicy
+            -> IsCmdStart
+            -> Parser a
+            -> InvokedWith
+            -> m (a, InvokedWith)
+runParserEnv policy _ p (InvokedWith ("--" : argt) env)
+  | policy /= AllPositionals
+  = runParserEnv AllPositionals CmdCont p (InvokedWith argt env)
+runParserEnv policy isCmdStart p inv@(InvokedWith args env) = case args of
+  [] -> result >>= exitP isCmdStart policy p
   (arg : argt) -> do
     (mp', args') <- do_step arg argt
     case mp' of
-      Nothing -> hoistMaybe result <|> parseError arg p
-      Just p' -> runParser (newPolicy arg) CmdCont p' args'
+      Nothing -> (result >>= hoistMaybe) <|> parseError arg p
+      Just p' -> runParserEnv (newPolicy arg) CmdCont p' (InvokedWith args' env)
   where
-    result =
-      (,) <$> evalParser p <*> pure args
-    do_step =
-      runParserStep policy p
-
+    result = do
+      def <- defaultValueEnv env p
+      pure $ flip (,) inv <$> def
+    do_step arg =
+      runParserStepEnv policy p arg env
     newPolicy a = case policy of
       NoIntersperse -> if isJust (parseWord a) then NoIntersperse else AllPositionals
       x             -> x
 
 runParserStep :: MonadP m => ArgPolicy -> Parser a -> String -> Args -> m (Maybe (Parser a), Args)
-runParserStep policy p arg args = do
+runParserStep policy p arg = runParserStepEnv policy p arg []
+
+runParserStepEnv :: MonadP m
+                 => ArgPolicy
+                 -> Parser a
+                 -> String
+                 -> Env
+                 -> Args
+                 -> m (Maybe (Parser a), Args)
+runParserStepEnv policy p arg env args = do
   prefs <- getPrefs
-  flip runStateT args
+  fmap (fmap _invArgs)
+    $ flip runStateT (InvokedWith args env)
     $ disamb (not (prefDisambiguate prefs))
     $ stepParser prefs policy arg p
 
@@ -230,12 +280,18 @@ parseError :: MonadP m => String -> Parser x -> m a
 parseError arg = errorP . UnexpectedError arg . SomeParser
 
 runParserInfo :: MonadP m => ParserInfo a -> Args -> m a
-runParserInfo i = runParserFully (infoPolicy i) (infoParser i)
+runParserInfo i args = runParserInfoEnv i $ InvokedWith args []
+
+runParserInfoEnv :: MonadP m => ParserInfo a -> InvokedWith -> m a
+runParserInfoEnv i = runParserFullyEnv (infoPolicy i) (infoParser i)
 
 runParserFully :: MonadP m => ArgPolicy -> Parser a -> Args -> m a
-runParserFully policy p args = do
-  (r, args') <- runParser policy CmdStart p args
-  case args' of
+runParserFully policy p args = runParserFullyEnv policy p (InvokedWith args [])
+
+runParserFullyEnv :: MonadP m => ArgPolicy -> Parser a -> InvokedWith -> m a
+runParserFullyEnv policy p inv = do
+  (r, inv') <- runParserEnv policy CmdStart p inv
+  case _invArgs inv' of
     []  -> return r
     a:_ -> parseError a (pure ())
 
@@ -244,9 +300,22 @@ runParserFully policy p args = do
 evalParser :: Parser a -> Maybe a
 evalParser (NilP r) = r
 evalParser (OptP _) = Nothing
+evalParser (EnvP _ _) = Nothing
 evalParser (MultP p1 p2) = evalParser p1 <*> evalParser p2
 evalParser (AltP p1 p2) = evalParser p1 <|> evalParser p2
 evalParser (BindP p k) = evalParser p >>= evalParser . k
+
+-- | Either value from environment or default value of a 'Parser'.
+defaultValueEnv :: (MonadP m) => Env -> Parser a -> m (Maybe a)
+defaultValueEnv _ (NilP r) = pure r
+defaultValueEnv _ (OptP _) = pure Nothing
+defaultValueEnv env (EnvP vars rdr) = Just <$> searchEnv vars rdr env
+defaultValueEnv env (MultP p1 p2) =
+  liftA2 (<*>) (defaultValueEnv env p1) (defaultValueEnv env p2)
+defaultValueEnv env (AltP p1 p2) =
+  liftA2 (<|>) (defaultValueEnv env p1) (defaultValueEnv env p2)
+defaultValueEnv env (BindP p k) =
+  fmap join $ defaultValueEnv env p >>= mapM (defaultValueEnv env . k)
 
 -- | Map a polymorphic function over all the options of a parser, and collect
 -- the results in a list.
@@ -278,6 +347,7 @@ treeMapParser g = simplify . go False g
       = Leaf (f (ArgumentReachability r) opt)
       | otherwise
       = MultNode []
+    go _ _ (EnvP _ _) = MultNode []
     go r f (MultP p1 p2) =
       MultNode [go r f p1, go r' f p2]
       where r' = r || hasArg p1
@@ -301,6 +371,7 @@ treeMapParser g = simplify . go False g
     hasArg :: Parser a -> Bool
     hasArg (NilP _) = False
     hasArg (OptP p) = (isArg . optMain) p
+    hasArg (EnvP _ _) = False
     hasArg (MultP p1 p2) = hasArg p1 || hasArg p2
     hasArg (AltP p1 p2) = hasArg p1 || hasArg p2
     hasArg (BindP p _) = hasArg p

@@ -9,6 +9,7 @@ module Options.Applicative.Extra (
   execParser,
   customExecParser,
   execParserPure,
+  execParserPureEnv,
   getParseResult,
   handleParseResult,
   parserFailure,
@@ -133,12 +134,20 @@ getParseResult :: ParserResult a -> Maybe a
 getParseResult (Success a) = Just a
 getParseResult _ = Nothing
 
+-- | Run 'execParserPureEnv' with empty environment
+execParserPure  :: ParserPrefs
+                -> ParserInfo a
+                -> [String]
+                -> ParserResult a
+execParserPure pprefs pinfo = execParserPureEnv pprefs pinfo []
+
 -- | The most general way to run a program description in pure code.
-execParserPure :: ParserPrefs       -- ^ Global preferences for this parser
-               -> ParserInfo a      -- ^ Description of the program to run
-               -> [String]          -- ^ Program arguments
-               -> ParserResult a
-execParserPure pprefs pinfo args =
+execParserPureEnv :: ParserPrefs       -- ^ Global preferences for this parser
+                  -> ParserInfo a      -- ^ Description of the program to run
+                  -> [(String,String)] -- ^ Environment variables
+                  -> [String]          -- ^ Program arguments
+                  -> ParserResult a
+execParserPureEnv pprefs pinfo env args =
   case runP p pprefs of
     (Right (Right r), _) -> Success r
     (Right (Left c), _) -> CompletionInvoked c
@@ -147,7 +156,7 @@ execParserPure pprefs pinfo args =
     pinfo' = pinfo
       { infoParser = (Left <$> bashCompletionParser pinfo pprefs)
                  <|> (Right <$> infoParser pinfo) }
-    p = runParserInfo pinfo' args
+    p = runParserInfoEnv pinfo' $ mkInvokedWith args env
 
 -- | Generate a `ParserFailure` from a `ParseError` in a given `Context`.
 --
