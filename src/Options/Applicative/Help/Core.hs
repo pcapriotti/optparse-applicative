@@ -256,11 +256,20 @@ parserGlobals pprefs p =
 -- | Generate option summary.
 parserUsage :: ParserPrefs -> Parser a -> String -> Doc
 parserUsage pprefs p progn =
-  hsep
-    [ string "Usage:",
-      string progn,
-      align (extractChunk (briefDesc pprefs p))
-    ]
+  case prefUsageOverflow pprefs of
+    UsageOverflowAlign ->
+      hsep
+        [ string "Usage:",
+          string progn,
+          align (extractChunk (briefDesc pprefs p))
+        ]
+    UsageOverflowHang level ->
+      hang level $
+        hsep
+          [ string "Usage:",
+            string progn,
+            extractChunk (briefDesc pprefs p)
+          ]
 
 -- | Peek at the structure of the rendered tree within.
 --

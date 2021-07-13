@@ -89,6 +89,8 @@ module Options.Applicative.Builder (
   columns,
   helpLongEquals,
   helpShowGlobals,
+  helpAlignUsageOverflow,
+  helpHangUsageOverflow,
   prefs,
   defaultPrefs,
 
@@ -521,6 +523,13 @@ helpLongEquals = PrefsMod $ \p -> p { prefHelpLongEquals = True }
 helpShowGlobals :: PrefsMod
 helpShowGlobals = PrefsMod $ \p -> p { prefHelpShowGlobal = True}
 
+-- | Align usage overflow to the right
+helpAlignUsageOverflow :: PrefsMod
+helpAlignUsageOverflow = PrefsMod $ \p -> p { prefUsageOverflow = UsageOverflowAlign }
+
+-- | Hang usage overflow to the specified indent
+helpHangUsageOverflow :: Int -> PrefsMod
+helpHangUsageOverflow indentation = PrefsMod $ \p -> p { prefUsageOverflow = UsageOverflowHang indentation }
 
 -- | Create a `ParserPrefs` given a modifier
 prefs :: PrefsMod -> ParserPrefs
@@ -534,7 +543,9 @@ prefs m = applyPrefsMod m base
       , prefBacktrack = Backtrack
       , prefColumns = 80
       , prefHelpLongEquals = False
-      , prefHelpShowGlobal = False }
+      , prefHelpShowGlobal = False
+      , prefUsageOverflow = UsageOverflowAlign
+      }
 
 -- Convenience shortcuts
 

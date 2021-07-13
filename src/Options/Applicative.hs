@@ -197,6 +197,8 @@ module Options.Applicative (
   columns,
   helpLongEquals,
   helpShowGlobals,
+  helpAlignUsageOverflow,
+  helpHangUsageOverflow,
   defaultPrefs,
 
   -- * Completions

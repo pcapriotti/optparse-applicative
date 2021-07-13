@@ -3,6 +3,7 @@ module Options.Applicative.Types (
   ParseError(..),
   ParserInfo(..),
   ParserPrefs(..),
+  UsageOverflow(..),
 
   Option(..),
   OptName(..),
@@ -107,25 +108,31 @@ data Backtracking
   | SubparserInline
   deriving (Eq, Show)
 
+data UsageOverflow
+  = UsageOverflowAlign    -- ^ usage is aligned to the right of the command
+  | UsageOverflowHang Int -- ^ usage follows a hanging indent with indent level supplied
+  deriving (Eq, Show)
+
 -- | Global preferences for a top-level 'Parser'.
 data ParserPrefs = ParserPrefs
-  { prefMultiSuffix :: String     -- ^ metavar suffix for multiple options
-  , prefDisambiguate :: Bool      -- ^ automatically disambiguate abbreviations
-                                  -- (default: False)
-  , prefShowHelpOnError :: Bool   -- ^ always show help text on parse errors
-                                  -- (default: False)
-  , prefShowHelpOnEmpty :: Bool   -- ^ show the help text for a command or subcommand
-                                  -- if it fails with no input (default: False)
-  , prefBacktrack :: Backtracking -- ^ backtrack to parent parser when a
-                                  -- subcommand fails (default: Backtrack)
-  , prefColumns :: Int            -- ^ number of columns in the terminal, used to
-                                  -- format the help page (default: 80)
-  , prefHelpLongEquals :: Bool    -- ^ when displaying long names in usage and help,
-                                  -- use an '=' sign for long names, rather than a
-                                  -- single space (default: False)
-  , prefHelpShowGlobal :: Bool    -- ^ when displaying subparsers' usage help,
-                                  -- show parent options under a "global options"
-                                  -- section (default: True)
+  { prefMultiSuffix :: String           -- ^ metavar suffix for multiple options
+  , prefDisambiguate :: Bool            -- ^ automatically disambiguate abbreviations
+                                        -- (default: False)
+  , prefShowHelpOnError :: Bool         -- ^ always show help text on parse errors
+                                        -- (default: False)
+  , prefShowHelpOnEmpty :: Bool         -- ^ show the help text for a command or subcommand
+                                        -- if it fails with no input (default: False)
+  , prefBacktrack :: Backtracking       -- ^ backtrack to parent parser when a
+                                        -- subcommand fails (default: Backtrack)
+  , prefColumns :: Int                  -- ^ number of columns in the terminal, used to
+                                        -- format the help page (default: 80)
+  , prefHelpLongEquals :: Bool          -- ^ when displaying long names in usage and help,
+                                        -- use an '=' sign for long names, rather than a
+                                        -- single space (default: False)
+  , prefHelpShowGlobal :: Bool          -- ^ when displaying subparsers' usage help,
+                                        -- show parent options under a "global options"
+                                        -- section (default: True)
+  , prefUsageOverflow :: UsageOverflow  -- ^ how usage overflow over lines is handled
   } deriving (Eq, Show)
 
 data OptName = OptShort !Char
