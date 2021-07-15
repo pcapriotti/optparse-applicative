@@ -39,9 +39,9 @@ import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
 
 -- | Style for rendering an option.
-data OptDescStyle
+data OptDescStyle ann
   = OptDescStyle
-      { descSep :: Doc,
+      { descSep :: Doc ann,
         descHidden :: Bool,
         descGlobal :: Bool
       }
@@ -50,14 +50,14 @@ safelast :: [a] -> Maybe a
 safelast = foldl' (const Just) Nothing
 
 -- | Generate description for a single option.
-optDesc :: ParserPrefs -> OptDescStyle -> ArgumentReachability -> Option a -> (Chunk Doc, Parenthetic)
+optDesc :: ParserPrefs -> OptDescStyle ann -> ArgumentReachability -> Option ann a -> (Chunk (Doc ann), Parenthetic)
 optDesc pprefs style _reachability opt =
   let names =
         sort . optionNames . optMain $ opt
       meta =
         stringChunk $ optMetaVar opt
       descs =
-        map (string . showOption) names
+        map (pretty . showOption) names
       descriptions =
         listToChunk (intersperse (descSep style) descs)
       desc
@@ -89,7 +89,7 @@ optDesc pprefs style _reachability opt =
    in (modified, wrapping)
 
 -- | Generate descriptions for commands.
-cmdDesc :: ParserPrefs -> Parser a -> [(Maybe String, Chunk Doc)]
+cmdDesc :: ParserPrefs -> Parser ann a -> [(Maybe String, Chunk (Doc ann))]
 cmdDesc pprefs = mapParser desc
   where
     desc _ opt =
@@ -97,24 +97,24 @@ cmdDesc pprefs = mapParser desc
         CmdReader gn cmds p ->
           (,) gn $
             tabulate (prefTabulateFill pprefs)
-              [ (string cmd, align (extractChunk d))
+              [ (pretty cmd, align (extractChunk d))
                 | cmd <- reverse cmds,
                   d <- maybeToList . fmap infoProgDesc $ p cmd
               ]
         _ -> mempty
 
 -- | Generate a brief help text for a parser.
-briefDesc :: ParserPrefs -> Parser a -> Chunk Doc
+briefDesc :: ParserPrefs -> Parser ann a -> Chunk (Doc ann)
 briefDesc = briefDesc' True
 
 -- | Generate a brief help text for a parser, only including mandatory
 --   options and arguments.
-missingDesc :: ParserPrefs -> Parser a -> Chunk Doc
+missingDesc :: ParserPrefs -> Parser ann a -> Chunk (Doc ann)
 missingDesc = briefDesc' False
 
 -- | Generate a brief help text for a parser, allowing the specification
 --   of if optional arguments are show.
-briefDesc' :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
+briefDesc' :: Bool -> ParserPrefs -> Parser ann a -> Chunk (Doc ann)
 briefDesc' showOptional pprefs =
   wrapOver NoDefault MaybeRequired
     . foldTree pprefs style
@@ -127,13 +127,13 @@ briefDesc' showOptional pprefs =
       | otherwise =
         filterOptional
     style = OptDescStyle
-      { descSep = string "|",
+      { descSep = pretty "|",
         descHidden = False,
         descGlobal = False
       }
 
 -- | Wrap a doc in parentheses or brackets if required.
-wrapOver :: AltNodeType -> Parenthetic -> (Chunk Doc, Parenthetic) -> Chunk Doc
+wrapOver :: AltNodeType -> Parenthetic -> (Chunk (Doc ann), Parenthetic) -> Chunk (Doc ann)
 wrapOver altnode mustWrapBeyond (chunk, wrapping)
   | altnode == MarkDefault =
     fmap brackets chunk
@@ -144,7 +144,7 @@ wrapOver altnode mustWrapBeyond (chunk, wrapping)
 
 -- Fold a tree of option docs into a single doc with fully marked
 -- optional areas and groups.
-foldTree :: ParserPrefs -> OptDescStyle -> OptTree (Chunk Doc, Parenthetic) -> (Chunk Doc, Parenthetic)
+foldTree :: ParserPrefs -> OptDescStyle ann -> OptTree (Chunk (Doc ann), Parenthetic) -> (Chunk (Doc ann), Parenthetic)
 foldTree _ _ (Leaf x) =
   x
 foldTree prefs s (MultNode xs) =
@@ -167,7 +167,7 @@ foldTree prefs s (AltNode b xs) =
     . map (foldTree prefs s)
     $ xs
   where
-    alt_node :: [(Chunk Doc, Parenthetic)] -> (Chunk Doc, Parenthetic)
+    alt_node :: [(Chunk (Doc ann), Parenthetic)] -> (Chunk (Doc ann), Parenthetic)
     alt_node [n] = n
     alt_node ns =
       (\y -> (y, AlwaysRequired))
@@ -184,16 +184,16 @@ foldTree prefs s (BindNode x) =
    in (withSuffix, NeverRequired)
 
 -- | Generate a full help text for a parser
-fullDesc :: ParserPrefs -> Parser a -> Chunk Doc
+fullDesc :: ParserPrefs -> Parser ann a -> Chunk (Doc ann)
 fullDesc = optionsDesc False
 
 -- | Generate a help text for the parser, showing
 --   only what is relevant in the "Global options: section"
-globalDesc :: ParserPrefs -> Parser a -> Chunk Doc
+globalDesc :: ParserPrefs -> Parser ann a -> Chunk (Doc ann)
 globalDesc = optionsDesc True
 
 -- | Common generator for full descriptions and globals
-optionsDesc :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
+optionsDesc :: Bool -> ParserPrefs -> Parser ann a -> Chunk (Doc ann)
 optionsDesc global pprefs = tabulate (prefTabulateFill pprefs) . catMaybes . mapParser doc
   where
     doc info opt = do
@@ -204,39 +204,39 @@ optionsDesc global pprefs = tabulate (prefTabulateFill pprefs) . catMaybes . map
         n = fst $ optDesc pprefs style info opt
         h = optHelp opt
         hdef = Chunk . fmap show_def . optShowDefault $ opt
-        show_def s = parens (string "default:" <+> string s)
+        show_def s = parens (pretty "default:" <+> pretty s)
     style = OptDescStyle
-      { descSep = string ",",
+      { descSep = pretty ",",
         descHidden = True,
         descGlobal = global
       }
 
-errorHelp :: Chunk Doc -> ParserHelp
+errorHelp :: Chunk (Doc ann) -> ParserHelp ann
 errorHelp chunk = mempty { helpError = chunk }
 
-headerHelp :: Chunk Doc -> ParserHelp
+headerHelp :: Chunk (Doc ann) -> ParserHelp ann
 headerHelp chunk = mempty { helpHeader = chunk }
 
-suggestionsHelp :: Chunk Doc -> ParserHelp
+suggestionsHelp :: Chunk (Doc ann) -> ParserHelp ann
 suggestionsHelp chunk = mempty { helpSuggestions = chunk }
 
-globalsHelp :: Chunk Doc -> ParserHelp
+globalsHelp :: Chunk (Doc ann) -> ParserHelp ann
 globalsHelp chunk = mempty { helpGlobals = chunk }
 
-usageHelp :: Chunk Doc -> ParserHelp
+usageHelp :: Chunk (Doc ann) -> ParserHelp ann
 usageHelp chunk = mempty { helpUsage = chunk }
 
-descriptionHelp :: Chunk Doc -> ParserHelp
+descriptionHelp :: Chunk (Doc ann) -> ParserHelp ann
 descriptionHelp chunk = mempty { helpDescription = chunk }
 
-bodyHelp :: Chunk Doc -> ParserHelp
+bodyHelp :: Chunk (Doc ann) -> ParserHelp ann
 bodyHelp chunk = mempty { helpBody = chunk }
 
-footerHelp :: Chunk Doc -> ParserHelp
+footerHelp :: Chunk (Doc ann) -> ParserHelp ann
 footerHelp chunk = mempty { helpFooter = chunk }
 
 -- | Generate the help text for a program.
-parserHelp :: ParserPrefs -> Parser a -> ParserHelp
+parserHelp :: ParserPrefs -> Parser ann a -> ParserHelp ann
 parserHelp pprefs p =
   bodyHelp . vsepChunks $
     with_title "Available options:" (fullDesc pprefs p)
@@ -250,11 +250,11 @@ parserHelp pprefs p =
         vcatChunks (snd <$> a)
     group_title _ = mempty
 
-    with_title :: String -> Chunk Doc -> Chunk Doc
-    with_title title = fmap (string title .$.)
+    with_title :: String -> Chunk (Doc ann) -> Chunk (Doc ann)
+    with_title title = fmap (pretty title .$.)
 
 
-parserGlobals :: ParserPrefs -> Parser a -> ParserHelp
+parserGlobals :: ParserPrefs -> Parser ann a -> ParserHelp ann
 parserGlobals pprefs p =
   globalsHelp $
     (.$.) <$> stringChunk "Global options:"
@@ -263,11 +263,11 @@ parserGlobals pprefs p =
 
 
 -- | Generate option summary.
-parserUsage :: ParserPrefs -> Parser a -> String -> Doc
+parserUsage :: ParserPrefs -> Parser ann a -> String -> Doc ann
 parserUsage pprefs p progn =
   hsep
-    [ string "Usage:",
-      string progn,
+    [ pretty "Usage:",
+      pretty progn,
       align (extractChunk (briefDesc pprefs p))
     ]
 

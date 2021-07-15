@@ -1,4 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Options.Applicative.Extra (
   -- * Extra parser utilities
   --
@@ -46,7 +48,7 @@ import Options.Applicative.Types
 -- > opts :: ParserInfo Sample
 -- > opts = info (sample <**> helper) mempty
 
-helper :: Parser (a -> a)
+helper :: Parser ann (a -> a)
 helper =
   helperWith (mconcat [
     long "help",
@@ -64,7 +66,7 @@ helper =
 -- >          help "Show this help text",
 -- >          hidden
 -- >        ])) mempty
-helperWith :: Mod OptionFields (a -> a) -> Parser (a -> a)
+helperWith :: Mod ann (OptionFields ann) (a -> a) -> Parser ann (a -> a)
 helperWith modifiers =
   option helpReader $
     mconcat
@@ -84,7 +86,7 @@ helperWith modifiers =
 -- | Builder for a command parser with a \"helper\" option attached.
 -- Used in the same way as `subparser`, but includes a \"--help|-h\" inside
 -- the subcommand.
-hsubparser :: Mod CommandFields a -> Parser a
+hsubparser :: Mod ann (CommandFields ann) a -> Parser ann a
 hsubparser m = mkParser d g rdr
   where
     Mod _ d g = metavar "COMMAND" `mappend` m
@@ -97,17 +99,17 @@ hsubparser m = mkParser d g rdr
 --
 -- Parse command line arguments. Display help text and exit if any parse error
 -- occurs.
-execParser :: ParserInfo a -> IO a
+execParser :: ParserInfo ann a -> IO a
 execParser = customExecParser defaultPrefs
 
 -- | Run a program description with custom preferences.
-customExecParser :: ParserPrefs -> ParserInfo a -> IO a
+customExecParser :: ParserPrefs -> ParserInfo ann a -> IO a
 customExecParser pprefs pinfo
   = execParserPure pprefs pinfo <$> getArgs
   >>= handleParseResult
 
 -- | Handle `ParserResult`.
-handleParseResult :: ParserResult a -> IO a
+handleParseResult :: ParserResult ann a -> IO a
 handleParseResult (Success a) = return a
 handleParseResult (Failure failure) = do
       progn <- getProgName
@@ -129,15 +131,15 @@ handleParseResult (CompletionInvoked compl) = do
 --
 -- If you want to display error messages and invoke completion actions
 -- appropriately, use 'handleParseResult' instead.
-getParseResult :: ParserResult a -> Maybe a
+getParseResult :: ParserResult ann a -> Maybe a
 getParseResult (Success a) = Just a
 getParseResult _ = Nothing
 
 -- | The most general way to run a program description in pure code.
 execParserPure :: ParserPrefs       -- ^ Global preferences for this parser
-               -> ParserInfo a      -- ^ Description of the program to run
+               -> ParserInfo ann a  -- ^ Description of the program to run
                -> [String]          -- ^ Program arguments
-               -> ParserResult a
+               -> ParserResult ann a
 execParserPure pprefs pinfo args =
   case runP p pprefs of
     (Right (Right r), _) -> Success r
@@ -154,9 +156,9 @@ execParserPure pprefs pinfo args =
 -- This function can be used, for example, to show the help text for a parser:
 --
 -- @handleParseResult . Failure $ parserFailure pprefs pinfo ShowHelpText mempty@
-parserFailure :: ParserPrefs -> ParserInfo a
-              -> ParseError -> [Context]
-              -> ParserFailure ParserHelp
+parserFailure :: forall ann a. ParserPrefs -> ParserInfo ann a
+              -> ParseError ann -> [Context ann]
+              -> ParserFailure (ParserHelp ann)
 parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
   let h = with_context ctx pinfo $ \names pinfo' -> mconcat
             [ base_help pinfo'
@@ -188,14 +190,14 @@ parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
       ShowHelpText {}    -> ExitSuccess
       InfoMsg {}         -> ExitSuccess
 
-    with_context :: [Context]
-                 -> ParserInfo a
-                 -> (forall b . [String] -> ParserInfo b -> c)
-                 -> c
+    with_context :: [Context ann]
+                 -> ParserInfo ann a'
+                 -> (forall b' . [String] -> ParserInfo ann b' -> c')
+                 -> c'
     with_context [] i f = f [] i
     with_context c@(Context _ i:_) _ f = f (contextNames c) i
 
-    globals :: [Context] -> ParserHelp
+    globals :: [Context ann] -> ParserHelp ann
     globals cs =
       let
         voided =
@@ -310,7 +312,7 @@ parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
       _
         -> mempty
 
-    base_help :: ParserInfo a -> ParserHelp
+    base_help :: ParserInfo ann a' -> ParserHelp ann
     base_help i
       | show_full_help
       = mconcat [h, f, parserHelp pprefs (infoParser i)]
@@ -327,7 +329,7 @@ parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
       InfoMsg _                -> False
       _                        -> prefShowHelpOnError pprefs
 
-renderFailure :: ParserFailure ParserHelp -> String -> (String, ExitCode)
+renderFailure :: ParserFailure (ParserHelp ann) -> String -> (String, ExitCode)
 renderFailure failure progn =
   let (h, exit, cols) = execFailure failure progn
   in (renderHelp cols h, exit)

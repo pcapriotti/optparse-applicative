@@ -32,17 +32,17 @@ import Prelude
 import Options.Applicative.Common
 import Options.Applicative.Types
 
-data OptionFields a = OptionFields
+data OptionFields ann a = OptionFields
   { optNames :: [OptName]
   , optCompleter :: Completer
-  , optNoArgError :: String -> ParseError }
+  , optNoArgError :: String -> ParseError ann }
 
 data FlagFields a = FlagFields
   { flagNames :: [OptName]
   , flagActive :: a }
 
-data CommandFields a = CommandFields
-  { cmdCommands :: [(String, ParserInfo a)]
+data CommandFields ann a = CommandFields
+  { cmdCommands :: [(String, ParserInfo ann a)]
   , cmdGroup :: Maybe String }
 
 data ArgumentFields a = ArgumentFields
@@ -51,7 +51,7 @@ data ArgumentFields a = ArgumentFields
 class HasName f where
   name :: OptName -> f a -> f a
 
-instance HasName OptionFields where
+instance HasName (OptionFields ann) where
   name n fields = fields { optNames = n : optNames fields }
 
 instance HasName FlagFields where
@@ -60,7 +60,7 @@ instance HasName FlagFields where
 class HasCompleter f where
   modCompleter :: (Completer -> Completer) -> f a -> f a
 
-instance HasCompleter OptionFields where
+instance HasCompleter (OptionFields ann) where
   modCompleter f p = p { optCompleter = f (optCompleter p) }
 
 instance HasCompleter ArgumentFields where
@@ -69,18 +69,18 @@ instance HasCompleter ArgumentFields where
 class HasValue f where
   -- this is just so that it is not necessary to specify the kind of f
   hasValueDummy :: f a -> ()
-instance HasValue OptionFields where
+instance HasValue (OptionFields ann) where
   hasValueDummy _ = ()
 instance HasValue ArgumentFields where
   hasValueDummy _ = ()
 
 class HasMetavar f where
   hasMetavarDummy :: f a -> ()
-instance HasMetavar OptionFields where
+instance HasMetavar (OptionFields ann) where
   hasMetavarDummy _ = ()
 instance HasMetavar ArgumentFields where
   hasMetavarDummy _ = ()
-instance HasMetavar CommandFields where
+instance HasMetavar (CommandFields ann) where
   hasMetavarDummy _ = ()
 
 -- mod --
@@ -122,27 +122,27 @@ instance Semigroup (DefaultProp a) where
 -- One rarely needs to deal with modifiers directly, as most of the times it is
 -- sufficient to pass them to builders (such as 'strOption' or 'flag') to
 -- create options (see 'Options.Applicative.Builder').
-data Mod f a = Mod (f a -> f a)
+data Mod ann f a = Mod (f a -> f a)
                    (DefaultProp a)
-                   (OptProperties -> OptProperties)
+                   (OptProperties ann -> OptProperties ann)
 
-optionMod :: (OptProperties -> OptProperties) -> Mod f a
+optionMod :: (OptProperties ann -> OptProperties ann) -> Mod ann f a
 optionMod = Mod id mempty
 
-fieldMod :: (f a -> f a) -> Mod f a
+fieldMod :: (f a -> f a) -> Mod ann f a
 fieldMod f = Mod f mempty id
 
-instance Monoid (Mod f a) where
+instance Monoid (Mod ann f a) where
   mempty = Mod id mempty id
   mappend = (<>)
 
 -- | @since 0.13.0.0
-instance Semigroup (Mod f a) where
+instance Semigroup (Mod ann f a) where
   Mod f1 d1 g1 <> Mod f2 d2 g2
     = Mod (f2 . f1) (d2 <> d1) (g2 . g1)
 
 -- | Base default properties.
-baseProps :: OptProperties
+baseProps :: OptProperties ann
 baseProps = OptProperties
   { propMetaVar = ""
   , propVisibility = Visible
@@ -152,16 +152,16 @@ baseProps = OptProperties
   , propShowGlobal = True
   }
 
-mkCommand :: Mod CommandFields a -> (Maybe String, [String], String -> Maybe (ParserInfo a))
+mkCommand :: Mod ann (CommandFields ann) a -> (Maybe String, [String], String -> Maybe (ParserInfo ann a))
 mkCommand m = (group, map fst cmds, (`lookup` cmds))
   where
     Mod f _ _ = m
     CommandFields cmds group = f (CommandFields [] Nothing)
 
 mkParser :: DefaultProp a
-         -> (OptProperties -> OptProperties)
-         -> OptReader a
-         -> Parser a
+         -> (OptProperties ann -> OptProperties ann)
+         -> OptReader ann a
+         -> Parser ann a
 mkParser d@(DefaultProp def _) g rdr =
   let
     o = liftOpt $ mkOption d g rdr
@@ -169,14 +169,14 @@ mkParser d@(DefaultProp def _) g rdr =
     maybe o (\a -> o <|> pure a) def
 
 mkOption :: DefaultProp a
-         -> (OptProperties -> OptProperties)
-         -> OptReader a
-         -> Option a
+         -> (OptProperties ann -> OptProperties ann)
+         -> OptReader ann a
+         -> Option ann a
 mkOption d g rdr = Option rdr (mkProps d g)
 
 mkProps :: DefaultProp a
-        -> (OptProperties -> OptProperties)
-        -> OptProperties
+        -> (OptProperties ann -> OptProperties ann)
+        -> OptProperties ann
 mkProps (DefaultProp def sdef) g = props
   where
     props = (g baseProps)
@@ -185,10 +185,10 @@ mkProps (DefaultProp def sdef) g = props
 -- | Hide this option completely from the help text
 --
 -- Use 'hidden' if the option should remain visible in the full description.
-internal :: Mod f a
+internal :: Mod ann f a
 internal = optionMod $ \p -> p { propVisibility = Internal }
 
 
 -- | Suppress this option from appearing in global options
-noGlobal :: Mod f a
+noGlobal :: Mod ann f a
 noGlobal = optionMod $ \pp -> pp { propShowGlobal = False }

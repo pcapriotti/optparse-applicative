@@ -65,40 +65,40 @@ import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
 
 
-data ParseError
+data ParseError ann
   = ErrorMsg String
   | InfoMsg String
   | ShowHelpText (Maybe String)
   | UnknownError
-  | MissingError IsCmdStart SomeParser
+  | MissingError IsCmdStart (SomeParser ann)
   | ExpectsArgError String
-  | UnexpectedError String SomeParser
+  | UnexpectedError String (SomeParser ann)
 
 data IsCmdStart = CmdStart | CmdCont
   deriving Show
 
-instance Monoid ParseError where
+instance Monoid (ParseError ann) where
   mempty = UnknownError
   mappend = (<>)
 
-instance Semigroup ParseError where
+instance Semigroup (ParseError ann) where
   m <> UnknownError = m
   _ <> m = m
 
 -- | A full description for a runnable 'Parser' for a program.
-data ParserInfo a = ParserInfo
-  { infoParser :: Parser a    -- ^ the option parser for the program
-  , infoFullDesc :: Bool      -- ^ whether the help text should contain full
-                              -- documentation
-  , infoProgDesc :: Chunk Doc -- ^ brief parser description
-  , infoHeader :: Chunk Doc   -- ^ header of the full parser description
-  , infoFooter :: Chunk Doc   -- ^ footer of the full parser description
-  , infoFailureCode :: Int    -- ^ exit code for a parser failure
-  , infoPolicy :: ArgPolicy   -- ^ allow regular options and flags to occur
-                              -- after arguments (default: InterspersePolicy)
+data ParserInfo ann a = ParserInfo
+  { infoParser :: Parser ann a      -- ^ the option parser for the program
+  , infoFullDesc :: Bool            -- ^ whether the help text should contain full
+                                    -- documentation
+  , infoProgDesc :: Chunk (Doc ann) -- ^ brief parser description
+  , infoHeader :: Chunk (Doc ann)   -- ^ header of the full parser description
+  , infoFooter :: Chunk (Doc ann)   -- ^ footer of the full parser description
+  , infoFailureCode :: Int          -- ^ exit code for a parser failure
+  , infoPolicy :: ArgPolicy         -- ^ allow regular options and flags to occur
+                                    -- after arguments (default: InterspersePolicy)
   }
 
-instance Functor ParserInfo where
+instance Functor (ParserInfo ann) where
   fmap f i = i { infoParser = fmap f (infoParser i) }
 
 data Backtracking
@@ -148,16 +148,16 @@ data OptVisibility
   deriving (Eq, Ord, Show)
 
 -- | Specification for an individual parser option.
-data OptProperties = OptProperties
-  { propVisibility :: OptVisibility       -- ^ whether this flag is shown in the brief description
-  , propHelp :: Chunk Doc                 -- ^ help text for this option
-  , propMetaVar :: String                 -- ^ metavariable for this option
-  , propShowDefault :: Maybe String       -- ^ what to show in the help text as the default
-  , propShowGlobal :: Bool                -- ^ whether the option is presented in global options text
-  , propDescMod :: Maybe ( Doc -> Doc )   -- ^ a function to run over the brief description
+data OptProperties ann = OptProperties
+  { propVisibility :: OptVisibility           -- ^ whether this flag is shown in the brief description
+  , propHelp :: Chunk (Doc ann)               -- ^ help text for this option
+  , propMetaVar :: String                     -- ^ metavariable for this option
+  , propShowDefault :: Maybe String           -- ^ what to show in the help text as the default
+  , propShowGlobal :: Bool                    -- ^ whether the option is presented in global options text
+  , propDescMod :: Maybe (Doc ann -> Doc ann) -- ^ a function to run over the brief description
   }
 
-instance Show OptProperties where
+instance Show (OptProperties ann) where
   showsPrec p (OptProperties pV pH pMV pSD pSG _)
     = showParen (p >= 11)
     $ showString "OptProperties { propVisibility = " . shows pV
@@ -168,39 +168,39 @@ instance Show OptProperties where
     . showString ", propDescMod = _ }"
 
 -- | A single option of a parser.
-data Option a = Option
-  { optMain :: OptReader a               -- ^ reader for this option
-  , optProps :: OptProperties            -- ^ properties of this option
+data Option ann a = Option
+  { optMain :: OptReader ann a           -- ^ reader for this option
+  , optProps :: OptProperties ann        -- ^ properties of this option
   }
 
-data SomeParser = forall a . SomeParser (Parser a)
+data SomeParser ann = forall a. SomeParser (Parser ann a)
 
 -- | Subparser context, containing the 'name' of the subparser and its parser info.
 --   Used by parserFailure to display relevant usage information when parsing inside a subparser fails.
-data Context = forall a. Context String (ParserInfo a)
+data Context ann = forall a. Context String (ParserInfo ann a)
 
-instance Show (Option a) where
+instance Show (Option ann a) where
     show opt = "Option {optProps = " ++ show (optProps opt) ++ "}"
 
-instance Functor Option where
+instance Functor (Option ann) where
   fmap f (Option m p) = Option (fmap f m) p
 
 -- | A newtype over 'ReaderT String Except', used by option readers.
-newtype ReadM a = ReadM
-  { unReadM :: ReaderT String (Except ParseError) a }
+newtype ReadM ann a = ReadM
+  { unReadM :: ReaderT String (Except (ParseError ann)) a }
 
-instance Functor ReadM where
+instance Functor (ReadM ann) where
   fmap f (ReadM r) = ReadM (fmap f r)
 
-instance Applicative ReadM where
+instance Applicative (ReadM ann) where
   pure = ReadM . pure
   ReadM x <*> ReadM y = ReadM $ x <*> y
 
-instance Alternative ReadM where
+instance Alternative (ReadM ann) where
   empty = mzero
   (<|>) = mplus
 
-instance Monad ReadM where
+instance Monad (ReadM ann) where
   return = pure
   ReadM r >>= f = ReadM $ r >>= unReadM . f
 
@@ -208,99 +208,99 @@ instance Monad ReadM where
   fail = Fail.fail
 #endif
 
-instance Fail.MonadFail ReadM where
+instance Fail.MonadFail (ReadM ann) where
   fail = readerError
 
-instance MonadPlus ReadM where
+instance MonadPlus (ReadM ann) where
   mzero = ReadM mzero
   mplus (ReadM x) (ReadM y) = ReadM $ mplus x y
 
 -- | Return the value being read.
-readerAsk :: ReadM String
+readerAsk :: ReadM ann String
 readerAsk = ReadM ask
 
 -- | Abort option reader by exiting with a 'ParseError'.
-readerAbort :: ParseError -> ReadM a
+readerAbort :: ParseError ann -> ReadM ann a
 readerAbort = ReadM . lift . throwE
 
 -- | Abort option reader by exiting with an error message.
-readerError :: String -> ReadM a
+readerError :: String -> ReadM ann a
 readerError = readerAbort . ErrorMsg
 
-data CReader a = CReader
+data CReader ann a = CReader
   { crCompleter :: Completer
-  , crReader :: ReadM a }
+  , crReader :: ReadM ann a }
 
-instance Functor CReader where
+instance Functor (CReader ann) where
   fmap f (CReader c r) = CReader c (fmap f r)
 
 -- | An 'OptReader' defines whether an option matches an command line argument.
-data OptReader a
-  = OptReader [OptName] (CReader a) (String -> ParseError)
+data OptReader ann a
+  = OptReader [OptName] (CReader ann a) (String -> ParseError ann)
   -- ^ option reader
   | FlagReader [OptName] !a
   -- ^ flag reader
-  | ArgReader (CReader a)
+  | ArgReader (CReader ann a)
   -- ^ argument reader
-  | CmdReader (Maybe String) [String] (String -> Maybe (ParserInfo a))
+  | CmdReader (Maybe String) [String] (String -> Maybe (ParserInfo ann a))
   -- ^ command reader
 
-instance Functor OptReader where
+instance Functor (OptReader ann) where
   fmap f (OptReader ns cr e) = OptReader ns (fmap f cr) e
   fmap f (FlagReader ns x) = FlagReader ns (f x)
   fmap f (ArgReader cr) = ArgReader (fmap f cr)
   fmap f (CmdReader n cs g) = CmdReader n cs ((fmap . fmap) f . g)
 
 -- | A @Parser a@ is an option parser returning a value of type 'a'.
-data Parser a
+data Parser ann a
   = NilP (Maybe a)
-  | OptP (Option a)
-  | forall x . MultP (Parser (x -> a)) (Parser x)
-  | AltP (Parser a) (Parser a)
-  | forall x . BindP (Parser x) (x -> Parser a)
+  | OptP (Option ann a)
+  | forall x . MultP (Parser ann (x -> a)) (Parser ann x)
+  | AltP (Parser ann a) (Parser ann a)
+  | forall x . BindP (Parser ann x) (x -> Parser ann a)
 
-instance Functor Parser where
+instance Functor (Parser ann) where
   fmap f (NilP x) = NilP (fmap f x)
   fmap f (OptP opt) = OptP (fmap f opt)
   fmap f (MultP p1 p2) = MultP (fmap (f.) p1) p2
   fmap f (AltP p1 p2) = AltP (fmap f p1) (fmap f p2)
   fmap f (BindP p k) = BindP p (fmap f . k)
 
-instance Applicative Parser where
+instance Applicative (Parser ann) where
   pure = NilP . Just
   (<*>) = MultP
 
-newtype ParserM r = ParserM
-  { runParserM :: forall x . (r -> Parser x) -> Parser x }
+newtype ParserM ann r = ParserM
+  { runParserM :: forall x . (r -> Parser ann x) -> Parser ann x }
 
-instance Monad ParserM where
+instance Monad (ParserM ann) where
   return = pure
   ParserM f >>= g = ParserM $ \k -> f (\x -> runParserM (g x) k)
 
-instance Functor ParserM where
+instance Functor (ParserM ann) where
   fmap = liftM
 
-instance Applicative ParserM where
+instance Applicative (ParserM ann) where
   pure x = ParserM $ \k -> k x
   (<*>) = ap
 
-fromM :: ParserM a -> Parser a
+fromM :: ParserM ann a -> Parser ann a
 fromM (ParserM f) = f pure
 
-oneM :: Parser a -> ParserM a
+oneM :: Parser ann a -> ParserM ann a
 oneM p = ParserM (BindP p)
 
-manyM :: Parser a -> ParserM [a]
+manyM :: Parser ann a -> ParserM ann [a]
 manyM p = do
   mx <- oneM (optional p)
   case mx of
     Nothing -> return []
     Just x -> (x:) <$> manyM p
 
-someM :: Parser a -> ParserM [a]
+someM :: Parser ann a -> ParserM ann [a]
 someM p = (:) <$> oneM p <*> manyM p
 
-instance Alternative Parser where
+instance Alternative (Parser ann) where
   empty = NilP Nothing
   (<|>) = AltP
   many = fromM . manyM
@@ -343,29 +343,29 @@ instance Functor ParserFailure where
     let (h, exit, cols) = err progn in (f h, exit, cols)
 
 -- | Result of 'execParserPure'.
-data ParserResult a
+data ParserResult ann a
   = Success a
-  | Failure (ParserFailure ParserHelp)
+  | Failure (ParserFailure (ParserHelp ann))
   | CompletionInvoked CompletionResult
   deriving Show
 
-instance Functor ParserResult where
+instance Functor (ParserResult ann) where
   fmap f (Success a) = Success (f a)
   fmap _ (Failure f) = Failure f
   fmap _ (CompletionInvoked c) = CompletionInvoked c
 
-overFailure :: (ParserHelp -> ParserHelp)
-            -> ParserResult a -> ParserResult a
+overFailure :: (ParserHelp ann -> ParserHelp ann)
+            -> ParserResult ann a -> ParserResult ann a
 overFailure f (Failure failure) = Failure $ fmap f failure
 overFailure _ r = r
 
-instance Applicative ParserResult where
+instance Applicative (ParserResult ann) where
   pure = Success
   Success f <*> r = fmap f r
   Failure f <*> _ = Failure f
   CompletionInvoked c <*> _ = CompletionInvoked c
 
-instance Monad ParserResult where
+instance Monad (ParserResult ann) where
   return = pure
   Success x >>= f = f x
   Failure f >>= _ = Failure f
@@ -428,17 +428,17 @@ filterOptional t = case t of
   BindNode xs
     -> BindNode (filterOptional xs)
 
-optVisibility :: Option a -> OptVisibility
+optVisibility :: Option ann a -> OptVisibility
 optVisibility = propVisibility . optProps
 
-optHelp :: Option a -> Chunk Doc
+optHelp :: Option ann a -> Chunk (Doc ann)
 optHelp  = propHelp . optProps
 
-optMetaVar :: Option a -> String
+optMetaVar :: Option ann a -> String
 optMetaVar = propMetaVar . optProps
 
-optShowDefault :: Option a -> Maybe String
+optShowDefault :: Option ann a -> Maybe String
 optShowDefault = propShowDefault . optProps
 
-optDescMod :: Option a -> Maybe ( Doc -> Doc )
+optDescMod :: Option ann a -> Maybe ( Doc ann -> Doc ann )
 optDescMod = propDescMod . optProps

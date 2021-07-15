@@ -1,6 +1,8 @@
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeApplications           #-}
+
 {-# OPTIONS_GHC -fno-warn-orphans       #-}
 module Main where
 
@@ -27,24 +29,24 @@ import qualified Options.Applicative.NonEmpty
 
 
 import qualified Options.Applicative.Help as H
-import           Options.Applicative.Help.Pretty (Doc, SimpleDoc(..))
+import           Options.Applicative.Help.Pretty (Doc)
 import qualified Options.Applicative.Help.Pretty as Doc
 import           Options.Applicative.Help.Chunk
 import           Options.Applicative.Help.Levenshtein
 
 import           Prelude
 
-run :: ParserInfo a -> [String] -> ParserResult a
+run :: ParserInfo ann a -> [String] -> ParserResult ann a
 run = execParserPure defaultPrefs
 
-assertError :: Show a => ParserResult a
-            -> (ParserFailure ParserHelp -> Property) -> Property
+assertError :: Show a => ParserResult ann a
+            -> (ParserFailure (ParserHelp ann) -> Property) -> Property
 assertError x f = case x of
   Success r -> counterexample ("expected failure, got success: " ++ show r) failed
   Failure e -> f e
   CompletionInvoked _ -> counterexample "expected failure, got completion" failed
 
-assertResult :: ParserResult a -> (a -> Property) -> Property
+assertResult :: ParserResult ann a -> (a -> Property) -> Property
 assertResult x f = case x of
   Success r -> f r
   Failure e -> do
@@ -57,7 +59,7 @@ assertHasLine l s = counterexample ("expected line:\n\t" ++ l ++ "\nnot found")
                   $ l `elem` lines s
 
 checkHelpTextWith :: Show a => ExitCode -> ParserPrefs -> String
-                  -> ParserInfo a -> [String] -> Property
+                  -> ParserInfo ann a -> [String] -> Property
 checkHelpTextWith ecode pprefs name p args = ioProperty $ do
   let result = execParserPure pprefs p args
   expected <- readFile $ "tests/" ++ name ++ ".err.txt"
@@ -65,7 +67,7 @@ checkHelpTextWith ecode pprefs name p args = ioProperty $ do
     let (msg, code) = renderFailure failure name
     in  (expected === msg ++ "\n") .&&. (ecode === code)
 
-checkHelpText :: Show a => String -> ParserInfo a -> [String] -> Property
+checkHelpText :: Show a => String -> ParserInfo ann a -> [String] -> Property
 checkHelpText = checkHelpTextWith ExitSuccess defaultPrefs
 
 prop_hello :: Property
@@ -136,7 +138,7 @@ prop_alt_cont = once $
 
 prop_alt_help :: Property
 prop_alt_help = once $
-  let p :: Parser (Maybe (Either String String))
+  let p :: Parser ann (Maybe (Either String String))
       p = p1 <|> p2 <|> p3
       p1 = (Just . Left)
         <$> strOption ( long "virtual-machine"
@@ -152,7 +154,7 @@ prop_alt_help = once $
 
 prop_optional_help :: Property
 prop_optional_help = once $
-  let p :: Parser (Maybe (String, String))
+  let p :: Parser ann (Maybe (String, String))
       p = optional ((,)
                     <$> strOption ( long "a"
                                     <> metavar "A"
@@ -188,7 +190,7 @@ prop_optional_alt_requiring_parens = once $
 
 prop_nested_optional_help :: Property
 prop_nested_optional_help = once $
-  let p :: Parser (String, Maybe (String, Maybe String))
+  let p :: Parser ann (String, Maybe (String, Maybe String))
       p = (,) <$>
           (strOption ( short 'a'
                        <> long "a"
@@ -207,7 +209,7 @@ prop_nested_optional_help = once $
 
 prop_long_equals :: Property
 prop_long_equals = once $
-  let p :: Parser String
+  let p :: Parser ann String
       p = option auto (   long "intval"
                        <> short 'j'
                        <> long "intval2"
@@ -218,7 +220,7 @@ prop_long_equals = once $
 
 prop_long_equals_doesnt_do_shorts :: Property
 prop_long_equals_doesnt_do_shorts = once $
-  let p :: Parser String
+  let p :: Parser ann String
       p = option auto (   short 'i'
                        <> help "integer value")
       i = info (p <**> helper) fullDesc
@@ -229,7 +231,7 @@ prop_long_equals_doesnt_do_shorts = once $
 
 prop_nested_fun :: Property
 prop_nested_fun = once $
-  let p :: Parser (String, Maybe (String, Maybe String))
+  let p :: Parser ann (String, Maybe (String, Maybe String))
       p = (,) <$>
           (strOption (short 'a' <> long "a" <> metavar "A")) <*>
           (optional
@@ -244,7 +246,7 @@ prop_nested_fun = once $
 
 prop_nested_commands :: Property
 prop_nested_commands = once $
-  let p3 :: Parser String
+  let p3 :: Parser ann String
       p3 = strOption (short 'a' <> metavar "A")
       p2 = subparser (command "b" (info p3 idm))
       p1 = subparser (command "c" (info p2 idm))
@@ -253,7 +255,7 @@ prop_nested_commands = once $
 
 prop_drops_back_contexts :: Property
 prop_drops_back_contexts = once $
-  let p3 :: Parser String
+  let p3 :: Parser ann String
       p3 = strOption (short 'a' <> metavar "A")
       p2 = subparser (command "b" (info p3 idm)  <> metavar "B")
       p1 = subparser (command "c" (info p3 idm)  <> metavar "C")
@@ -263,7 +265,7 @@ prop_drops_back_contexts = once $
 
 prop_context_carry :: Property
 prop_context_carry = once $
-  let p3 :: Parser String
+  let p3 :: Parser ann String
       p3 = strOption (short 'a' <> metavar "A")
       p2 = subparser (command "b" (info p3 idm)  <> metavar "B")
       p1 = subparser (command "c" (info p3 idm)  <> metavar "C")
@@ -273,7 +275,7 @@ prop_context_carry = once $
 
 prop_help_on_empty :: Property
 prop_help_on_empty = once $
-  let p3 :: Parser String
+  let p3 :: Parser ann String
       p3 = strOption (short 'a' <> metavar "A")
       p2 = subparser (command "b" (info p3 idm)  <> metavar "B")
       p1 = subparser (command "c" (info p3 idm)  <> metavar "C")
@@ -283,7 +285,7 @@ prop_help_on_empty = once $
 
 prop_help_on_empty_sub :: Property
 prop_help_on_empty_sub = once $
-  let p3 :: Parser String
+  let p3 :: Parser ann String
       p3 = strOption (short 'a' <> metavar "A" <> help "both commands require this")
       p2 = subparser (command "b" (info p3 idm)  <> metavar "B")
       p1 = subparser (command "c" (info p3 idm)  <> metavar "C")
@@ -293,7 +295,7 @@ prop_help_on_empty_sub = once $
 
 prop_many_args :: Property
 prop_many_args = forAll (choose (0,2000)) $ \nargs ->
-  let p :: Parser [String]
+  let p :: Parser ann [String]
       p = many (argument str idm)
       i = info p idm
       result = run i (replicate nargs "foo")
@@ -349,7 +351,7 @@ prop_completion_opt_after_double_dash = once . ioProperty $
 
 prop_completion_only_reachable :: Property
 prop_completion_only_reachable = once . ioProperty $
-  let p :: Parser (String,String)
+  let p :: Parser ann (String,String)
       p = (,)
         <$> strArgument (completeWith ["reachable"])
         <*> strArgument (completeWith ["unreachable"])
@@ -364,7 +366,7 @@ prop_completion_only_reachable = once . ioProperty $
 
 prop_completion_only_reachable_deep :: Property
 prop_completion_only_reachable_deep = once . ioProperty $
-  let p :: Parser (String,String)
+  let p :: Parser ann (String,String)
       p = (,)
         <$> strArgument (completeWith ["seen"])
         <*> strArgument (completeWith ["now-reachable"])
@@ -381,7 +383,7 @@ prop_completion_only_reachable_deep = once . ioProperty $
 
 prop_completion_multi :: Property
 prop_completion_multi = once . ioProperty $
-  let p :: Parser [String]
+  let p :: Parser ann [String]
       p = many (strArgument (completeWith ["reachable"]))
       i = info p idm
       result = run i [ "--bash-completion-index", "3"
@@ -427,7 +429,7 @@ prop_completion_rich_lengths = once . ioProperty $
 
 prop_bind_usage :: Property
 prop_bind_usage = once $
-  let p :: Parser [String]
+  let p :: Parser ann [String]
       p = many (argument str (metavar "ARGS..."))
       i = info (p <**> helper) briefDesc
       result = run i ["--help"]
@@ -446,7 +448,7 @@ prop_issue_19 = once $
 
 prop_arguments1_none :: Property
 prop_arguments1_none =
-  let p :: Parser [String]
+  let p :: Parser ann [String]
       p = some (argument str idm)
       i = info (p <**> helper) idm
       result = run i []
@@ -454,7 +456,7 @@ prop_arguments1_none =
 
 prop_arguments1_some :: Property
 prop_arguments1_some = once $
-  let p :: Parser [String]
+  let p :: Parser ann [String]
       p = some (argument str idm)
       i = info (p <**> helper) idm
       result = run i ["foo", "--", "bar", "baz"]
@@ -462,7 +464,7 @@ prop_arguments1_some = once $
 
 prop_arguments_switch :: Property
 prop_arguments_switch = once $
-  let p :: Parser [String]
+  let p :: Parser ann [String]
       p =  switch (short 'x')
         *> many (argument str idm)
       i = info p idm
@@ -514,7 +516,7 @@ prop_error_context = once $
     pk :: Int -> Int -> (Int, Int)
     pk = (,)
 
-condr :: (Int -> Bool) -> ReadM Int
+condr :: (Int -> Bool) -> ReadM ann Int
 condr f = do
   x <- auto
   guard (f x)
@@ -576,7 +578,7 @@ prop_count_flags = once $
 
 prop_issue_47 :: Property
 prop_issue_47 = once $
-  let p = option r (long "test" <> value 9) :: Parser Int
+  let p = option r (long "test" <> value 9) :: Parser ann Int
       r = readerError "error message"
       result = run (info p idm) ["--test", "x"]
   in assertError result $ \failure ->
@@ -670,7 +672,7 @@ prop_argument_error :: Property
 prop_argument_error = once $
   let r = (auto >>= \x -> x <$ guard (x == 42))
         <|> (str >>= \x -> readerError (x ++ " /= 42"))
-      p1 = argument r idm :: Parser Int
+      p1 = argument r idm :: Parser ann Int
       i = info (p1 *> p1) idm
   in assertError (run i ["3", "4"]) $ \failure ->
     let text = head . lines . fst $ renderFailure failure "test"
@@ -680,7 +682,7 @@ prop_reader_error_mplus :: Property
 prop_reader_error_mplus = once $
   let r = (auto >>= \x -> x <$ guard (x == 42))
         <|> (str >>= \x -> readerError (x ++ " /= 42"))
-      p1 = argument r idm :: Parser Int
+      p1 = argument r idm :: Parser ann Int
       i = info p1 idm
   in assertError (run i ["foo"]) $ \failure ->
     let text = head . lines . fst $ renderFailure failure "test"
@@ -688,7 +690,7 @@ prop_reader_error_mplus = once $
 
 prop_missing_flags_described :: Property
 prop_missing_flags_described = once $
-  let p :: Parser (String, String, Maybe String)
+  let p :: Parser ann (String, String, Maybe String)
       p = (,,)
        <$> option str (short 'a')
        <*> option str (short 'b')
@@ -700,7 +702,7 @@ prop_missing_flags_described = once $
 
 prop_many_missing_flags_described :: Property
 prop_many_missing_flags_described = once $
-  let p :: Parser (String, String)
+  let p :: Parser ann (String, String)
       p = (,)
         <$> option str (short 'a')
         <*> option str (short 'b')
@@ -711,7 +713,7 @@ prop_many_missing_flags_described = once $
 
 prop_alt_missing_flags_described :: Property
 prop_alt_missing_flags_described = once $
-  let p :: Parser String
+  let p :: Parser ann String
       p = option str (short 'a') <|> option str (short 'b')
       i = info p idm
   in assertError (run i []) $ \failure ->
@@ -720,7 +722,7 @@ prop_alt_missing_flags_described = once $
 
 prop_missing_option_parameter_err :: Property
 prop_missing_option_parameter_err = once $
-  let p :: Parser String
+  let p :: Parser ann String
       p = option str (short 'a')
       i = info p idm
   in assertError (run i ["-a"]) $ \failure ->
@@ -729,7 +731,7 @@ prop_missing_option_parameter_err = once $
 
 prop_many_pairs_success :: Property
 prop_many_pairs_success = once $
-  let p :: Parser [(String, String)]
+  let p :: Parser ann [(String, String)]
       p = many $ (,) <$> argument str idm <*> argument str idm
       i = info p idm
       nargs = 10000
@@ -738,7 +740,7 @@ prop_many_pairs_success = once $
 
 prop_many_pairs_failure :: Property
 prop_many_pairs_failure = once $
-  let p :: Parser [(String, String)]
+  let p :: Parser ann [(String, String)]
       p = many $ (,) <$> argument str idm <*> argument str idm
       i = info p idm
       nargs = 9999
@@ -747,7 +749,7 @@ prop_many_pairs_failure = once $
 
 prop_many_pairs_lazy_progress :: Property
 prop_many_pairs_lazy_progress = once $
-  let p :: Parser [(Maybe String, String)]
+  let p :: Parser ann [(Maybe String, String)]
       p = many $ (,) <$> optional (option str (short 'a')) <*> argument str idm
       i = info p idm
       result = run i ["foo", "-abar", "baz"]
@@ -768,7 +770,7 @@ prop_suggest = once $
 
 prop_grouped_some_option_ellipsis :: Property
 prop_grouped_some_option_ellipsis = once $
-  let x :: Parser String
+  let x :: Parser ann String
       x = strOption (short 'x' <> metavar "X")
       p = prefs (multiSuffix "...")
       r = show . extractChunk $ H.briefDesc p (x *> some x)
@@ -776,7 +778,7 @@ prop_grouped_some_option_ellipsis = once $
 
 prop_grouped_many_option_ellipsis :: Property
 prop_grouped_many_option_ellipsis = once $
-  let x :: Parser String
+  let x :: Parser ann String
       x = strOption (short 'x' <> metavar "X")
       p = prefs (multiSuffix "...")
       r = show . extractChunk $ H.briefDesc p (x *> many x)
@@ -784,7 +786,7 @@ prop_grouped_many_option_ellipsis = once $
 
 prop_grouped_some_argument_ellipsis :: Property
 prop_grouped_some_argument_ellipsis = once $
-  let x :: Parser String
+  let x :: Parser ann String
       x = strArgument (metavar "X")
       p = prefs (multiSuffix "...")
       r = show . extractChunk $ H.briefDesc p (x *> some x)
@@ -792,7 +794,7 @@ prop_grouped_some_argument_ellipsis = once $
 
 prop_grouped_many_argument_ellipsis :: Property
 prop_grouped_many_argument_ellipsis = once $
-  let x :: Parser String
+  let x :: Parser ann String
       x = strArgument (metavar "X")
       p = prefs (multiSuffix "...")
       r = show . extractChunk $ H.briefDesc p (x *> many x)
@@ -800,7 +802,7 @@ prop_grouped_many_argument_ellipsis = once $
 
 prop_grouped_some_pairs_argument_ellipsis :: Property
 prop_grouped_some_pairs_argument_ellipsis = once $
-  let x :: Parser String
+  let x :: Parser ann String
       x = strArgument (metavar "X")
       p = prefs (multiSuffix "...")
       r = show . extractChunk $ H.briefDesc p (x *> some (x *> x))
@@ -808,7 +810,7 @@ prop_grouped_some_pairs_argument_ellipsis = once $
 
 prop_grouped_many_pairs_argument_ellipsis :: Property
 prop_grouped_many_pairs_argument_ellipsis = once $
-  let x :: Parser String
+  let x :: Parser ann String
       x = strArgument (metavar "X")
       p = prefs (multiSuffix "...")
       r = show . extractChunk $ H.briefDesc p (x *> many (x *> x))
@@ -816,7 +818,7 @@ prop_grouped_many_pairs_argument_ellipsis = once $
 
 prop_grouped_some_dual_option_ellipsis :: Property
 prop_grouped_some_dual_option_ellipsis = once $
-  let x :: Parser String
+  let x :: Parser ann String
       x = strOption (short 'a' <> short 'b' <> metavar "X")
       p = prefs (multiSuffix "...")
       r = show . extractChunk $ H.briefDesc p (x *> some x)
@@ -824,7 +826,7 @@ prop_grouped_some_dual_option_ellipsis = once $
 
 prop_grouped_many_dual_option_ellipsis :: Property
 prop_grouped_many_dual_option_ellipsis = once $
-  let x :: Parser String
+  let x :: Parser ann String
       x = strOption (short 'a' <> short 'b' <> metavar "X")
       p = prefs (multiSuffix "...")
       r = show . extractChunk $ H.briefDesc p (x *> many x)
@@ -894,12 +896,10 @@ prop_help_unknown_context = once $
 ---
 
 deriving instance Arbitrary a => Arbitrary (Chunk a)
-deriving instance Eq SimpleDoc
-deriving instance Show SimpleDoc
 
-equalDocs :: Float -> Int -> Doc -> Doc -> Property
-equalDocs f w d1 d2 = Doc.renderPretty f w d1
-                  === Doc.renderPretty f w d2
+equalDocs :: (Eq ann, Show ann) => Double -> Int -> Doc ann -> Doc ann -> Property
+equalDocs f w d1 d2 = Doc.layoutPretty (Doc.LayoutOptions (Doc.AvailablePerLine w f)) d1
+                  === Doc.layoutPretty (Doc.LayoutOptions (Doc.AvailablePerLine w f)) d2
 
 prop_listToChunk_1 :: [String] -> Property
 prop_listToChunk_1 xs = isEmpty (listToChunk xs) === null xs
@@ -913,10 +913,10 @@ prop_extractChunk_1 x = extractChunk (pure x) === x
 prop_extractChunk_2 :: Chunk String -> Property
 prop_extractChunk_2 x = extractChunk (fmap pure x) === x
 
-prop_stringChunk_1 :: Positive Float -> Positive Int -> String -> Property
+prop_stringChunk_1 :: Positive Double -> Positive Int -> String -> Property
 prop_stringChunk_1 (Positive f) (Positive w) s =
-  equalDocs f w (extractChunk (stringChunk s))
-                (Doc.string s)
+  equalDocs @() f w (extractChunk (stringChunk s))
+                (Doc.pretty s)
 
 prop_stringChunk_2 :: String -> Property
 prop_stringChunk_2 s = isEmpty (stringChunk s) === null s

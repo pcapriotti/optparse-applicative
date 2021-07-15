@@ -1,6 +1,8 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module Options.Applicative.Help.Pretty
-  ( module Text.PrettyPrint.ANSI.Leijen
+  ( module Prettyprinter
   , (.$.)
   , groupOrNestLine
   , altSep
@@ -11,19 +13,18 @@ import           Control.Applicative
 import           Data.Semigroup ((<>))
 #endif
 
-import           Text.PrettyPrint.ANSI.Leijen hiding ((<$>), (<>), columns)
-import           Text.PrettyPrint.ANSI.Leijen.Internal (Doc (..), flatten)
-import qualified Text.PrettyPrint.ANSI.Leijen as PP
-
+import           Prettyprinter hiding ((<$>), (<>), columns)
+import           Prettyprinter.Internal (Doc (..))
+import qualified Prettyprinter as PP
 import           Prelude
 
-(.$.) :: Doc -> Doc -> Doc
-(.$.) = (PP.<$>)
+(.$.) :: Doc ann -> Doc ann -> Doc ann
+(.$.) x y = x <> line <> y
 
 
 -- | Apply the function if we're not at the
 --   start of our nesting level.
-ifNotAtRoot :: (Doc -> Doc) -> Doc -> Doc
+ifNotAtRoot :: (Doc ann -> Doc ann) -> Doc ann -> Doc ann
 ifNotAtRoot f doc =
   Nesting $ \i ->
     Column $ \j ->
@@ -37,11 +38,28 @@ ifNotAtRoot f doc =
 --
 --   This will also nest subsequent lines in the
 --   group.
-groupOrNestLine :: Doc -> Doc
+groupOrNestLine :: Doc ann -> Doc ann
 groupOrNestLine =
   Union
     <$> flatten
     <*> ifNotAtRoot (line <>) . nest 2
+  where flatten :: Doc ann -> Doc ann
+        flatten doc = case doc of
+          FlatAlt _ y     -> flatten y
+          Cat x y         -> Cat (flatten x) (flatten y)
+          Nest i x        -> Nest i (flatten x)
+          Line            -> Fail
+          Union x _       -> flatten x
+          Column f        -> Column (flatten . f)
+          WithPageWidth f -> WithPageWidth (flatten . f)
+          Nesting f       -> Nesting (flatten . f)
+          Annotated ann x -> Annotated ann (flatten x)
+
+          x@Fail   -> x
+          x@Empty  -> x
+          x@Char{} -> x
+          x@Text{} -> x
+
 
 
 -- | Separate items in an alternative with a pipe.
@@ -54,6 +72,6 @@ groupOrNestLine =
 --   does fit on the line, there is at least a space,
 --   but it's possible for y to still appear on the
 --   next line.
-altSep :: Doc -> Doc -> Doc
+altSep :: Doc ann -> Doc ann -> Doc ann
 altSep x y =
-  group (x <+> char '|' <> line) <//> y
+  group (x <+> "|" <> line) <> softline' <> y

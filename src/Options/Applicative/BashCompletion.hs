@@ -1,3 +1,6 @@
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 -- | You don't need to import this module to enable bash completion.
 --
 -- See
@@ -19,6 +22,7 @@ import Options.Applicative.Internal
 import Options.Applicative.Types
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
+import Prettyprinter.Render.String
 
 -- | Provide basic or rich command completions
 data Richness
@@ -31,7 +35,7 @@ data Richness
   --   description length.
   deriving (Eq, Ord, Show)
 
-bashCompletionParser :: ParserInfo a -> ParserPrefs -> Parser CompletionResult
+bashCompletionParser :: ParserInfo ann a -> ParserPrefs -> Parser ann CompletionResult
 bashCompletionParser pinfo pprefs = complParser
   where
     failure opts = CompletionResult
@@ -64,7 +68,7 @@ bashCompletionParser pinfo pprefs = complParser
             strOption (long "zsh-completion-script" `mappend` internal))
       ]
 
-bashCompletionQuery :: ParserInfo a -> ParserPrefs -> Richness -> [String] -> Int -> String -> IO [String]
+bashCompletionQuery :: forall ann a. ParserInfo ann a -> ParserPrefs -> Richness -> [String] -> Int -> String -> IO [String]
 bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl pprefs of
   Just (Left (SomeParser p, a))
     -> list_options a p
@@ -73,8 +77,10 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
   Nothing
     -> return []
   where
+    compl :: Completion ann a
     compl = runParserInfo pinfo (drop 1 ws')
 
+    list_options :: ArgPolicy -> Parser ann a' -> IO [String]
     list_options a
       = fmap concat
       . sequence
@@ -91,6 +97,7 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
     --
     -- For options and flags, ensure that the user
     -- hasn't disabled them with `--`.
+    opt_completions :: ArgPolicy -> ArgumentReachability -> Option ann a' -> IO [String]
     opt_completions argPolicy reachability opt = case optMain opt of
       OptReader ns _ _
          | argPolicy /= AllPositionals
@@ -115,7 +122,7 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
 
     -- When doing enriched completions, add any help specified
     -- to the completion variables (tab separated).
-    add_opt_help :: Functor f => Option a -> f String -> f String
+    add_opt_help :: Functor f => Option ann a' -> f String -> f String
     add_opt_help opt = case richness of
       Standard ->
         id
@@ -126,7 +133,7 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
 
     -- When doing enriched completions, add the command description
     -- to the completion variables (tab separated).
-    add_cmd_help :: Functor f => (String -> Maybe (ParserInfo a)) -> f String -> f String
+    add_cmd_help :: Functor f => (String -> Maybe (ParserInfo ann a')) -> f String -> f String
     add_cmd_help p = case richness of
       Standard ->
         id
@@ -141,8 +148,8 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
     -- We only want to show a single line in the completion results description.
     -- If there was a line break, it would come across as a different completion
     -- possibility.
-    render_line :: Int -> Doc -> String
-    render_line len doc = case lines (displayS (renderPretty 1 len doc) "") of
+    render_line :: Int -> Doc ann -> String
+    render_line len doc = case lines (renderShowS (layoutPretty (LayoutOptions (AvailablePerLine len 1.0)) doc) "") of
       [] -> ""
       [x] -> x
       x : _ -> x ++ "..."

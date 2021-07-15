@@ -12,5 +12,5 @@ import Prelude
 --
 --   Functionally identical to 'Data.List.NonEmpty.some1',
 --   but is preferred as it gives a nicer help text.
-some1 :: Parser a -> Parser (NonEmpty a)
+some1 :: Parser ann a -> Parser ann (NonEmpty a)
 some1 p = fromM $ (:|) <$> oneM p <*> manyM p

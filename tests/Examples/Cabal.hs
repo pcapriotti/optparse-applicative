@@ -39,12 +39,12 @@ data BuildOpts = BuildOpts
   { buildDir :: FilePath }
   deriving Show
 
-version :: Parser (a -> a)
+version :: Parser ann (a -> a)
 version = infoOption "0.0.0"
   (  long "version"
   <> help "Print version information" )
 
-parser :: Parser Args
+parser :: Parser ann Args
 parser = runA $ proc () -> do
   opts <- asA commonOpts -< ()
   cmds <- (asA . hsubparser)
@@ -62,7 +62,7 @@ parser = runA $ proc () -> do
                     (progDesc "Make this package ready for installation")) ) -< ()
   A version >>> A helper -< Args opts cmds
 
-commonOpts :: Parser CommonOpts
+commonOpts :: Parser ann CommonOpts
 commonOpts = CommonOpts
   <$> option auto
       ( short 'v'
@@ -71,13 +71,13 @@ commonOpts = CommonOpts
      <> help "Set verbosity to LEVEL"
      <> value 0 )
 
-installParser :: Parser Command
+installParser :: Parser ann Command
 installParser = runA $ proc () -> do
   config <- asA configureOpts -< ()
   inst <- asA installOpts -< ()
   returnA -< Install config inst
 
-installOpts :: Parser InstallOpts
+installOpts :: Parser ann InstallOpts
 installOpts = runA $ proc () -> do
   reinst <- asA (switch (long "reinstall")) -< ()
   force <- asA (switch (long "force-reinstall")) -< ()
@@ -85,15 +85,15 @@ installOpts = runA $ proc () -> do
              { instReinstall = reinst
              , instForce = force }
 
-updateParser :: Parser Command
+updateParser :: Parser ann Command
 updateParser = pure Update
 
-configureParser :: Parser Command
+configureParser :: Parser ann Command
 configureParser = runA $ proc () -> do
   config <- asA configureOpts -< ()
   returnA -< Configure config
 
-configureOpts :: Parser ConfigureOpts
+configureOpts :: Parser ann ConfigureOpts
 configureOpts = runA $ proc () -> do
   tests <- (asA . switch)
              ( long "enable-tests"
@@ -105,12 +105,12 @@ configureOpts = runA $ proc () -> do
             <> help "Enable the given flag" ) -< ()
   returnA -< ConfigureOpts tests flags
 
-buildParser :: Parser Command
+buildParser :: Parser ann Command
 buildParser = runA $ proc () -> do
   opts <- asA buildOpts -< ()
   returnA -< Build opts
 
-buildOpts :: Parser BuildOpts
+buildOpts :: Parser ann BuildOpts
 buildOpts = runA $ proc () -> do
   bdir <- (asA . strOption)
             ( long "builddir"
@@ -118,7 +118,7 @@ buildOpts = runA $ proc () -> do
            <> value "dist" ) -< ()
   returnA -< BuildOpts bdir
 
-pinfo :: ParserInfo Args
+pinfo :: ParserInfo ann Args
 pinfo = info parser
   ( progDesc "An example modelled on cabal" )
 

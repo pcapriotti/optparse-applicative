@@ -99,7 +99,7 @@ library
   build-depends:       base                            == 4.*
                      , transformers                    >= 0.2 && < 0.6
                      , transformers-compat             >= 0.3 && < 0.7
-                     , ansi-wl-pprint                  >= 0.6.8 && < 0.7
+                     , prettyprinter                   >= 1.7.0 && < 1.8
 
   if flag(process)
     build-depends:     process                         >= 1.0 && < 1.7

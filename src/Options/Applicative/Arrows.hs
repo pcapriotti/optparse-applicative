@@ -72,4 +72,4 @@ instance Applicative f => Arrow (A f) where
   first (A f) = A $ first <$> f
 
 -- | The type of arrows associated to the applicative 'Parser' functor.
-type ParserA = A Parser
+type ParserA ann = A (Parser ann)

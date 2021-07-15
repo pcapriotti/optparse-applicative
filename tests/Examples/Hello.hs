@@ -11,7 +11,7 @@ data Sample = Sample
   , repeat :: Int }
   deriving Show
 
-sample :: Parser Sample
+sample :: Parser ann Sample
 sample = Sample
       <$> strOption
           ( long "hello"
@@ -31,7 +31,7 @@ sample = Sample
 main :: IO ()
 main = greet =<< execParser opts
 
-opts :: ParserInfo Sample
+opts :: ParserInfo ann Sample
 opts = info (sample <**> helper)
   ( fullDesc
   <> progDesc "Print a greeting for TARGET"
