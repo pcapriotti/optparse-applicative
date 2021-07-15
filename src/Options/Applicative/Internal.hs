@@ -1,3 +1,10 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Options.Applicative.Internal
   ( P
   , MonadP(..)
@@ -34,126 +41,127 @@ import Control.Monad.Trans.Except
 import Control.Monad.Trans.Reader
   (mapReaderT, runReader, runReaderT, Reader, ReaderT, ask)
 import Control.Monad.Trans.State (StateT, get, put, modify, evalStateT, runStateT)
+import Data.Proxy
 
 import Options.Applicative.Types
 
-class (Alternative m, MonadPlus m) => MonadP m where
-  enterContext :: String -> ParserInfo a -> m ()
-  exitContext :: m ()
-  getPrefs :: m ParserPrefs
+class (Alternative m, MonadPlus m) => MonadP ann m where
+  enterContext :: String -> ParserInfo ann a -> m ()
+  exitContext :: Proxy ann -> m ()
+  getPrefs :: Proxy ann -> m ParserPrefs
 
-  missingArgP :: ParseError -> Completer -> m a
-  errorP :: ParseError -> m a
-  exitP :: IsCmdStart -> ArgPolicy -> Parser b -> Maybe a -> m a
+  missingArgP :: Proxy ann -> ParseError ann -> Completer -> m a
+  errorP :: Proxy ann -> ParseError ann -> m a
+  exitP :: IsCmdStart -> ArgPolicy -> Parser ann b -> Maybe a -> m a
 
-newtype P a = P (ExceptT ParseError (StateT [Context] (Reader ParserPrefs)) a)
+data P ann a = P (ExceptT (ParseError ann) (StateT [Context ann] (Reader ParserPrefs)) a)
 
-instance Functor P where
+instance Functor (P ann) where
   fmap f (P m) = P $ fmap f m
 
-instance Applicative P where
+instance Applicative (P ann) where
   pure a = P $ pure a
   P f <*> P a = P $ f <*> a
 
-instance Alternative P where
+instance Alternative (P ann) where
   empty = P empty
   P x <|> P y = P $ x <|> y
 
-instance Monad P where
+instance Monad (P ann) where
   return = pure
   P x >>= k = P $ x >>= \a -> case k a of P y -> y
 
-instance MonadPlus P where
+instance MonadPlus (P ann) where
   mzero = P mzero
   mplus (P x) (P y) = P $ mplus x y
 
-contextNames :: [Context] -> [String]
+contextNames :: [Context ann] -> [String]
 contextNames ns =
   let go (Context n _) = n
   in  reverse $ go <$> ns
 
-instance MonadP P where
+instance MonadP ann (P ann) where
   enterContext name pinfo = P $ lift $ modify $ (:) $ Context name pinfo
-  exitContext = P $ lift $ modify $ drop 1
-  getPrefs = P . lift . lift $ ask
+  exitContext _ = P $ lift $ modify $ drop 1
+  getPrefs _ = P . lift . lift $ ask
 
-  missingArgP e _ = errorP e
+  missingArgP proxy e _ = errorP proxy e
   exitP i _ p = P . maybe (throwE . MissingError i . SomeParser $ p) return
-  errorP = P . throwE
+  errorP _ = P . throwE
 
 hoistMaybe :: MonadPlus m => Maybe a -> m a
 hoistMaybe = maybe mzero return
 
-hoistEither :: MonadP m => Either ParseError a -> m a
-hoistEither = either errorP return
+hoistEither :: MonadP ann m => Proxy ann -> Either (ParseError ann) a -> m a
+hoistEither proxy = either (errorP proxy) return
 
-runP :: P a -> ParserPrefs -> (Either ParseError a, [Context])
+runP :: P ann a -> ParserPrefs -> (Either (ParseError ann) a, [Context ann])
 runP (P p) = runReader . flip runStateT [] . runExceptT $ p
 
 uncons :: [a] -> Maybe (a, [a])
 uncons [] = Nothing
 uncons (x : xs) = Just (x, xs)
 
-runReadM :: MonadP m => ReadM a -> String -> m a
-runReadM (ReadM r) s = hoistEither . runExcept $ runReaderT r s
+runReadM :: MonadP ann m => Proxy ann -> ReadM ann a -> String -> m a
+runReadM proxy (ReadM r) s = hoistEither proxy . runExcept $ runReaderT r s
 
-withReadM :: (String -> String) -> ReadM a -> ReadM a
+withReadM :: (String -> String) -> ReadM ann a -> ReadM ann a
 withReadM f = ReadM . mapReaderT (withExcept f') . unReadM
   where
     f' (ErrorMsg err) = ErrorMsg (f err)
     f' e = e
 
-data ComplResult a
-  = ComplParser SomeParser ArgPolicy
+data ComplResult ann a
+  = ComplParser (SomeParser ann) ArgPolicy
   | ComplOption Completer
   | ComplResult a
 
-instance Functor ComplResult where
+instance Functor (ComplResult ann) where
   fmap = liftM
 
-instance Applicative ComplResult where
+instance Applicative (ComplResult ann) where
   pure = ComplResult
   (<*>) = ap
 
-instance Monad ComplResult where
+instance Monad (ComplResult ann) where
   return = pure
   m >>= f = case m of
     ComplResult r -> f r
     ComplParser p a -> ComplParser p a
     ComplOption c -> ComplOption c
 
-newtype Completion a =
-  Completion (ExceptT ParseError (ReaderT ParserPrefs ComplResult) a)
+newtype Completion ann a =
+  Completion (ExceptT (ParseError ann) (ReaderT ParserPrefs (ComplResult ann)) a)
 
-instance Functor Completion where
+instance Functor (Completion ann) where
   fmap f (Completion m) = Completion $ fmap f m
 
-instance Applicative Completion where
+instance Applicative (Completion ann) where
   pure a = Completion $ pure a
   Completion f <*> Completion a = Completion $ f <*> a
 
-instance Alternative Completion where
+instance Alternative (Completion ann) where
   empty = Completion empty
   Completion x <|> Completion y = Completion $ x <|> y
 
-instance Monad Completion where
+instance Monad (Completion ann) where
   return = pure
   Completion x >>= k = Completion $ x >>= \a -> case k a of Completion y -> y
 
-instance MonadPlus Completion where
+instance MonadPlus (Completion ann) where
   mzero = Completion mzero
   mplus (Completion x) (Completion y) = Completion $ mplus x y
 
-instance MonadP Completion where
+instance MonadP ann (Completion ann) where
   enterContext _ _ = return ()
-  exitContext = return ()
-  getPrefs = Completion $ lift ask
+  exitContext _ = return ()
+  getPrefs _ = Completion $ lift ask
 
-  missingArgP _ = Completion . lift . lift . ComplOption
+  missingArgP _ _ = Completion . lift . lift . ComplOption
   exitP _ a p _ = Completion . lift . lift $ ComplParser (SomeParser p) a
-  errorP = Completion . throwE
+  errorP _ = Completion . throwE
 
-runCompletion :: Completion r -> ParserPrefs -> Maybe (Either (SomeParser, ArgPolicy) Completer)
+runCompletion :: Completion ann r -> ParserPrefs -> Maybe (Either (SomeParser ann, ArgPolicy) Completer)
 runCompletion (Completion c) prefs = case runReaderT (runExceptT c) prefs of
   ComplResult _ -> Nothing
   ComplParser p' a' -> Just $ Left (p', a')

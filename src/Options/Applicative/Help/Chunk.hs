@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Options.Applicative.Help.Chunk
   ( Chunk(..)
   , chunked
@@ -19,6 +21,7 @@ import Data.List.NonEmpty (NonEmpty(..))
 import Data.Maybe
 import Data.Semigroup
 import Prelude
+import Prettyprinter
 
 import Options.Applicative.Help.Pretty
 
@@ -88,20 +91,20 @@ extractChunk = fromMaybe mempty . unChunk
 --
 -- Unlike '<+>' for 'Doc', this operation has a unit element, namely the empty
 -- 'Chunk'.
-(<<+>>) :: Chunk Doc -> Chunk Doc -> Chunk Doc
+(<<+>>) :: Chunk (Doc ann) -> Chunk (Doc ann) -> Chunk (Doc ann)
 (<<+>>) = chunked (<+>)
 
 -- | Concatenate two 'Chunk's with a softline in between.  This is exactly like
 -- '<<+>>', but uses a softline instead of a space.
-(<</>>) :: Chunk Doc -> Chunk Doc -> Chunk Doc
-(<</>>) = chunked (</>)
+(<</>>) :: Chunk (Doc ann) -> Chunk (Doc ann) -> Chunk (Doc ann)
+(<</>>) = chunked (\x y -> x <> softline <> y)
 
 -- | Concatenate 'Chunk's vertically.
-vcatChunks :: [Chunk Doc] -> Chunk Doc
+vcatChunks :: [Chunk (Doc ann)] -> Chunk (Doc ann)
 vcatChunks = foldr (chunked (.$.)) mempty
 
 -- | Concatenate 'Chunk's vertically separated by empty lines.
-vsepChunks :: [Chunk Doc] -> Chunk Doc
+vsepChunks :: [Chunk (Doc ann)] -> Chunk (Doc ann)
 vsepChunks = foldr (chunked (\x y -> x .$. mempty .$. y)) mempty
 
 -- | Whether a 'Chunk' is empty.  Note that something like 'pure mempty' is not
@@ -113,9 +116,9 @@ isEmpty = isNothing . unChunk
 --
 -- > isEmpty . stringChunk = null
 -- > extractChunk . stringChunk = string
-stringChunk :: String -> Chunk Doc
+stringChunk :: String -> Chunk (Doc ann)
 stringChunk "" = mempty
-stringChunk s = pure (string s)
+stringChunk s = pure (pretty s)
 
 -- | Convert a paragraph into a 'Chunk'.  The resulting chunk is composed by the
 -- words of the original paragraph separated by softlines, so it will be
@@ -124,12 +127,12 @@ stringChunk s = pure (string s)
 -- This satisfies:
 --
 -- > isEmpty . paragraph = null . words
-paragraph :: String -> Chunk Doc
-paragraph = foldr (chunked (</>) . stringChunk) mempty
+paragraph :: String -> Chunk (Doc ann)
+paragraph = foldr (chunked (\x y -> x <> softline <> y) . stringChunk) mempty
           . words
 
 -- | Display pairs of strings in a table.
-tabulate :: Int -> [(Doc, Doc)] -> Chunk Doc
+tabulate :: Int -> [(Doc ann, Doc ann)] -> Chunk (Doc ann)
 tabulate _ [] = mempty
 tabulate size table = pure $ vcat
   [ indent 2 (fillBreak size key <+> value)

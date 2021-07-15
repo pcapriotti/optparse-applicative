@@ -5,14 +5,14 @@ import Options.Applicative
 data Value = A | B
   deriving (Eq, Show)
 
-values :: Parser [Value]
+values :: Parser ann [Value]
 values = many $ a <|> b
 
-a :: Parser Value
+a :: Parser ann Value
 a = flag' A (short 'a')
 
-b :: Parser Value
+b :: Parser ann Value
 b = flag' B (short 'b')
 
-opts :: ParserInfo [Value]
+opts :: ParserInfo ann [Value]
 opts = info values idm

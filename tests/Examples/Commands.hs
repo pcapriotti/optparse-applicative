@@ -15,10 +15,10 @@ data Sample
   | Goodbye
   deriving (Eq, Show)
 
-hello :: Parser Sample
+hello :: Parser ann Sample
 hello = Hello <$> many (argument str (metavar "TARGET..."))
 
-sample :: Parser Sample
+sample :: Parser ann Sample
 sample = subparser
        ( command "hello"
          (info hello
@@ -42,7 +42,7 @@ run :: Sample -> IO ()
 run (Hello targets) = putStrLn $ "Hello, " ++ intercalate ", " targets ++ "!"
 run Goodbye = putStrLn "Goodbye."
 
-opts :: ParserInfo Sample
+opts :: ParserInfo ann Sample
 opts = info (sample <**> helper) idm
 
 main :: IO ()
