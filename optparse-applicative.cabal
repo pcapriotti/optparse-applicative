@@ -87,7 +87,6 @@ library
                      , Options.Applicative.Common
                      , Options.Applicative.Extra
                      , Options.Applicative.Help
-                     , Options.Applicative.Help.Ann
                      , Options.Applicative.Help.Chunk
                      , Options.Applicative.Help.Core
                      , Options.Applicative.Help.Levenshtein

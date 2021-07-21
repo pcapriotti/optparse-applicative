@@ -36,7 +36,6 @@ import Prelude hiding (any)
 
 import Options.Applicative.Common
 import Options.Applicative.Types
-import Options.Applicative.Help.Ann
 import Options.Applicative.Help.Chunk
 import Options.Applicative.Help.Pretty
 
@@ -57,7 +56,7 @@ safelast = foldl' (const Just) Nothing
 
 -- | Generate description for a single option.
 optDesc :: ParserPrefs -> OptDescStyle -> ArgumentReachability -> Option a -> (Chunk Doc, Parenthetic)
-optDesc pprefs style _reachability opt = first (annTrace 2 "optDesc") $
+optDesc pprefs style _reachability opt =
   let names =
         sort . optionNames . optMain $ opt
       meta =
@@ -96,7 +95,7 @@ optDesc pprefs style _reachability opt = first (annTrace 2 "optDesc") $
 
 -- | Generate descriptions for commands.
 cmdDesc :: ParserPrefs -> Parser a -> [(Maybe String, Chunk Doc)]
-cmdDesc pprefs = fmap (fmap (annTrace 2 "cmdDesc")) <$> mapParser desc
+cmdDesc pprefs = mapParser desc
   where
     desc _ opt =
       case optMain opt of
@@ -111,18 +110,18 @@ cmdDesc pprefs = fmap (fmap (annTrace 2 "cmdDesc")) <$> mapParser desc
 
 -- | Generate a brief help text for a parser.
 briefDesc :: ParserPrefs -> Parser a -> Chunk Doc
-briefDesc = fmap (annTrace 2 "briefDesc") . briefDesc' True
+briefDesc = briefDesc' True
 
 -- | Generate a brief help text for a parser, only including mandatory
 --   options and arguments.
 missingDesc :: ParserPrefs -> Parser a -> Chunk Doc
-missingDesc = fmap (annTrace 2 "missingDesc") . briefDesc' False
+missingDesc = briefDesc' False
 
 -- | Generate a brief help text for a parser, allowing the specification
 --   of if optional arguments are show.
 briefDesc' :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
-briefDesc' showOptional pprefs = fmap (annTrace 2 "briefDesc'")
-    . wrapOver NoDefault MaybeRequired
+briefDesc' showOptional pprefs =
+  wrapOver NoDefault MaybeRequired
     . foldTree pprefs style
     . mfilterOptional
     . treeMapParser (optDesc pprefs style)
@@ -142,18 +141,17 @@ briefDesc' showOptional pprefs = fmap (annTrace 2 "briefDesc'")
 wrapOver :: AltNodeType -> Parenthetic -> (Chunk Doc, Parenthetic) -> Chunk Doc
 wrapOver altnode mustWrapBeyond (chunk, wrapping)
   | chunkIsEffectivelyEmpty chunk =
-    annTrace 3 "wrapOver0" <$> chunk
+      chunk
   | altnode == MarkDefault =
-    annTrace 3 "wrapOver1" <$> fmap brackets chunk
+      fmap brackets chunk
   | wrapping > mustWrapBeyond =
-    annTrace 3 "wrapOver2" <$> fmap parens chunk
-  | otherwise =
-    annTrace 3 "wrapOver3" chunk
+      fmap parens chunk
+  | otherwise = chunk
 
 -- Fold a tree of option docs into a single doc with fully marked
 -- optional areas and groups.
 foldTree :: ParserPrefs -> OptDescStyle -> OptTree (Chunk Doc, Parenthetic) -> (Chunk Doc, Parenthetic)
-foldTree _ _ (Leaf x) = first (annTrace 3 "foldTree1")
+foldTree _ _ (Leaf x) =
   x
 foldTree prefs s (MultNode xs) =
   ( let generous :: Chunk Doc
@@ -179,7 +177,7 @@ foldTree prefs s (MultNode xs) =
     leads :: [Chunk Doc]
     leads = fmap pure (pretty " ":repeat (line <> pretty "  "))
 
-foldTree prefs s (AltNode b xs) = first (annTrace 3 "foldTree2") $
+foldTree prefs s (AltNode b xs) =
   (\x -> (x, NeverRequired))
     . fmap groupOrNestLine
     . wrapOver b MaybeRequired
@@ -211,7 +209,7 @@ foldTree prefs s (AltNode b xs) = first (annTrace 3 "foldTree2") $
     leads :: [Chunk Doc]
     leads = fmap pure (pretty " ":repeat (line <> pretty "| "))
 
-foldTree prefs s (BindNode x) = first (annTrace 3 "foldTree3") $
+foldTree prefs s (BindNode x) =
   let rendered =
         wrapOver NoDefault NeverRequired (foldTree prefs s x)
 
@@ -223,21 +221,17 @@ foldTree prefs s (BindNode x) = first (annTrace 3 "foldTree3") $
 
 -- | Generate a full help text for a parser
 fullDesc :: ParserPrefs -> Parser a -> Chunk Doc
-fullDesc = fmap (annTrace 2 "fullDesc") <$> optionsDesc False
+fullDesc = optionsDesc False
 
 -- | Generate a help text for the parser, showing
 --   only what is relevant in the "Global options: section"
 globalDesc :: ParserPrefs -> Parser a -> Chunk Doc
-globalDesc = fmap (annTrace 2 "globalDesc") <$> optionsDesc True
+globalDesc = optionsDesc True
 
 -- | Common generator for full descriptions and globals
 optionsDesc :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
-optionsDesc global pprefs = fmap (annTrace 2 "optionsDesc")
-    . tabulate (prefTabulateFill pprefs)
-    . catMaybes
-    . mapParser doc
+optionsDesc global pprefs = tabulate (prefTabulateFill pprefs) . catMaybes . mapParser doc
   where
-    doc :: MonadPlus m => ArgumentReachability -> Option a -> m (Doc, Doc)
     doc info opt = do
       guard . not . isEmpty $ n
       guard . not . isEmpty $ h
@@ -292,7 +286,7 @@ parserHelp pprefs p =
         vcatChunks (snd <$> a)
     group_title _ = mempty
 
-    with_title title = annTrace 1 "with_title" . fmap (string title .$.)
+    with_title title = fmap (string title .$.)
 
 
 parserGlobals :: ParserPrefs -> Parser a -> ParserHelp
@@ -305,7 +299,7 @@ parserGlobals pprefs p =
 
 -- | Generate option summary.
 parserUsage :: ParserPrefs -> Parser a -> String -> Doc
-parserUsage pprefs p progn = annTrace 2 "parserUsage" $
+parserUsage pprefs p progn =
   case prefUsageOverflow pprefs of
     UsageOverflowAlign ->
       hsep

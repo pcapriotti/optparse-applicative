@@ -24,16 +24,12 @@ import Data.Maybe
 import Data.Semigroup
 import Prelude
 
-import Options.Applicative.Help.Ann
 import Options.Applicative.Help.Pretty
 
 -- | The free monoid on a semigroup 'a'.
 newtype Chunk a = Chunk
   { unChunk :: Maybe a }
   deriving (Eq, Show)
-
-instance CanAnnotate (Chunk Doc) where
-  annTrace n = fmap . annTrace n
 
 instance Functor Chunk where
   fmap f = Chunk . fmap f . unChunk
@@ -97,20 +93,20 @@ extractChunk = fromMaybe mempty . unChunk
 -- Unlike '<+>' for 'Doc', this operation has a unit element, namely the empty
 -- 'Chunk'.
 (<<+>>) :: Chunk Doc -> Chunk Doc -> Chunk Doc
-(<<+>>) = fmap (annTrace 1 "(<<+>>)") . chunked (<+>)
+(<<+>>) = chunked (<+>)
 
 -- | Concatenate two 'Chunk's with a softline in between.  This is exactly like
 -- '<<+>>', but uses a softline instead of a space.
 (<</>>) :: Chunk Doc -> Chunk Doc -> Chunk Doc
-(<</>>) = fmap (annTrace 1 "(<</>>)") . chunked (</>)
+(<</>>) = chunked (</>)
 
 -- | Concatenate 'Chunk's vertically.
 vcatChunks :: [Chunk Doc] -> Chunk Doc
-vcatChunks = fmap (annTrace 1 "vcatChunks") . foldr (chunked (.$.)) mempty
+vcatChunks = foldr (chunked (.$.)) mempty
 
 -- | Concatenate 'Chunk's vertically separated by empty lines.
 vsepChunks :: [Chunk Doc] -> Chunk Doc
-vsepChunks = annTrace 1 "vsepChunks" . foldr (chunked (\x y -> x .$. mempty .$. y)) mempty
+vsepChunks = foldr (chunked (\x y -> x .$. mempty .$. y)) mempty
 
 -- | Whether a 'Chunk' is empty.  Note that something like 'pure mempty' is not
 -- considered an empty chunk, even though the underlying 'Doc' is empty.
@@ -122,8 +118,8 @@ isEmpty = isNothing . unChunk
 -- > isEmpty . stringChunk = null
 -- > extractChunk . stringChunk = string
 stringChunk :: String -> Chunk Doc
-stringChunk "" = annTrace 0 "stringChunk" mempty
-stringChunk s = annTrace 0 "stringChunk" $ pure (string s)
+stringChunk "" = mempty
+stringChunk s = pure (string s)
 
 -- | Convert a paragraph into a 'Chunk'.  The resulting chunk is composed by the
 -- words of the original paragraph separated by softlines, so it will be
@@ -133,14 +129,12 @@ stringChunk s = annTrace 0 "stringChunk" $ pure (string s)
 --
 -- > isEmpty . paragraph = null . words
 paragraph :: String -> Chunk Doc
-paragraph = annTrace 0 "paragraph"
-  . foldr (chunked (</>) . stringChunk) mempty
-  . words
+paragraph = foldr (chunked (</>) . stringChunk) mempty . words
 
 -- | Display pairs of strings in a table.
 tabulate :: Int -> [(Doc, Doc)] -> Chunk Doc
-tabulate _ [] = annTrace 1 "tabulate" mempty
-tabulate size table = annTrace 1 "tabulate" . pure $ vcat
+tabulate _ [] = mempty
+tabulate size table = pure $ vcat
   [ indent 2 (fillBreak size key <+> value)
   | (key, value) <- table ]
 
