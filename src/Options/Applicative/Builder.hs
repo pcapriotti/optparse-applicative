@@ -88,7 +88,10 @@ module Options.Applicative.Builder (
   columns,
   helpLongEquals,
   helpShowGlobals,
+  helpAlignUsageOverflow,
+  helpHangUsageOverflow,
   helpIndent,
+  helpRenderHelp,
   prefs,
   defaultPrefs,
 
@@ -116,8 +119,9 @@ import Options.Applicative.Builder.Completer
 import Options.Applicative.Builder.Internal
 import Options.Applicative.Common
 import Options.Applicative.Types
-import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
+import Options.Applicative.Help.Pretty
+import Options.Applicative.Help.Types (renderHelp)
 
 -- Readers --
 
@@ -521,6 +525,18 @@ helpLongEquals = PrefsMod $ \p -> p { prefHelpLongEquals = True }
 helpShowGlobals :: PrefsMod
 helpShowGlobals = PrefsMod $ \p -> p { prefHelpShowGlobal = True }
 
+-- | Align usage overflow to the right
+helpAlignUsageOverflow :: PrefsMod
+helpAlignUsageOverflow = PrefsMod $ \p -> p { prefUsageOverflow = UsageOverflowAlign }
+
+-- | Hang usage overflow to the specified indent
+helpHangUsageOverflow :: Int -> PrefsMod
+helpHangUsageOverflow indentation = PrefsMod $ \p -> p { prefUsageOverflow = UsageOverflowHang indentation }
+
+-- | Custom render function
+helpRenderHelp :: (Int -> ParserHelp -> String) -> PrefsMod
+helpRenderHelp f = PrefsMod $ \p -> p { prefRenderHelp = f }
+
 -- | Set fill width in help text presentation.
 helpIndent :: Int -> PrefsMod
 helpIndent w = PrefsMod $ \p -> p { prefTabulateFill = w }
@@ -540,7 +556,10 @@ prefs m = applyPrefsMod m base
       , prefColumns = 80
       , prefHelpLongEquals = False
       , prefHelpShowGlobal = False
-      , prefTabulateFill = 24 }
+      , prefUsageOverflow = UsageOverflowAlign
+      , prefTabulateFill = 24
+      , prefRenderHelp = renderHelp
+      }
 
 -- Convenience shortcuts
 

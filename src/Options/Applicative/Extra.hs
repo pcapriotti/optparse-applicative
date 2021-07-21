@@ -13,6 +13,7 @@ module Options.Applicative.Extra (
   handleParseResult,
   parserFailure,
   renderFailure,
+  renderFailure',
   ParserFailure(..),
   overFailure,
   ParserResult(..),
@@ -104,19 +105,22 @@ execParser = customExecParser defaultPrefs
 customExecParser :: ParserPrefs -> ParserInfo a -> IO a
 customExecParser pprefs pinfo
   = execParserPure pprefs pinfo <$> getArgs
-  >>= handleParseResult
+  >>= handleParseResult' pprefs
 
 -- | Handle `ParserResult`.
 handleParseResult :: ParserResult a -> IO a
-handleParseResult (Success a) = return a
-handleParseResult (Failure failure) = do
+handleParseResult = handleParseResult' defaultPrefs
+
+handleParseResult' :: ParserPrefs -> ParserResult a -> IO a
+handleParseResult' _ (Success a) = return a
+handleParseResult' pprefs (Failure failure) = do
       progn <- getProgName
-      let (msg, exit) = renderFailure failure progn
+      let (msg, exit) = renderFailure' pprefs failure progn
       case exit of
         ExitSuccess -> putStrLn msg
         _           -> hPutStrLn stderr msg
       exitWith exit
-handleParseResult (CompletionInvoked compl) = do
+handleParseResult' _ (CompletionInvoked compl) = do
       progn <- getProgName
       msg <- execCompletion compl progn
       putStr msg
@@ -328,6 +332,9 @@ parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
       _                        -> prefShowHelpOnError pprefs
 
 renderFailure :: ParserFailure ParserHelp -> String -> (String, ExitCode)
-renderFailure failure progn =
+renderFailure = renderFailure' defaultPrefs
+
+renderFailure' :: ParserPrefs -> ParserFailure ParserHelp -> String -> (String, ExitCode)
+renderFailure' pprefs failure progn =
   let (h, exit, cols) = execFailure failure progn
-  in (renderHelp cols h, exit)
+  in (prefRenderHelp pprefs cols h, exit)
