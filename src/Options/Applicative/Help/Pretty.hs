@@ -4,6 +4,7 @@ module Options.Applicative.Help.Pretty
   , (.$.)
   , groupOrNestLine
   , altSep
+  , hangAtIfOver
   ) where
 
 import           Control.Applicative
@@ -24,12 +25,24 @@ import           Prelude
 -- | Apply the function if we're not at the
 --   start of our nesting level.
 ifNotAtRoot :: (Doc -> Doc) -> Doc -> Doc
-ifNotAtRoot f doc =
+ifNotAtRoot =
+  ifElseAtRoot id
+
+-- | Apply the function if we're not at the
+--   start of our nesting level.
+ifAtRoot :: (Doc -> Doc) -> Doc -> Doc
+ifAtRoot =
+  flip ifElseAtRoot id
+
+-- | Apply the function if we're not at the
+--   start of our nesting level.
+ifElseAtRoot :: (Doc -> Doc) -> (Doc -> Doc) -> Doc -> Doc
+ifElseAtRoot f g doc =
   Nesting $ \i ->
     Column $ \j ->
       if i == j
-        then doc
-        else f doc
+        then f doc
+        else g doc
 
 
 -- | Render flattened text on this line, or start
@@ -57,3 +70,23 @@ groupOrNestLine =
 altSep :: Doc -> Doc -> Doc
 altSep x y =
   group (x <+> char '|' <> line) <//> y
+
+
+-- | Printer hacks to get nice indentation for long commands
+--   and subcommands.
+--
+--   If we're starting this section over the desired width
+--   (usually 1/3 of the ribbon), then we will make a line
+--   break, indent all of the usage, and go.
+--
+--   The ifAtRoot is an interesting clause. If this whole
+--   operation is put under a `group` then the linebreak
+--   will disappear; then item d will therefore not be at
+--   the starting column, and it won't be indented more.
+hangAtIfOver :: Int -> Int -> Doc -> Doc
+hangAtIfOver i j d =
+  Column $ \k ->
+    if k <= j then
+      align d
+    else
+      linebreak <> ifAtRoot (indent i) d
