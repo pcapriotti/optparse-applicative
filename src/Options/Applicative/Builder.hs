@@ -273,6 +273,11 @@ completer f = fieldMod $ modCompleter (`mappend` f)
 
 -- | Builder for a command parser. The 'command' modifier can be used to
 -- specify individual commands.
+--
+-- By default, sub-parsers allow backtracking to their parent's options when
+-- they are completed. To allow full mixing of parent and sub-parser options,
+-- turn on 'subparserInline'; otherwise, to disable backtracking completely,
+-- use 'noBacktrack'.
 subparser :: Mod CommandFields a -> Parser a
 subparser m = mkParser d g rdr
   where
