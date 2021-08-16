@@ -390,7 +390,7 @@ instance Monoid (InfoMod a) where
 instance Semigroup (InfoMod a) where
   m1 <> m2 = InfoMod $ applyInfoMod m2 . applyInfoMod m1
 
--- | Show a full description in the help text of this parser.
+-- | Show a full description in the help text of this parser (default).
 fullDesc :: InfoMod a
 fullDesc = InfoMod $ \i -> i { infoFullDesc = True }
 
