@@ -9,6 +9,8 @@ import qualified Examples.Commands as Commands
 import qualified Examples.Cabal as Cabal
 import qualified Examples.Alternatives as Alternatives
 import qualified Examples.Formatting as Formatting
+import qualified Examples.Generic.Simple as GenericSimple
+import qualified Examples.Generic.Commands as GenericCommands
 
 import           Control.Applicative
 import           Control.Monad
@@ -71,6 +73,16 @@ checkHelpText = checkHelpTextWith ExitSuccess defaultPrefs
 prop_hello :: Property
 prop_hello = once $
   checkHelpText "hello" Hello.opts ["--help"]
+
+prop_generic_simple :: Property
+prop_generic_simple = once $
+  checkHelpText "generic_simple" GenericSimple.opts ["--help"]
+
+
+prop_generic_commands :: Property
+prop_generic_commands = once $
+  checkHelpText "generic_commands" GenericCommands.opts ["--help"]
+
 
 prop_modes :: Property
 prop_modes = once $

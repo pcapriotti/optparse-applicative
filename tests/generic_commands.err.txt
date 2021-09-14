@@ -1,0 +1,12 @@
+generic_commands - a test for optparse-applicative
+
+Usage: generic_commands COMMAND
+
+  Do multiple things
+
+Available options:
+  -h,--help                Show this help text
+
+Available commands:
+  Cat                      
+  Copy                     

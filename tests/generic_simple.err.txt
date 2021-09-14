@@ -1,0 +1,8 @@
+generic_simple - a test for optparse-applicative
+
+Usage: generic_simple (-h|--hello STRING) [-q|--quiet] (-r|--repeat INT)
+
+  Print a greeting
+
+Available options:
+  -h,--help                Show this help text

@@ -86,6 +86,7 @@ library
                      , Options.Applicative.Builder.Internal
                      , Options.Applicative.Common
                      , Options.Applicative.Extra
+                     , Options.Applicative.Generic
                      , Options.Applicative.Help
                      , Options.Applicative.Help.Chunk
                      , Options.Applicative.Help.Core
@@ -124,6 +125,8 @@ test-suite tests
                      , Examples.Commands
                      , Examples.Formatting
                      , Examples.Hello
+                     , Examples.Generic.Simple
+                     , Examples.Generic.Commands
 
   build-depends:       base
                      , optparse-applicative
