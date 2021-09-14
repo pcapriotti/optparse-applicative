@@ -10,3 +10,7 @@ cabal.sandbox.config
 
 .stack-work/
 stack.yaml.lock
+
+.envrc
+.history
+
