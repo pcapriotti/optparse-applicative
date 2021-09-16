@@ -9,6 +9,7 @@ import qualified Examples.Commands as Commands
 import qualified Examples.Cabal as Cabal
 import qualified Examples.Alternatives as Alternatives
 import qualified Examples.Formatting as Formatting
+import qualified Examples.LongSub as LongSub
 
 import           Control.Applicative
 import           Control.Monad
@@ -890,6 +891,18 @@ prop_help_unknown_context = once $
     pre = run i ["--help"]
     post = run i ["--help", "not-a-command"]
   in grabHelpMessage pre === grabHelpMessage post
+
+
+prop_long_command_line_flow :: Property
+prop_long_command_line_flow = once $
+  let p = LongSub.sample <**> helper
+      i = info p
+        ( progDesc (concat
+            [ "This is a very long program description. "
+            , "This text should be automatically wrapped "
+            , "to fit the size of the terminal" ]) )
+  in checkHelpTextWith ExitSuccess (prefs (columns 50)) "formatting-long-subcommand" i ["hello-very-long-sub", "--help"]
+
 
 ---
 

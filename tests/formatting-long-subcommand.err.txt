@@ -1,0 +1,9 @@
+Usage: formatting-long-subcommand hello-very-long-sub 
+         [TARGET...] [--first-flag] 
+         [--second-flag] [--third-flag] 
+         [--fourth-flag]
+
+  Print greeting
+
+Available options:
+  -h,--help                Show this help text
