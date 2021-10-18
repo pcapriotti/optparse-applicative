@@ -36,6 +36,7 @@ extra-source-files:  CHANGELOG.md
                      tests/helponemptysub.err.txt
                      tests/long_equals.err.txt
                      tests/formatting.err.txt
+                     tests/formatting-long-subcommand.err.txt
                      tests/nested.err.txt
                      tests/optional.err.txt
                      tests/nested_optional.err.txt
@@ -124,6 +125,7 @@ test-suite tests
                      , Examples.Commands
                      , Examples.Formatting
                      , Examples.Hello
+                     , Examples.LongSub
 
   build-depends:       base
                      , optparse-applicative
