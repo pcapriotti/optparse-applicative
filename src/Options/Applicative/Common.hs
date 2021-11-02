@@ -207,7 +207,7 @@ runParser policy isCmdStart p args = case args of
   (arg : argt) -> do
     (mp', args') <- do_step arg argt
     case mp' of
-      Nothing -> hoistMaybe result <|> parseError arg p
+      Nothing -> hoistMaybe result <|> exitP isCmdStart policy p Nothing
       Just p' -> runParser (newPolicy arg) CmdCont p' args'
   where
     result =
