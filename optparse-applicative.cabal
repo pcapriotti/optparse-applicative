@@ -106,7 +106,7 @@ library
     build-depends:     process                         >= 1.0 && < 1.7
 
   if !impl(ghc >= 8)
-    build-depends:     semigroups                      >= 0.10 && < 0.20
+    build-depends:     semigroups                      >= 0.10 && < 0.21
                      , fail                            == 4.9.*
 
 test-suite tests
