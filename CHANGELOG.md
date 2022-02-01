@@ -1,4 +1,4 @@
-## Unreleased
+## Version 0.17.0.0 (1 Feb 2022)
 
 - Make tabulation width configurable in usage texts.
 
@@ -6,6 +6,10 @@
 
 - Add `helperWith` function, which can be easily used to
   localize the help flag.
+
+- Improve usage texts when command names are long.
+
+- Improve Documentation.
 
 ## Version 0.16.1.0 (21 Nov 2020)
 

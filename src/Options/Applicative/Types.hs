@@ -125,7 +125,7 @@ data ParserPrefs = ParserPrefs
                                   -- single space (default: False)
   , prefHelpShowGlobal :: Bool    -- ^ when displaying subparsers' usage help,
                                   -- show parent options under a "global options"
-                                  -- section (default: True)
+                                  -- section (default: False)
   , prefTabulateFill ::Int       -- ^ Indentation width for tables
   } deriving (Eq, Show)
 
