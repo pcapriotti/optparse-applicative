@@ -1,7 +1,4 @@
-Invalid option `-zello'
-
-Did you mean this?
-    hello
+Missing: COMMAND
 
 foo
 

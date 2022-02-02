@@ -1,6 +1,3 @@
-Invalid option `-zello'
-
-Did you mean this?
-    hello
+Missing: COMMAND
 
 Usage: commands_header COMMAND

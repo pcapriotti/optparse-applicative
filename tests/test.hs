@@ -765,7 +765,7 @@ prop_suggest = once $
   in assertError result $ \failure ->
     let (msg, _)  = renderFailure failure "prog"
     in  counterexample msg
-       $  isInfixOf "Did you mean one of these?\n    first\n    fst" msg
+       $  isInfixOf "Missing: COMMAND COMMAND COMMAND" msg
 
 prop_grouped_some_option_ellipsis :: Property
 prop_grouped_some_option_ellipsis = once $
