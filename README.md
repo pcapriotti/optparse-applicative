@@ -75,7 +75,6 @@ Here's a simple example of a parser.
 
 ```haskell
 import Options.Applicative
-import Data.Semigroup ((<>))
 
 data Sample = Sample
   { hello      :: String
