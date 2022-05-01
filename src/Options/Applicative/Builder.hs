@@ -33,6 +33,7 @@ module Options.Applicative.Builder (
   long,
   help,
   helpDoc,
+  environ,
   value,
   showDefaultWith,
   showDefault,
@@ -164,6 +165,13 @@ short = fieldMod . name . OptShort
 -- | Specify a long name for an option.
 long :: HasName f => String -> Mod f a
 long = fieldMod . name . OptLong
+
+-- | Try to read value from environment variable.
+-- If applied many times are tried in order with latter one taking precedence.
+--
+-- /Note/: Same restrictions as for 'value' apply.
+environ :: String -> Mod OptionFields a
+environ var = fieldMod $ \p -> p {optEnvVars = var:optEnvVars p}
 
 -- | Specify a default value for an option.
 --
@@ -372,11 +380,13 @@ strOption = option str
 -- > nameParser = option str ( long "name" <> short 'n' )
 --
 option :: ReadM a -> Mod OptionFields a -> Parser a
-option r m = mkParser d g rdr
+option r m = mkParserEnv envP d g rdr
   where
     Mod f d g = metavar "ARG" `mappend` m
-    fields = f (OptionFields [] mempty ExpectsArgError)
+    fields = f (OptionFields [] [] mempty ExpectsArgError)
     crdr = CReader (optCompleter fields) r
+    envVars = optEnvVars fields
+    envP = if null envVars then Nothing else Just $ EnvP envVars r
     rdr = OptReader (optNames fields) crdr (optNoArgError fields)
 
 -- | Modifier for 'ParserInfo'.
