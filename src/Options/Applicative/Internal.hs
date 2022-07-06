@@ -18,7 +18,7 @@ module Options.Applicative.Internal
   , ListT
   , takeListT
   , runListT
-  , select
+  , hoistList
 
   , NondetT
   , cut
@@ -173,9 +173,6 @@ bimapTStep :: (a -> b) -> (x -> y) -> TStep a x -> TStep b y
 bimapTStep _ _ TNil = TNil
 bimapTStep f g (TCons a x) = TCons (f a) (g x)
 
-hoistList :: Monad m => [a] -> ListT m a
-hoistList = foldr (\x xt -> ListT (return (TCons x xt))) mzero
-
 takeListT :: Monad m => Int -> ListT m a -> ListT m a
 takeListT 0 = const mzero
 takeListT n = ListT . liftM (bimapTStep id (takeListT (n - 1))) . stepListT
@@ -193,7 +190,7 @@ instance Monad m => Functor (ListT m) where
          . stepListT
 
 instance Monad m => Applicative (ListT m) where
-  pure = hoistList . pure
+  pure a = ListT (return (TCons a mzero))
   (<*>) = ap
 
 instance Monad m => Monad (ListT m) where
@@ -265,7 +262,7 @@ disamb allow_amb xs = do
     [x] -> Just x
     _   -> Nothing
 
-select :: (Foldable f, Alternative m) => f a -> m a
-select = foldr cons empty
+hoistList :: Alternative m => [a] -> m a
+hoistList = foldr cons empty
   where
     cons x xs = pure x <|> xs

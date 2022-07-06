@@ -167,7 +167,7 @@ searchArg prefs arg =
     when (isArg (optMain opt)) cut
     case optMain opt of
       CmdReader _ cs -> do
-        subp <- select (cmdMatches cs)
+        subp <- hoistList (cmdMatches cs)
         case prefBacktrack prefs of
           NoBacktrack -> lift $ do
             args <- get <* put []
