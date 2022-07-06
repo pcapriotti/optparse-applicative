@@ -40,6 +40,8 @@ module Options.Applicative.Common (
 
   -- * Running parsers
   runParserInfo,
+
+  -- * Internal parser runners
   runParserFully,
   runParserStep,
   runParser,
@@ -54,7 +56,7 @@ module Options.Applicative.Common (
 import Control.Applicative
 import Control.Monad (guard, mzero, msum, when)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State (StateT(..), get, put, runStateT)
+import Control.Monad.Trans.RWS (RWST (..), get, put, runRWST, tell)
 import Data.List (isPrefixOf)
 import Data.Maybe (maybeToList, isJust, isNothing)
 import Prelude
@@ -80,7 +82,7 @@ isOptionPrefix _ _ = False
 liftOpt :: Option a -> Parser a
 liftOpt = OptP
 
-optMatches :: MonadP m => Bool -> OptReader a -> OptWord -> Maybe (StateT Args m a)
+optMatches :: (Monoid i, MonadP m) => Bool -> OptReader a -> OptWord -> Maybe (RWST () i Args m a)
 optMatches disambiguate opt (OptWord arg1 val) = case opt of
   OptReader names rdr no_arg_err -> do
     guard $ has_name arg1 names
@@ -151,8 +153,8 @@ searchParser f (BindP p k) = msum
       Nothing -> mzero
       Just aa -> searchParser f (k aa) ]
 
-searchOpt :: MonadP m => ParserPrefs -> OptWord -> Parser a
-          -> NondetT (StateT Args m) (Parser a)
+searchOpt :: (Monoid i, MonadP m) => ParserPrefs -> OptWord -> Parser a
+          -> NondetT (RWST ()  i Args m) (Parser a)
 searchOpt pprefs w = searchParser $ \opt -> do
   let disambiguate = prefDisambiguate pprefs
                   && optVisibility opt > Internal
@@ -161,7 +163,7 @@ searchOpt pprefs w = searchParser $ \opt -> do
     Nothing -> mzero
 
 searchArg :: MonadP m => ParserPrefs -> String -> Parser a
-          -> NondetT (StateT Args m) (Parser a)
+          -> NondetT (RWST () IsCmdStart Args m) (Parser a)
 searchArg prefs arg =
   searchParser $ \opt -> do
     when (isArg (optMain opt)) cut
@@ -173,11 +175,15 @@ searchArg prefs arg =
             args <- get <* put []
             fmap pure . lift $ enterContext arg subp *> runParserInfo subp args <* exitContext
 
-          Backtrack -> fmap pure . lift . StateT $ \args ->
-            enterContext arg subp *> runParser (infoPolicy subp) CmdStart (infoParser subp) args <* exitContext
+          Backtrack -> fmap pure . lift . RWST $ \_ args -> do
+            enterContext arg subp
+            (res, args1) <- runParser (infoPolicy subp) CmdStart (infoParser subp) args
+            exitContext
+            return (res, args1, CmdCont)
 
           SubparserInline -> lift $ do
             lift $ enterContext arg subp
+            tell CmdStart
             return $ infoParser subp
 
       ArgReader rdr ->
@@ -190,7 +196,7 @@ searchArg prefs arg =
       | otherwise = maybeToList (lookup arg cs)
 
 stepParser :: MonadP m => ParserPrefs -> ArgPolicy -> String
-           -> Parser a -> NondetT (StateT Args m) (Parser a)
+           -> Parser a -> NondetT (RWST () IsCmdStart Args m) (Parser a)
 stepParser pprefs AllPositionals arg p =
   searchArg pprefs arg p
 stepParser pprefs ForwardOptions arg p = case parseWord arg of
@@ -210,10 +216,10 @@ runParser policy _ p ("--" : argt) | policy /= AllPositionals
 runParser policy isCmdStart p args = case args of
   [] -> exitP isCmdStart policy p result
   (arg : argt) -> do
-    (mp', args') <- do_step arg argt
+    (mp', args', subCommandStart) <- do_step arg argt
     case mp' of
       Nothing -> hoistMaybe result <|> parseError arg p
-      Just p' -> runParser (newPolicy arg) CmdCont p' args'
+      Just p' -> runParser (newPolicy arg) subCommandStart p' args'
   where
     result =
       (,) <$> evalParser p <*> pure args
@@ -224,10 +230,11 @@ runParser policy isCmdStart p args = case args of
       NoIntersperse -> if isJust (parseWord a) then NoIntersperse else AllPositionals
       x             -> x
 
-runParserStep :: MonadP m => ArgPolicy -> Parser a -> String -> Args -> m (Maybe (Parser a), Args)
+
+runParserStep :: MonadP m => ArgPolicy -> Parser a -> String -> Args -> m (Maybe (Parser a), Args, IsCmdStart)
 runParserStep policy p arg args = do
   prefs <- getPrefs
-  flip runStateT args
+  (\act -> runRWST act () args)
     $ disamb (not (prefDisambiguate prefs))
     $ stepParser prefs policy arg p
 
@@ -244,7 +251,7 @@ runParserFully policy p args = do
     []  -> return r
     a:_ -> parseError a (pure ())
 
--- | The default value of a 'Parser'.  This function returns an error if any of
+-- | The default value of a 'Parser'.  This function returns Nothing if any of
 -- the options don't have a default value.
 evalParser :: Parser a -> Maybe a
 evalParser (NilP r) = r

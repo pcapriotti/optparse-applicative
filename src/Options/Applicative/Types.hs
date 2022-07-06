@@ -85,6 +85,13 @@ instance Semigroup ParseError where
   m <> UnknownError = m
   _ <> m = m
 
+instance Monoid IsCmdStart where
+  mempty = CmdStart
+  mappend = (<>)
+
+instance Semigroup IsCmdStart where
+  _ <> m = m
+
 -- | A full description for a runnable 'Parser' for a program.
 data ParserInfo a = ParserInfo
   { infoParser :: Parser a    -- ^ the option parser for the program

@@ -946,6 +946,31 @@ prop_long_command_line_flow = once $
             , "to fit the size of the terminal" ]) )
   in checkHelpTextWith ExitSuccess (prefs (columns 50)) "formatting-long-subcommand" i ["hello-very-long-sub", "--help"]
 
+
+prop_show_help_on_error_inlined :: Property
+prop_show_help_on_error_inlined = once $
+  let
+    q =
+      subparser $
+        command "bar" $ info (pure 'x') $
+        progDesc "Go to bar."
+    p =
+      subparser $
+        command "foo" $ info q $
+        progDesc "Foo commands."
+
+    i = info (p <**> helper) briefDesc
+    result = execParserPure (prefs (showHelpOnEmpty <> subparserInline)) i ["foo"]
+  in assertError result $ \failure ->
+    let text = lines . fst $ renderFailure failure "test"
+    in ["Usage: test foo COMMAND"
+       , ""
+       , "  Foo commands."
+       , ""
+       , "Available commands:"
+       , "  bar                      Go to bar."] === text
+
+
 ---
 
 deriving instance Arbitrary a => Arbitrary (Chunk a)
