@@ -318,6 +318,49 @@ prop_ambiguous = once $
       result = execParserPure (prefs disambiguate) i ["--ba"]
   in  assertError result (\_ -> property succeeded)
 
+
+prop_disambiguate_in_same_subparsers :: Property
+prop_disambiguate_in_same_subparsers = once $
+  let p0 = subparser (command "oranges" (info (pure "oranges") idm) <> command "apples" (info (pure "apples") idm) <> metavar "B")
+      i = info (p0 <**> helper) idm
+      result = execParserPure (prefs disambiguate) i ["orang"]
+  in  assertResult result ((===) "oranges")
+
+prop_disambiguate_commands_in_separate_subparsers :: Property
+prop_disambiguate_commands_in_separate_subparsers = once $
+  let p2 = subparser (command "oranges" (info (pure "oranges") idm)  <> metavar "B")
+      p1 = subparser (command "apples" (info (pure "apples") idm)  <> metavar "C")
+      p0 = p1 <|> p2
+      i = info (p0 <**> helper) idm
+      result = execParserPure (prefs disambiguate) i ["orang"]
+  in  assertResult result ((===) "oranges")
+
+prop_fail_ambiguous_commands_in_same_subparser :: Property
+prop_fail_ambiguous_commands_in_same_subparser = once $
+  let p0 = subparser (command "oranges" (info (pure ()) idm) <> command "orangutans" (info (pure ()) idm) <> metavar "B")
+      i = info (p0 <**> helper) idm
+      result = execParserPure (prefs disambiguate) i ["orang"]
+  in  assertError result (\_ -> property succeeded)
+
+prop_fail_ambiguous_commands_in_separate_subparser :: Property
+prop_fail_ambiguous_commands_in_separate_subparser = once $
+  let p2 = subparser (command "oranges" (info (pure ()) idm)  <> metavar "B")
+      p1 = subparser (command "orangutans" (info (pure ()) idm)  <> metavar "C")
+      p0 = p1 <|> p2
+      i = info (p0 <**> helper) idm
+      result = execParserPure (prefs disambiguate) i ["orang"]
+  in  assertError result (\_ -> property succeeded)
+
+prop_without_disambiguation_same_named_commands_should_parse_in_order :: Property
+prop_without_disambiguation_same_named_commands_should_parse_in_order = once $
+  let p3 = subparser (command "b" (info (pure ()) idm)  <> metavar "B")
+      p2 = subparser (command "a" (info (pure ()) idm)  <> metavar "B")
+      p1 = subparser (command "a" (info (pure ()) idm)  <> metavar "C")
+      p0 = (,,) <$> p1 <*> p2 <*> p3
+      i = info (p0 <**> helper) idm
+      result = execParserPure defaultPrefs i ["b", "a", "a"]
+  in  assertResult result ((===) ((), (), ()))
+
 prop_completion :: Property
 prop_completion = once . ioProperty $
   let p = (,)
@@ -902,7 +945,6 @@ prop_long_command_line_flow = once $
             , "This text should be automatically wrapped "
             , "to fit the size of the terminal" ]) )
   in checkHelpTextWith ExitSuccess (prefs (columns 50)) "formatting-long-subcommand" i ["hello-very-long-sub", "--help"]
-
 
 ---
 
