@@ -18,6 +18,7 @@ module Options.Applicative.Internal
   , ListT
   , takeListT
   , runListT
+  , select
 
   , NondetT
   , cut
@@ -263,3 +264,8 @@ disamb allow_amb xs = do
   return $ case xs' of
     [x] -> Just x
     _   -> Nothing
+
+select :: (Foldable f, Alternative m) => f a -> m a
+select = foldr cons empty
+  where
+    cons x xs = pure x <|> xs
