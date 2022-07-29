@@ -94,12 +94,11 @@ cmdDesc pprefs = mapParser desc
   where
     desc _ opt =
       case optMain opt of
-        CmdReader gn cmds p ->
+        CmdReader gn cmds ->
           (,) gn $
             tabulate (prefTabulateFill pprefs)
-              [ (string cmd, align (extractChunk d))
-                | cmd <- reverse cmds,
-                  d <- maybeToList . fmap infoProgDesc $ p cmd
+              [ (string nm, align (extractChunk (infoProgDesc cmd)))
+              | (nm, cmd) <- reverse cmds
               ]
         _ -> mempty
 

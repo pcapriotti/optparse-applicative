@@ -88,8 +88,8 @@ hsubparser :: Mod CommandFields a -> Parser a
 hsubparser m = mkParser d g rdr
   where
     Mod _ d g = metavar "COMMAND" `mappend` m
-    (groupName, cmds, subs) = mkCommand m
-    rdr = CmdReader groupName cmds (fmap add_helper . subs)
+    (groupName, cmds) = mkCommand m
+    rdr = CmdReader groupName ((fmap . fmap) add_helper cmds)
     add_helper pinfo = pinfo
       { infoParser = infoParser pinfo <**> helper }
 
@@ -303,10 +303,10 @@ parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
               OptReader ns _ _ -> fmap showOption ns
               FlagReader ns _  -> fmap showOption ns
               ArgReader _      -> []
-              CmdReader _ ns _  | argumentIsUnreachable reachability
+              CmdReader _ ns    | argumentIsUnreachable reachability
                                -> []
                                 | otherwise
-                               -> ns
+                               -> fst <$> ns
       _
         -> mempty
 
