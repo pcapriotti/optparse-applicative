@@ -153,7 +153,7 @@ execParserPure pprefs pinfo args =
 --
 -- This function can be used, for example, to show the help text for a parser:
 --
--- @handleParseResult . Failure $ parserFailure pprefs pinfo ShowHelpText mempty@
+-- @handleParseResult . Failure $ parserFailure pprefs pinfo (ShowHelpText Nothing) mempty@
 parserFailure :: ParserPrefs -> ParserInfo a
               -> ParseError -> [Context]
               -> ParserFailure ParserHelp
