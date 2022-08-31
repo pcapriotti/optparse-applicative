@@ -116,8 +116,9 @@ import Options.Applicative.Builder.Completer
 import Options.Applicative.Builder.Internal
 import Options.Applicative.Common
 import Options.Applicative.Types
-import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
+import Options.Applicative.Help.Pretty
+import Options.Applicative.Help.Types (renderHelp)
 
 -- Readers --
 
@@ -545,7 +546,8 @@ prefs m = applyPrefsMod m base
       , prefColumns = 80
       , prefHelpLongEquals = False
       , prefHelpShowGlobal = False
-      , prefTabulateFill = 24 }
+      , prefTabulateFill = 24
+      }
 
 -- Convenience shortcuts
 

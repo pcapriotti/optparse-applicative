@@ -35,8 +35,8 @@ import Prelude hiding (any)
 
 import Options.Applicative.Common
 import Options.Applicative.Types
-import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
+import Options.Applicative.Help.Pretty
 
 -- | Style for rendering an option.
 data OptDescStyle
@@ -157,6 +157,7 @@ foldTree prefs s (MultNode xs) =
   where
     mult_wrap [_] = NeverRequired
     mult_wrap _ = MaybeRequired
+
 foldTree prefs s (AltNode b xs) =
   (\x -> (x, NeverRequired))
     . fmap groupOrNestLine

@@ -88,19 +88,22 @@ library
                      , Options.Applicative.Common
                      , Options.Applicative.Extra
                      , Options.Applicative.Help
+                     , Options.Applicative.Help.Ann
                      , Options.Applicative.Help.Chunk
                      , Options.Applicative.Help.Core
                      , Options.Applicative.Help.Levenshtein
                      , Options.Applicative.Help.Pretty
+                     , Options.Applicative.Help.Style
                      , Options.Applicative.Help.Types
                      , Options.Applicative.NonEmpty
                      , Options.Applicative.Types
                      , Options.Applicative.Internal
 
   build-depends:       base                            == 4.*
+                     , ansi-terminal                   >= 0.4.0
+                     , prettyprinter                   >= 1.7.1 && < 1.8
                      , transformers                    >= 0.2 && < 0.7
                      , transformers-compat             >= 0.3 && < 0.8
-                     , ansi-wl-pprint                  >= 0.6.8 && < 0.7
 
   if flag(process)
     build-depends:     process                         >= 1.0 && < 1.7

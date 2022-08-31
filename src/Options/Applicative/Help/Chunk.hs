@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module Options.Applicative.Help.Chunk
   ( Chunk(..)
   , chunked
@@ -11,6 +13,7 @@ module Options.Applicative.Help.Chunk
   , paragraph
   , extractChunk
   , tabulate
+  , chunkFlatAlt
   ) where
 
 import Control.Applicative
@@ -134,3 +137,9 @@ tabulate _ [] = mempty
 tabulate size table = pure $ vcat
   [ indent 2 (fillBreak size key <+> value)
   | (key, value) <- table ]
+
+-- | By default, @('chunkFlatAlt' x y)@ renders as @x@. However when 'group'ed,
+-- @y@ will be preferred, with @x@ as the fallback for the case when @y@
+-- doesn't fit.
+chunkFlatAlt :: Chunk Doc -> Chunk Doc -> Chunk Doc
+chunkFlatAlt x y = pure (flatAlt (extractChunk x) (extractChunk y))
