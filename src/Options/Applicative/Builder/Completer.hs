@@ -6,6 +6,8 @@ module Options.Applicative.Builder.Completer
   , listIOCompleter
   , listCompleter
   , bashCompleter
+
+  , requote
   ) where
 
 import Control.Applicative
