@@ -39,10 +39,6 @@ data BuildOpts = BuildOpts
   { buildDir :: FilePath }
   deriving Show
 
-version :: Parser (a -> a)
-version = infoOption "0.0.0"
-  (  long "version"
-  <> help "Print version information" )
 
 parser :: Parser Args
 parser = runA $ proc () -> do
@@ -60,7 +56,7 @@ parser = runA $ proc () -> do
            <> command "build"
               (info buildParser
                     (progDesc "Make this package ready for installation")) ) -< ()
-  A version >>> A helper -< Args opts cmds
+  A (simpleVersioner "0.0.0") >>> A helper -< Args opts cmds
 
 commonOpts :: Parser CommonOpts
 commonOpts = CommonOpts

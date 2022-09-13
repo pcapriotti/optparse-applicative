@@ -74,6 +74,7 @@ module Options.Applicative (
   abortOption,
   infoOption,
   helper,
+  simpleVersioner,
 
   -- ** Modifiers
   --

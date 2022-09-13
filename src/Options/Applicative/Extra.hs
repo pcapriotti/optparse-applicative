@@ -6,6 +6,7 @@ module Options.Applicative.Extra (
   helper,
   helperWith,
   hsubparser,
+  simpleVersioner,
   execParser,
   customExecParser,
   execParserPure,
@@ -92,6 +93,19 @@ hsubparser m = mkParser d g rdr
     rdr = CmdReader groupName ((fmap . fmap) add_helper cmds)
     add_helper pinfo = pinfo
       { infoParser = infoParser pinfo <**> helper }
+
+-- | A hidden \"--version\" option that displays the version.
+--
+-- > opts :: ParserInfo Sample
+-- > opts = info (sample <**> simpleVersioner "v1.2.3") mempty
+simpleVersioner :: String -- ^ Version string to be shown
+                -> Parser (a -> a)
+simpleVersioner version = infoOption version $
+  mconcat
+    [ long "version"
+    , help "Show version information"
+    , hidden
+    ]
 
 -- | Run a program description.
 --

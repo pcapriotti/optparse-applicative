@@ -9,4 +9,4 @@ Available options:
 
 Global options:
   -v,--verbose LEVEL       Set verbosity to LEVEL
-  --version                Print version information
+  --version                Show version information
