@@ -198,6 +198,7 @@ module Options.Applicative (
   columns,
   helpLongEquals,
   helpShowGlobals,
+  helpIndent,
   defaultPrefs,
 
   -- * Completions
