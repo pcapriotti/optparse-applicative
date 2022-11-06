@@ -1,3 +1,7 @@
+## Unreleased
+
+- Export `helpIndent` from `Options.Applicative`.
+
 ## Version 0.17.0.0 (1 Feb 2022)
 
 - Make tabulation width configurable in usage texts.
