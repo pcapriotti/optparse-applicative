@@ -301,7 +301,14 @@ Having `Applicative` and `Alternative` instances, optparse-applicative
 parsers are also able to be composed with standard combinators. For
 example: `optional :: Alternative f => f a -> f (Maybe a)` will
 mean the user is not required to provide input for the affected
-`Parser`.
+`Parser`. For example, the following parser will return `Nothing`
+instead of failing if the user doesn't supply an `output` option:
+
+```haskell
+optional $ strOption
+  ( long "output"
+ <> metavar "DIRECTORY" )
+```
 
 ### Running parsers
 
