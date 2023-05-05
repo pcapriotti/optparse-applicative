@@ -20,6 +20,7 @@ module Options.Applicative.Builder (
   subparser,
   strArgument,
   argument,
+  optionalArg,
   flag,
   flag',
   switch,
@@ -296,6 +297,10 @@ argument p m = mkParser d g (ArgReader rdr)
 -- | Builder for a 'String' argument.
 strArgument :: IsString s => Mod ArgumentFields s -> Parser s
 strArgument = argument str
+
+-- | Builder for an optional argument.
+optionalArg :: ReadM a -> Mod ArgumentFields (Maybe a) -> Parser (Maybe a)
+optionalArg p m = argument (Just <$> p) (m <> value Nothing)
 
 -- | Builder for a flag parser.
 --
