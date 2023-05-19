@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fno-warn-warnings-deprecations #-}
 module Options.Applicative.Help.Chunk
   ( Chunk(..)
   , chunked

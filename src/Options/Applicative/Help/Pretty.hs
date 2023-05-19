@@ -1,22 +1,36 @@
 {-# LANGUAGE CPP #-}
-{-# OPTIONS -Wno-warnings-deprecations #-}
+{-# OPTIONS_GHC -fno-warn-warnings-deprecations #-}
 module Options.Applicative.Help.Pretty
   ( module Text.PrettyPrint.ANSI.Leijen
+  , Doc
+  , indent
+  , renderPretty
+  , displayS
   , (.$.)
   , groupOrNestLine
   , altSep
   , hangAtIfOver
   ) where
 
-import           Control.Applicative
 #if !MIN_VERSION_base(4,11,0)
 import           Data.Semigroup ((<>))
 #endif
 
-import           Text.PrettyPrint.ANSI.Leijen hiding ((<$>), (<>), columns)
+import           Text.PrettyPrint.ANSI.Leijen hiding (Doc, (<$>), (<>), columns, indent, renderPretty, displayS)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 
 import           Prelude
+
+type Doc = PP.Doc
+
+indent :: Int -> PP.Doc -> PP.Doc
+indent = PP.indent
+
+renderPretty :: Float -> Int -> PP.Doc -> SimpleDoc
+renderPretty = PP.renderPretty
+
+displayS :: SimpleDoc -> ShowS
+displayS = PP.displayS
 
 (.$.) :: Doc -> Doc -> Doc
 (.$.) = (PP.<$>)
