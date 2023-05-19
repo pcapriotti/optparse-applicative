@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# OPTIONS -Wno-warnings-deprecations #-}
 module Options.Applicative.Help.Pretty
   ( module Text.PrettyPrint.ANSI.Leijen
   , (.$.)
@@ -13,7 +14,6 @@ import           Data.Semigroup ((<>))
 #endif
 
 import           Text.PrettyPrint.ANSI.Leijen hiding ((<$>), (<>), columns)
-import           Text.PrettyPrint.ANSI.Leijen.Internal (Doc (..), flatten)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 
 import           Prelude
@@ -38,8 +38,8 @@ ifAtRoot =
 --   start of our nesting level.
 ifElseAtRoot :: (Doc -> Doc) -> (Doc -> Doc) -> Doc -> Doc
 ifElseAtRoot f g doc =
-  Nesting $ \i ->
-    Column $ \j ->
+  nesting $ \i ->
+    column $ \j ->
       if i == j
         then f doc
         else g doc
@@ -52,9 +52,7 @@ ifElseAtRoot f g doc =
 --   group.
 groupOrNestLine :: Doc -> Doc
 groupOrNestLine =
-  Union
-    <$> flatten
-    <*> ifNotAtRoot (line <>) . nest 2
+  group . ifNotAtRoot (linebreak <>) . nest 2
 
 
 -- | Separate items in an alternative with a pipe.
@@ -85,7 +83,7 @@ altSep x y =
 --   the starting column, and it won't be indented more.
 hangAtIfOver :: Int -> Int -> Doc -> Doc
 hangAtIfOver i j d =
-  Column $ \k ->
+  column $ \k ->
     if k <= j then
       align d
     else
