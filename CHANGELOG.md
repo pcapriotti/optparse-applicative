@@ -2,6 +2,19 @@
 
 - Export `helpIndent` from `Options.Applicative`.
 
+- Export completion script generators from `Options.Applicative.BashCompletion`.
+
+- Add `simpleVersioner` utility for adding a '--version' option to a parser.
+
+- Allow commands to be disambiguated in a similar manner to flags when the
+  `disambiguate` modifier is used.
+
+  This is a potentially breaking change as the internal `CmdReader` constructor
+  has been adapted so it is able to be inspected to a greater degree to support
+  finding submatches.
+
+- Improve documentation.
+
 ## Version 0.17.0.0 (1 Feb 2022)
 
 - Make tabulation width configurable in usage texts.
