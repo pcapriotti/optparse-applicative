@@ -1,40 +1,41 @@
 {-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -fno-warn-warnings-deprecations #-}
 module Options.Applicative.Help.Pretty
-  ( module Text.PrettyPrint.ANSI.Leijen
+  ( module Prettyprinter
+  , module Prettyprinter.Render.Terminal
   , Doc
-  , indent
-  , renderPretty
-  , displayS
+  , SimpleDoc
+
   , (.$.)
+  , (</>)
+
   , groupOrNestLine
   , altSep
   , hangAtIfOver
+
+  , prettyString
   ) where
 
 #if !MIN_VERSION_base(4,11,0)
-import           Data.Semigroup ((<>))
+import           Data.Semigroup ((<>), mempty)
 #endif
 
-import           Text.PrettyPrint.ANSI.Leijen hiding (Doc, (<$>), (<>), columns, indent, renderPretty, displayS)
-import qualified Text.PrettyPrint.ANSI.Leijen as PP
+import           Prettyprinter hiding (Doc)
+import qualified Prettyprinter as PP
+import qualified Prettyprinter.Render.String as PP
+import           Prettyprinter.Render.Terminal
 
 import           Prelude
 
-type Doc = PP.Doc
+type Doc = PP.Doc Prettyprinter.Render.Terminal.AnsiStyle
+type SimpleDoc = SimpleDocStream AnsiStyle
 
-indent :: Int -> PP.Doc -> PP.Doc
-indent = PP.indent
-
-renderPretty :: Float -> Int -> PP.Doc -> SimpleDoc
-renderPretty = PP.renderPretty
-
-displayS :: SimpleDoc -> ShowS
-displayS = PP.displayS
+linebreak :: Doc
+linebreak = flatAlt line mempty
 
 (.$.) :: Doc -> Doc -> Doc
-(.$.) = (PP.<$>)
-
+x .$. y = x <> line <> y
+(</>) :: Doc -> Doc -> Doc
+x </> y = x <> softline <> y
 
 -- | Apply the function if we're not at the
 --   start of our nesting level.
@@ -58,7 +59,6 @@ ifElseAtRoot f g doc =
         then f doc
         else g doc
 
-
 -- | Render flattened text on this line, or start
 --   a new line before rendering any text.
 --
@@ -81,7 +81,7 @@ groupOrNestLine =
 --   next line.
 altSep :: Doc -> Doc -> Doc
 altSep x y =
-  group (x <+> char '|' <> line) <//> y
+  group (x <+> pretty '|' <> line) <> group linebreak <>  y
 
 
 -- | Printer hacks to get nice indentation for long commands
@@ -102,3 +102,18 @@ hangAtIfOver i j d =
       align d
     else
       linebreak <> ifAtRoot (indent i) d
+
+
+renderPretty :: Double -> Int -> Doc -> SimpleDocStream AnsiStyle
+renderPretty ribbonFraction lineWidth
+  = layoutSmart LayoutOptions
+      { layoutPageWidth = AvailablePerLine lineWidth ribbonFraction }
+
+prettyString :: Double -> Int -> Doc -> String
+prettyString ribbonFraction lineWidth
+  = streamToString
+  . renderPretty ribbonFraction lineWidth
+
+streamToString :: SimpleDocStream AnsiStyle -> String
+streamToString stream =
+  PP.renderShowS stream ""

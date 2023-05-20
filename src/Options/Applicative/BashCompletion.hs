@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -fno-warn-warnings-deprecations #-}
 -- | You don't need to import this module to enable bash completion.
 --
 -- See
@@ -150,7 +149,7 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
     -- If there was a line break, it would come across as a different completion
     -- possibility.
     render_line :: Int -> Doc -> String
-    render_line len doc = case lines (displayS (renderPretty 1 len doc) "") of
+    render_line len doc = case lines (prettyString 1 len doc) of
       [] -> ""
       [x] -> x
       x : _ -> x ++ "..."

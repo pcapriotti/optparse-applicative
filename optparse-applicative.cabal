@@ -100,10 +100,11 @@ library
                      , Options.Applicative.Types
                      , Options.Applicative.Internal
 
-  build-depends:       base                            == 4.*
+  build-depends:       base                            >= 4.5 && < 5
                      , transformers                    >= 0.2 && < 0.7
                      , transformers-compat             >= 0.3 && < 0.8
-                     , ansi-wl-pprint                  >= 0.6.8 && < 1.1
+                     , prettyprinter                   >= 1.7 && < 1.8
+                     , prettyprinter-ansi-terminal     >= 1.1 && < 1.2
 
   if flag(process)
     build-depends:     process                         >= 1.0 && < 1.7
