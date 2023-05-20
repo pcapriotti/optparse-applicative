@@ -114,11 +114,11 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
         -> return []
          | otherwise
         -> run_completer (crCompleter rdr)
-      CmdReader _ ns
+      CmdReader _ ns p
          | argumentIsUnreachable reachability
         -> return []
          | otherwise
-        -> return . with_cmd_help $ filter (is_completion . fst) ns
+        -> return . add_cmd_help p $ filter_names ns
 
     -- When doing enriched completions, add any help specified
     -- to the completion variables (tab separated).
@@ -133,18 +133,17 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
 
     -- When doing enriched completions, add the command description
     -- to the completion variables (tab separated).
-    with_cmd_help :: Functor f => f (String, ParserInfo a) -> f String
-    with_cmd_help =
-      case richness of
-        Standard ->
-          fmap fst
-        Enriched _ len ->
-          fmap $ \(cmd, cmdInfo) ->
-            let h = unChunk (infoProgDesc cmdInfo)
-            in  maybe cmd (\h' -> cmd ++ "\t" ++ render_line len h') h
+    add_cmd_help :: Functor f => (String -> Maybe (ParserInfo a)) -> f String -> f String
+    add_cmd_help p = case richness of
+      Standard ->
+        id
+      Enriched _ len ->
+        fmap $ \cmd ->
+          let h = p cmd >>= unChunk . infoProgDesc
+          in  maybe cmd (\h' -> cmd ++ "\t" ++ render_line len h') h
 
     show_names :: [OptName] -> [String]
-    show_names = filter is_completion . map showOption
+    show_names = filter_names . map showOption
 
     -- We only want to show a single line in the completion results description.
     -- If there was a line break, it would come across as a different completion
@@ -154,6 +153,9 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
       [] -> ""
       [x] -> x
       x : _ -> x ++ "..."
+
+    filter_names :: [String] -> [String]
+    filter_names = filter is_completion
 
     run_completer :: Completer -> IO [String]
     run_completer c = runCompleter c (fromMaybe "" (listToMaybe ws''))

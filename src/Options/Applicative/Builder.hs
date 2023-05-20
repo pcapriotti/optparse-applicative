@@ -282,8 +282,8 @@ subparser :: Mod CommandFields a -> Parser a
 subparser m = mkParser d g rdr
   where
     Mod _ d g = metavar "COMMAND" `mappend` m
-    (groupName, cmds) = mkCommand m
-    rdr = CmdReader groupName cmds
+    (groupName, cmds, subs) = mkCommand m
+    rdr = CmdReader groupName cmds subs
 
 -- | Builder for an argument parser.
 argument :: ReadM a -> Mod ArgumentFields a -> Parser a

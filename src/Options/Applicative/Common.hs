@@ -166,28 +166,23 @@ searchArg prefs arg =
   searchParser $ \opt -> do
     when (isArg (optMain opt)) cut
     case optMain opt of
-      CmdReader _ cs -> do
-        subp <- hoistList (cmdMatches cs)
-        case prefBacktrack prefs of
-          NoBacktrack -> lift $ do
+      CmdReader _ _ f ->
+        case (f arg, prefBacktrack prefs) of
+          (Just subp, NoBacktrack) -> lift $ do
             args <- get <* put []
             fmap pure . lift $ enterContext arg subp *> runParserInfo subp args <* exitContext
 
-          Backtrack -> fmap pure . lift . StateT $ \args ->
+          (Just subp, Backtrack) -> fmap pure . lift . StateT $ \args ->
             enterContext arg subp *> runParser (infoPolicy subp) CmdStart (infoParser subp) args <* exitContext
 
-          SubparserInline -> lift $ do
+          (Just subp, SubparserInline) -> lift $ do
             lift $ enterContext arg subp
             return $ infoParser subp
 
+          (Nothing, _)  -> mzero
       ArgReader rdr ->
         fmap pure . lift . lift $ runReadM (crReader rdr) arg
       _ -> mzero
-
-  where
-    cmdMatches cs
-      | prefDisambiguate prefs = snd <$> filter (isPrefixOf arg . fst) cs
-      | otherwise = maybeToList (lookup arg cs)
 
 stepParser :: MonadP m => ParserPrefs -> ArgPolicy -> String
            -> Parser a -> NondetT (StateT Args m) (Parser a)

@@ -152,8 +152,8 @@ baseProps = OptProperties
   , propShowGlobal = True
   }
 
-mkCommand :: Mod CommandFields a -> (Maybe String, [(String, ParserInfo a)])
-mkCommand m = (group, cmds)
+mkCommand :: Mod CommandFields a -> (Maybe String, [String], String -> Maybe (ParserInfo a))
+mkCommand m = (group, map fst cmds, (`lookup` cmds))
   where
     Mod f _ _ = m
     CommandFields cmds group = f (CommandFields [] Nothing)

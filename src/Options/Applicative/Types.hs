@@ -242,14 +242,14 @@ data OptReader a
   -- ^ flag reader
   | ArgReader (CReader a)
   -- ^ argument reader
-  | CmdReader (Maybe String) [(String, ParserInfo a)]
+  | CmdReader (Maybe String) [String] (String -> Maybe (ParserInfo a))
   -- ^ command reader
 
 instance Functor OptReader where
   fmap f (OptReader ns cr e) = OptReader ns (fmap f cr) e
   fmap f (FlagReader ns x) = FlagReader ns (f x)
   fmap f (ArgReader cr) = ArgReader (fmap f cr)
-  fmap f (CmdReader n cs) = CmdReader n ((fmap . fmap . fmap) f cs)
+  fmap f (CmdReader n cs g) = CmdReader n cs ((fmap . fmap) f . g)
 
 -- | A @Parser a@ is an option parser returning a value of type 'a'.
 data Parser a

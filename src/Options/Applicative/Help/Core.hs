@@ -25,7 +25,7 @@ import Control.Monad (guard)
 import Data.Function (on)
 import Data.List (sort, intersperse, groupBy)
 import Data.Foldable (any, foldl')
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (catMaybes, fromMaybe, maybeToList)
 #if !MIN_VERSION_base(4,8,0)
 import Data.Monoid (mempty)
 #endif
@@ -95,11 +95,12 @@ cmdDesc pprefs = mapParser desc
   where
     desc _ opt =
       case optMain opt of
-        CmdReader gn cmds ->
+        CmdReader gn cmds p ->
           (,) gn $
             tabulate (prefTabulateFill pprefs)
-              [ (string nm, align (extractChunk (infoProgDesc cmd)))
-              | (nm, cmd) <- reverse cmds
+              [ (string cmd, align (extractChunk d))
+                | cmd <- reverse cmds,
+                  d <- maybeToList . fmap infoProgDesc $ p cmd
               ]
         _ -> mempty
 
