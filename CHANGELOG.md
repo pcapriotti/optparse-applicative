@@ -1,5 +1,9 @@
 ## Unreleased
 
+- Widen bounds for `ansi-wl-pprint`. This supports the use of `prettyprinter`
+  in a non-breaking way, as the `ansi-wl-pprint > 1.0` support the newer
+  library.
+
 - Export `helpIndent` from `Options.Applicative`.
 
 - Export completion script generators from `Options.Applicative.BashCompletion`.
