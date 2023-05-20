@@ -1,4 +1,4 @@
-## Unreleased
+## Version 0.17.1.0 (21 May 2023)
 
 - Widen bounds for `ansi-wl-pprint`. This supports the use of `prettyprinter`
   in a non-breaking way, as the `ansi-wl-pprint > 1.0` support the newer
