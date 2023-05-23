@@ -1,22 +1,36 @@
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -fno-warn-warnings-deprecations #-}
 module Options.Applicative.Help.Pretty
   ( module Text.PrettyPrint.ANSI.Leijen
+  , Doc
+  , indent
+  , renderPretty
+  , displayS
   , (.$.)
   , groupOrNestLine
   , altSep
   , hangAtIfOver
   ) where
 
-import           Control.Applicative
 #if !MIN_VERSION_base(4,11,0)
 import           Data.Semigroup ((<>))
 #endif
 
-import           Text.PrettyPrint.ANSI.Leijen hiding ((<$>), (<>), columns)
-import           Text.PrettyPrint.ANSI.Leijen.Internal (Doc (..), flatten)
+import           Text.PrettyPrint.ANSI.Leijen hiding (Doc, (<$>), (<>), columns, indent, renderPretty, displayS)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 
 import           Prelude
+
+type Doc = PP.Doc
+
+indent :: Int -> PP.Doc -> PP.Doc
+indent = PP.indent
+
+renderPretty :: Float -> Int -> PP.Doc -> SimpleDoc
+renderPretty = PP.renderPretty
+
+displayS :: SimpleDoc -> ShowS
+displayS = PP.displayS
 
 (.$.) :: Doc -> Doc -> Doc
 (.$.) = (PP.<$>)
@@ -38,8 +52,8 @@ ifAtRoot =
 --   start of our nesting level.
 ifElseAtRoot :: (Doc -> Doc) -> (Doc -> Doc) -> Doc -> Doc
 ifElseAtRoot f g doc =
-  Nesting $ \i ->
-    Column $ \j ->
+  nesting $ \i ->
+    column $ \j ->
       if i == j
         then f doc
         else g doc
@@ -52,9 +66,7 @@ ifElseAtRoot f g doc =
 --   group.
 groupOrNestLine :: Doc -> Doc
 groupOrNestLine =
-  Union
-    <$> flatten
-    <*> ifNotAtRoot (line <>) . nest 2
+  group . ifNotAtRoot (linebreak <>) . nest 2
 
 
 -- | Separate items in an alternative with a pipe.
@@ -85,7 +97,7 @@ altSep x y =
 --   the starting column, and it won't be indented more.
 hangAtIfOver :: Int -> Int -> Doc -> Doc
 hangAtIfOver i j d =
-  Column $ \k ->
+  column $ \k ->
     if k <= j then
       align d
     else

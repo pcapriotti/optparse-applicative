@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -fno-warn-warnings-deprecations #-}
 module Options.Applicative.Help.Core (
   cmdDesc,
   briefDesc,
@@ -24,7 +25,7 @@ import Control.Monad (guard)
 import Data.Function (on)
 import Data.List (sort, intersperse, groupBy)
 import Data.Foldable (any, foldl')
-import Data.Maybe (maybeToList, catMaybes, fromMaybe)
+import Data.Maybe (catMaybes, fromMaybe)
 #if !MIN_VERSION_base(4,8,0)
 import Data.Monoid (mempty)
 #endif

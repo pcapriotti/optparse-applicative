@@ -103,7 +103,7 @@ library
   build-depends:       base                            == 4.*
                      , transformers                    >= 0.2 && < 0.7
                      , transformers-compat             >= 0.3 && < 0.8
-                     , ansi-wl-pprint                  >= 0.6.8 && < 0.7
+                     , ansi-wl-pprint                  >= 0.6.8 && < 1.1
 
   if flag(process)
     build-depends:     process                         >= 1.0 && < 1.7

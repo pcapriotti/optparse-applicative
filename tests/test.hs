@@ -949,12 +949,11 @@ prop_long_command_line_flow = once $
 ---
 
 deriving instance Arbitrary a => Arbitrary (Chunk a)
-deriving instance Eq SimpleDoc
-deriving instance Show SimpleDoc
+
 
 equalDocs :: Float -> Int -> Doc -> Doc -> Property
-equalDocs f w d1 d2 = Doc.renderPretty f w d1
-                  === Doc.renderPretty f w d2
+equalDocs f w d1 d2 = Doc.displayS (Doc.renderPretty f w d1) ""
+                  === Doc.displayS (Doc.renderPretty f w d2) ""
 
 prop_listToChunk_1 :: [String] -> Property
 prop_listToChunk_1 xs = isEmpty (listToChunk xs) === null xs
