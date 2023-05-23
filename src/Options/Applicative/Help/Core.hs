@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -fno-warn-warnings-deprecations #-}
 module Options.Applicative.Help.Core (
   cmdDesc,
   briefDesc,
@@ -58,7 +57,7 @@ optDesc pprefs style _reachability opt =
       meta =
         stringChunk $ optMetaVar opt
       descs =
-        map (string . showOption) names
+        map (pretty . showOption) names
       descriptions =
         listToChunk (intersperse (descSep style) descs)
       desc
@@ -98,7 +97,7 @@ cmdDesc pprefs = mapParser desc
         CmdReader gn cmds ->
           (,) gn $
             tabulate (prefTabulateFill pprefs)
-              [ (string nm, align (extractChunk (infoProgDesc cmd)))
+              [ (pretty nm, align (extractChunk (infoProgDesc cmd)))
               | (nm, cmd) <- reverse cmds
               ]
         _ -> mempty
@@ -127,7 +126,7 @@ briefDesc' showOptional pprefs =
       | otherwise =
         filterOptional
     style = OptDescStyle
-      { descSep = string "|",
+      { descSep = pretty '|',
         descHidden = False,
         descGlobal = False
       }
@@ -204,9 +203,9 @@ optionsDesc global pprefs = tabulate (prefTabulateFill pprefs) . catMaybes . map
         n = fst $ optDesc pprefs style info opt
         h = optHelp opt
         hdef = Chunk . fmap show_def . optShowDefault $ opt
-        show_def s = parens (string "default:" <+> string s)
+        show_def s = parens (pretty "default:" <+> pretty s)
     style = OptDescStyle
-      { descSep = string ",",
+      { descSep = pretty ',',
         descHidden = True,
         descGlobal = global
       }
@@ -251,7 +250,7 @@ parserHelp pprefs p =
     group_title _ = mempty
 
     with_title :: String -> Chunk Doc -> Chunk Doc
-    with_title title = fmap (string title .$.)
+    with_title title = fmap (pretty title .$.)
 
 
 parserGlobals :: ParserPrefs -> Parser a -> ParserHelp
@@ -267,8 +266,8 @@ parserUsage :: ParserPrefs -> Parser a -> String -> Doc
 parserUsage pprefs p progn =
   group $
     hsep
-      [ string "Usage:",
-        string progn,
+      [ pretty "Usage:",
+        pretty progn,
         hangAtIfOver 9 35 (extractChunk (briefDesc pprefs p))
       ]
 

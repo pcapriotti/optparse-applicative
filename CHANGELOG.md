@@ -1,4 +1,23 @@
-## Unreleased
+## Version 0.18.0.0 (22 May 2023)
+
+- Move to 'prettyprinter` library for pretty printing.
+
+  This is a potentially breaking change when one uses the '*Doc' family of functions
+  (like `headerDoc`) from `Options.Applicative`. However, as versions of
+  'ansi-wl-pprint > 1.0' export a compatible `Doc` type, this can be mitigated by
+  using a recent version.
+
+  One can also either import directly from `Options.Applicative.Help` or from the
+  `Prettyprinter` module of 'prettyprinter'.
+
+- Allow commands to be disambiguated in a similar manner to flags when the
+  `disambiguate` modifier is used.
+
+  This is a potentially breaking change as the internal `CmdReader` constructor
+  has been adapted so it is able to be inspected to a greater degree to support
+  finding prefix matches.
+
+## Version 0.17.1.0 (22 May 2023)
 
 - Widen bounds for `ansi-wl-pprint`. This supports the use of `prettyprinter`
   in a non-breaking way, as the `ansi-wl-pprint > 1.0` support the newer
@@ -10,14 +29,9 @@
 
 - Add `simpleVersioner` utility for adding a '--version' option to a parser.
 
-- Allow commands to be disambiguated in a similar manner to flags when the
-  `disambiguate` modifier is used.
-
-  This is a potentially breaking change as the internal `CmdReader` constructor
-  has been adapted so it is able to be inspected to a greater degree to support
-  finding submatches.
-
 - Improve documentation.
+
+- Drop support for GHC 7.0 and 7.2.
 
 ## Version 0.17.0.0 (1 Feb 2022)
 

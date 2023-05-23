@@ -28,7 +28,7 @@ import qualified Options.Applicative.NonEmpty
 
 
 import qualified Options.Applicative.Help as H
-import           Options.Applicative.Help.Pretty (Doc, SimpleDoc(..))
+import           Options.Applicative.Help.Pretty (Doc)
 import qualified Options.Applicative.Help.Pretty as Doc
 import           Options.Applicative.Help.Chunk
 import           Options.Applicative.Help.Levenshtein
@@ -951,9 +951,9 @@ prop_long_command_line_flow = once $
 deriving instance Arbitrary a => Arbitrary (Chunk a)
 
 
-equalDocs :: Float -> Int -> Doc -> Doc -> Property
-equalDocs f w d1 d2 = Doc.displayS (Doc.renderPretty f w d1) ""
-                  === Doc.displayS (Doc.renderPretty f w d2) ""
+equalDocs :: Double -> Int -> Doc -> Doc -> Property
+equalDocs f w d1 d2 = Doc.prettyString f w d1
+                  === Doc.prettyString f w d2
 
 prop_listToChunk_1 :: [String] -> Property
 prop_listToChunk_1 xs = isEmpty (listToChunk xs) === null xs
@@ -967,10 +967,10 @@ prop_extractChunk_1 x = extractChunk (pure x) === x
 prop_extractChunk_2 :: Chunk String -> Property
 prop_extractChunk_2 x = extractChunk (fmap pure x) === x
 
-prop_stringChunk_1 :: Positive Float -> Positive Int -> String -> Property
+prop_stringChunk_1 :: Positive Double -> Positive Int -> String -> Property
 prop_stringChunk_1 (Positive f) (Positive w) s =
   equalDocs f w (extractChunk (stringChunk s))
-                (Doc.string s)
+                (Doc.pretty s)
 
 prop_stringChunk_2 :: String -> Property
 prop_stringChunk_2 s = isEmpty (stringChunk s) === null s

@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -fno-warn-warnings-deprecations #-}
 module Options.Applicative.Help.Chunk
   ( Chunk(..)
   , chunked
@@ -116,7 +115,7 @@ isEmpty = isNothing . unChunk
 -- > extractChunk . stringChunk = string
 stringChunk :: String -> Chunk Doc
 stringChunk "" = mempty
-stringChunk s = pure (string s)
+stringChunk s = pure (pretty s)
 
 -- | Convert a paragraph into a 'Chunk'.  The resulting chunk is composed by the
 -- words of the original paragraph separated by softlines, so it will be
