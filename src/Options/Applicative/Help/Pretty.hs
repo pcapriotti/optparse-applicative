@@ -106,7 +106,7 @@ hangAtIfOver i j d =
 
 renderPretty :: Double -> Int -> Doc -> SimpleDocStream AnsiStyle
 renderPretty ribbonFraction lineWidth
-  = layoutSmart LayoutOptions
+  = layoutPretty LayoutOptions
       { layoutPageWidth = AvailablePerLine lineWidth ribbonFraction }
 
 prettyString :: Double -> Int -> Doc -> String
