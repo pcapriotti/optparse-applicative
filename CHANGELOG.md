@@ -8,6 +8,7 @@
   Fixes issues:
     * \# 476 - Stack executable 'hangs' with 0.17.1 and 0.18.0.
 
+- Render help text with `AnsiStyle` aware rendering functions.
 
 ## Version 0.18.0.0 (22 May 2023)
 
