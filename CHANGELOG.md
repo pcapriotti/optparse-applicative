@@ -1,6 +1,6 @@
-## Version 0.18.1.0 (26 May 2023)
+## Version 0.18.1.0 (29 May 2023)
 
-- Change layout algorithm used to a simpler, faster one.
+- Change pretty printer layout algorithm used.
 
   The layoutSmart algorithm appears to be extremely slow with some command line
   sets, to the point where the program appears to hang.
