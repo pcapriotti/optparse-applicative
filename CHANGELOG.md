@@ -1,3 +1,15 @@
+## Version 0.18.1.0 (29 May 2023)
+
+- Change pretty printer layout algorithm used.
+
+  The layoutSmart algorithm appears to be extremely slow with some command line
+  sets, to the point where the program appears to hang.
+
+  Fixes issues:
+    * \# 476 - Stack executable 'hangs' with 0.17.1 and 0.18.0.
+
+- Render help text with `AnsiStyle` aware rendering functions.
+
 ## Version 0.18.0.0 (22 May 2023)
 
 - Move to 'prettyprinter` library for pretty printing.

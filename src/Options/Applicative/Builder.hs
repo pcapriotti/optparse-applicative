@@ -189,7 +189,7 @@ showDefault = showDefaultWith show
 help :: String -> Mod f a
 help s = optionMod $ \p -> p { propHelp = paragraph s }
 
--- | Specify the help text for an option as a 'Text.PrettyPrint.ANSI.Leijen.Doc'
+-- | Specify the help text for an option as a 'Prettyprinter.Doc AnsiStyle'
 -- value.
 helpDoc :: Maybe Doc -> Mod f a
 helpDoc doc = optionMod $ \p -> p { propHelp = Chunk doc }
@@ -215,7 +215,7 @@ hidden = optionMod $ \p ->
 -- | Apply a function to the option description in the usage text.
 --
 -- > import Options.Applicative.Help
--- > flag' () (short 't' <> style bold)
+-- > flag' () (short 't' <> style (annotate bold))
 --
 -- /NOTE/: This builder is more flexible than its name and example
 -- allude. One of the motivating examples for its addition was to
@@ -402,7 +402,7 @@ briefDesc = InfoMod $ \i -> i { infoFullDesc = False }
 header :: String -> InfoMod a
 header s = InfoMod $ \i -> i { infoHeader = paragraph s }
 
--- | Specify a header for this parser as a 'Text.PrettyPrint.ANSI.Leijen.Doc'
+-- | Specify a header for this parser as a 'Prettyprinter.Doc AnsiStyle'
 -- value.
 headerDoc :: Maybe Doc -> InfoMod a
 headerDoc doc = InfoMod $ \i -> i { infoHeader = Chunk doc }
@@ -411,7 +411,7 @@ headerDoc doc = InfoMod $ \i -> i { infoHeader = Chunk doc }
 footer :: String -> InfoMod a
 footer s = InfoMod $ \i -> i { infoFooter = paragraph s }
 
--- | Specify a footer for this parser as a 'Text.PrettyPrint.ANSI.Leijen.Doc'
+-- | Specify a footer for this parser as a 'Prettyprinter.Doc AnsiStyle'
 -- value.
 footerDoc :: Maybe Doc -> InfoMod a
 footerDoc doc = InfoMod $ \i -> i { infoFooter = Chunk doc }
@@ -420,7 +420,7 @@ footerDoc doc = InfoMod $ \i -> i { infoFooter = Chunk doc }
 progDesc :: String -> InfoMod a
 progDesc s = InfoMod $ \i -> i { infoProgDesc = paragraph s }
 
--- | Specify a short program description as a 'Text.PrettyPrint.ANSI.Leijen.Doc'
+-- | Specify a short program description as a 'Prettyprinter.Doc AnsiStyle'
 -- value.
 progDescDoc :: Maybe Doc -> InfoMod a
 progDescDoc doc = InfoMod $ \i -> i { infoProgDesc = Chunk doc }

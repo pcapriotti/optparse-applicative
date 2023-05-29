@@ -18,15 +18,15 @@ module Options.Applicative.Help.Pretty
 #if !MIN_VERSION_base(4,11,0)
 import           Data.Semigroup ((<>), mempty)
 #endif
+import qualified Data.Text.Lazy as Lazy
 
 import           Prettyprinter hiding (Doc)
 import qualified Prettyprinter as PP
-import qualified Prettyprinter.Render.String as PP
 import           Prettyprinter.Render.Terminal
 
 import           Prelude
 
-type Doc = PP.Doc Prettyprinter.Render.Terminal.AnsiStyle
+type Doc = PP.Doc AnsiStyle
 type SimpleDoc = SimpleDocStream AnsiStyle
 
 linebreak :: Doc
@@ -106,7 +106,7 @@ hangAtIfOver i j d =
 
 renderPretty :: Double -> Int -> Doc -> SimpleDocStream AnsiStyle
 renderPretty ribbonFraction lineWidth
-  = layoutSmart LayoutOptions
+  = layoutPretty LayoutOptions
       { layoutPageWidth = AvailablePerLine lineWidth ribbonFraction }
 
 prettyString :: Double -> Int -> Doc -> String
@@ -115,5 +115,9 @@ prettyString ribbonFraction lineWidth
   . renderPretty ribbonFraction lineWidth
 
 streamToString :: SimpleDocStream AnsiStyle -> String
-streamToString stream =
-  PP.renderShowS stream ""
+streamToString sdoc =
+  let
+    rendered =
+      Prettyprinter.Render.Terminal.renderLazy sdoc
+  in
+    Lazy.unpack rendered
