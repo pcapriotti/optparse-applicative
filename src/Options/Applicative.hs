@@ -5,7 +5,9 @@ module Options.Applicative (
   -- optparse-applicative command line option parsers.
   --
   -- See <https://github.com/pcapriotti/optparse-applicative> for a tutorial,
-  -- and a general introduction to applicative option parsers.
+  -- and a general introduction to applicative option parsers. There is also
+  -- "A Gentle Introduction to optparse-applicative" blog post at 
+  -- <https://prborges.com/2023/introduction-to-optparse-applicative/>.
   --
   -- See the sections below for more detail
 
