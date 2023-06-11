@@ -93,6 +93,7 @@ library
                      , Options.Applicative.Help
                      , Options.Applicative.Help.Chunk
                      , Options.Applicative.Help.Core
+                     , Options.Applicative.Help.HelpDoc
                      , Options.Applicative.Help.Levenshtein
                      , Options.Applicative.Help.Pretty
                      , Options.Applicative.Help.Types

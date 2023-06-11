@@ -95,6 +95,13 @@ optDesc pprefs style _reachability opt =
         | otherwise =
           desc
       modified =
+        -- TODO(martin): optDescMod here wants to modify the description (`rendered`), but we made
+        --   description HelpDoc, because we are annotating stuff like metavar and option name,
+        --   while optDescMode works as AnsiDoc -> AnsiDoc. Figure out what to do: do we make
+        --   optDescMode work as HelpDoc -> HelpDoc, or do we give up annotating description here
+        --   and make it AnsiDoc, or maybe there is third option? I am leaning toward making
+        --   optDescMode operate as HelpDoc -> HelpDoc, but I don't yet understand the whole
+        --   situation.
         maybe id fmap (optDescMod opt) rendered
    in (modified, wrapping)
 
@@ -217,7 +224,8 @@ optionsDesc global pprefs = tabulate (prefTabulateFill pprefs) . catMaybes . map
       return (extractChunk n, align . extractChunk $ h <</>> hdef)
       where
         n = fst $ optDesc pprefs style info opt
-        h = optHelp opt
+        -- TODO(Martin) Not 100% if this `ansiDocToHelpDoc` makes sense here as a move, should double check.
+        h = ansiDocToHelpDoc <$> optHelp opt
         hdef = Chunk . fmap show_def . optShowDefault $ opt
         show_def s = parens (pretty "default:" <+> pretty s)
     style = OptDescStyle
