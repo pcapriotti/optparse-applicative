@@ -63,6 +63,7 @@ import System.Exit (ExitCode(..))
 import Options.Applicative.Help.Types
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
+import Options.Applicative.Help.HelpDoc (HelpDoc)
 
 
 data ParseError
@@ -90,9 +91,9 @@ data ParserInfo a = ParserInfo
   { infoParser :: Parser a    -- ^ the option parser for the program
   , infoFullDesc :: Bool      -- ^ whether the help text should contain full
                               -- documentation
-  , infoProgDesc :: Chunk Doc -- ^ brief parser description
-  , infoHeader :: Chunk Doc   -- ^ header of the full parser description
-  , infoFooter :: Chunk Doc   -- ^ footer of the full parser description
+  , infoProgDesc :: Chunk AnsiDoc -- ^ brief parser description
+  , infoHeader :: Chunk AnsiDoc   -- ^ header of the full parser description
+  , infoFooter :: Chunk AnsiDoc   -- ^ footer of the full parser description
   , infoFailureCode :: Int    -- ^ exit code for a parser failure
   , infoPolicy :: ArgPolicy   -- ^ allow regular options and flags to occur
                               -- after arguments (default: InterspersePolicy)
@@ -150,11 +151,11 @@ data OptVisibility
 -- | Specification for an individual parser option.
 data OptProperties = OptProperties
   { propVisibility :: OptVisibility       -- ^ whether this flag is shown in the brief description
-  , propHelp :: Chunk Doc                 -- ^ help text for this option
+  , propHelp :: Chunk HelpDoc                 -- ^ help text for this option
   , propMetaVar :: String                 -- ^ metavariable for this option
   , propShowDefault :: Maybe String       -- ^ what to show in the help text as the default
   , propShowGlobal :: Bool                -- ^ whether the option is presented in global options text
-  , propDescMod :: Maybe ( Doc -> Doc )   -- ^ a function to run over the brief description
+  , propDescMod :: Maybe ( HelpDoc -> HelpDoc )   -- ^ a function to run over the brief description
   }
 
 instance Show OptProperties where
@@ -431,7 +432,7 @@ filterOptional t = case t of
 optVisibility :: Option a -> OptVisibility
 optVisibility = propVisibility . optProps
 
-optHelp :: Option a -> Chunk Doc
+optHelp :: Option a -> Chunk HelpDoc
 optHelp  = propHelp . optProps
 
 optMetaVar :: Option a -> String
@@ -440,5 +441,5 @@ optMetaVar = propMetaVar . optProps
 optShowDefault :: Option a -> Maybe String
 optShowDefault = propShowDefault . optProps
 
-optDescMod :: Option a -> Maybe ( Doc -> Doc )
+optDescMod :: Option a -> Maybe ( HelpDoc -> HelpDoc )
 optDescMod = propDescMod . optProps
