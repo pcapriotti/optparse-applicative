@@ -151,11 +151,11 @@ data OptVisibility
 -- | Specification for an individual parser option.
 data OptProperties = OptProperties
   { propVisibility :: OptVisibility       -- ^ whether this flag is shown in the brief description
-  , propHelp :: Chunk HelpDoc                 -- ^ help text for this option
+  , propHelp :: Chunk AnsiDoc                 -- ^ help text for this option
   , propMetaVar :: String                 -- ^ metavariable for this option
   , propShowDefault :: Maybe String       -- ^ what to show in the help text as the default
   , propShowGlobal :: Bool                -- ^ whether the option is presented in global options text
-  , propDescMod :: Maybe ( HelpDoc -> HelpDoc )   -- ^ a function to run over the brief description
+  , propDescMod :: Maybe ( AnsiDoc -> AnsiDoc )   -- ^ a function to run over the brief description
   }
 
 instance Show OptProperties where
@@ -432,7 +432,7 @@ filterOptional t = case t of
 optVisibility :: Option a -> OptVisibility
 optVisibility = propVisibility . optProps
 
-optHelp :: Option a -> Chunk HelpDoc
+optHelp :: Option a -> Chunk AnsiDoc
 optHelp  = propHelp . optProps
 
 optMetaVar :: Option a -> String
@@ -441,5 +441,5 @@ optMetaVar = propMetaVar . optProps
 optShowDefault :: Option a -> Maybe String
 optShowDefault = propShowDefault . optProps
 
-optDescMod :: Option a -> Maybe ( HelpDoc -> HelpDoc )
+optDescMod :: Option a -> Maybe ( AnsiDoc -> AnsiDoc )
 optDescMod = propDescMod . optProps
