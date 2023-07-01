@@ -721,8 +721,8 @@ The `progDesc`, `header`, and `footer` functions can be used to
 specify a brief description or tagline for the program, and detailed
 information surrounding the generated option and command descriptions.
 
-Internally we actually use the [ansi-wl-pprint][ansi-wl-pprint]
-library, and one can use the `headerDoc` combinator and friends if
+Internally we actually use the [prettyprinter][prettyprinter]
+library, and one can supply either text or prettyprinter `Doc` elements if
 additional customisation is required.
 
 To display the usage text, the user may type `--help` if the `helper`
@@ -1030,4 +1030,4 @@ simplified implementation.
  [parsec]: http://hackage.haskell.org/package/parsec
  [status]: https://github.com/pcapriotti/optparse-applicative/actions/workflows/haskell-ci.yml
  [status-png]: https://github.com/pcapriotti/optparse-applicative/workflows/Haskell-CI/badge.svg
- [ansi-wl-pprint]: http://hackage.haskell.org/package/ansi-wl-pprint
+ [prettyprinter]: http://hackage.haskell.org/package/prettyprinter
