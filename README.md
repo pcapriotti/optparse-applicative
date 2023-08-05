@@ -509,7 +509,7 @@ number of arguments, combine the `argument` builder with either the
 `many` or `some` combinator:
 
 ```haskell
-some (argument str (metavar "FILES..."))
+some (argument str (metavar "FILES"))
 ```
 
 Note that arguments starting with `-` are considered options by
