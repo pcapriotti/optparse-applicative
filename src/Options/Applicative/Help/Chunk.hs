@@ -22,6 +22,14 @@ import Prelude
 
 import Options.Applicative.Help.Pretty
 
+-- TODO: What is the point of Chunk in this codebase? Is it basically used to give Doc additional powers -> Monoid?
+--   I wonder if it wasn't better if it was named DocPlus or Doc' or smth like that, and also a newtype, and then
+--   used like that around: `newtype DocPlus a = DocPlus (Chunk (Doc a))`, or maybe we can kick `Chunk` out completely?
+--   Feels to me like "Chunk" abstraction is a bit confusing: how does it relate to Doc? Is it
+--   really a "doc chunk"? But isn't Doc already a "chunk of doc"?.
+
+-- TODO: We have two types of functions here: general (Chunk a) operations, and Chunk (Doc a) operations. We should probably split those into separate modules.
+
 -- | The free monoid on a semigroup 'a'.
 newtype Chunk a = Chunk
   { unChunk :: Maybe a }
@@ -88,20 +96,20 @@ extractChunk = fromMaybe mempty . unChunk
 --
 -- Unlike '<+>' for 'Doc', this operation has a unit element, namely the empty
 -- 'Chunk'.
-(<<+>>) :: Chunk Doc -> Chunk Doc -> Chunk Doc
+(<<+>>) :: Chunk (Doc a) -> Chunk (Doc a) -> Chunk (Doc a)
 (<<+>>) = chunked (<+>)
 
 -- | Concatenate two 'Chunk's with a softline in between.  This is exactly like
 -- '<<+>>', but uses a softline instead of a space.
-(<</>>) :: Chunk Doc -> Chunk Doc -> Chunk Doc
+(<</>>) :: Chunk (Doc a) -> Chunk (Doc a) -> Chunk (Doc a)
 (<</>>) = chunked (</>)
 
 -- | Concatenate 'Chunk's vertically.
-vcatChunks :: [Chunk Doc] -> Chunk Doc
+vcatChunks :: [Chunk (Doc a)] -> Chunk (Doc a)
 vcatChunks = foldr (chunked (.$.)) mempty
 
 -- | Concatenate 'Chunk's vertically separated by empty lines.
-vsepChunks :: [Chunk Doc] -> Chunk Doc
+vsepChunks :: [Chunk (Doc a)] -> Chunk (Doc a)
 vsepChunks = foldr (chunked (\x y -> x .$. mempty .$. y)) mempty
 
 -- | Whether a 'Chunk' is empty.  Note that something like 'pure mempty' is not
@@ -113,7 +121,7 @@ isEmpty = isNothing . unChunk
 --
 -- > isEmpty . stringChunk = null
 -- > extractChunk . stringChunk = string
-stringChunk :: String -> Chunk Doc
+stringChunk :: String -> Chunk (Doc a)
 stringChunk "" = mempty
 stringChunk s = pure (pretty s)
 
@@ -124,12 +132,12 @@ stringChunk s = pure (pretty s)
 -- This satisfies:
 --
 -- > isEmpty . paragraph = null . words
-paragraph :: String -> Chunk Doc
+paragraph :: String -> Chunk (Doc a)
 paragraph = foldr (chunked (</>) . stringChunk) mempty
           . words
 
 -- | Display pairs of strings in a table.
-tabulate :: Int -> [(Doc, Doc)] -> Chunk Doc
+tabulate :: Int -> [((Doc a), (Doc a))] -> Chunk (Doc a)
 tabulate _ [] = mempty
 tabulate size table = pure $ vcat
   [ indent 2 (fillBreak size key <+> value)

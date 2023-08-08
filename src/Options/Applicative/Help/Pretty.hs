@@ -2,8 +2,7 @@
 module Options.Applicative.Help.Pretty
   ( module Prettyprinter
   , module Prettyprinter.Render.Terminal
-  , Doc
-  , SimpleDoc
+  , AnsiDoc
 
   , (.$.)
   , (</>)
@@ -12,7 +11,7 @@ module Options.Applicative.Help.Pretty
   , altSep
   , hangAtIfOver
 
-  , prettyString
+  , ansiDocToPrettyString
   ) where
 
 #if !MIN_VERSION_base(4,11,0)
@@ -20,38 +19,44 @@ import           Data.Semigroup ((<>), mempty)
 #endif
 import qualified Data.Text.Lazy as Lazy
 
-import           Prettyprinter hiding (Doc)
-import qualified Prettyprinter as PP
+import           Prettyprinter
 import           Prettyprinter.Render.Terminal
 
 import           Prelude
 
-type Doc = PP.Doc AnsiStyle
-type SimpleDoc = SimpleDocStream AnsiStyle
+-- TODO: Pass semantically more meaningful type to Doc, as annotation (as parameter).
+--   From docs:
+--     Summary: Use semantic annotations for Doc, and after layouting map to backend-specific ones.
+--     For example, suppose you want to prettyprint some programming language code. If you want
+--     keywords to be red, you should annotate the Doc with a type that has a Keyword field (without
+--     any notion of color), and then after layouting convert the annotations to map Keyword to e.g.
+--     Red (using reAnnotateS). The alternative that I do not recommend is directly annotating the
+--     Doc with Red.
+-- Btw I put this comment here for no good reason, it is a general comment for the whole refactoring.
 
-linebreak :: Doc
+linebreak :: Doc a
 linebreak = flatAlt line mempty
 
-(.$.) :: Doc -> Doc -> Doc
+(.$.) :: Doc a -> Doc a -> Doc a
 x .$. y = x <> line <> y
-(</>) :: Doc -> Doc -> Doc
+(</>) :: Doc a -> Doc a -> Doc a
 x </> y = x <> softline <> y
 
 -- | Apply the function if we're not at the
 --   start of our nesting level.
-ifNotAtRoot :: (Doc -> Doc) -> Doc -> Doc
+ifNotAtRoot :: (Doc a -> Doc a) -> Doc a -> Doc a
 ifNotAtRoot =
   ifElseAtRoot id
 
 -- | Apply the function if we're not at the
 --   start of our nesting level.
-ifAtRoot :: (Doc -> Doc) -> Doc -> Doc
+ifAtRoot :: (Doc a -> Doc a) -> Doc a -> Doc a
 ifAtRoot =
   flip ifElseAtRoot id
 
 -- | Apply the function if we're not at the
 --   start of our nesting level.
-ifElseAtRoot :: (Doc -> Doc) -> (Doc -> Doc) -> Doc -> Doc
+ifElseAtRoot :: (Doc a -> Doc a) -> (Doc a -> Doc a) -> Doc a -> Doc a
 ifElseAtRoot f g doc =
   nesting $ \i ->
     column $ \j ->
@@ -64,7 +69,7 @@ ifElseAtRoot f g doc =
 --
 --   This will also nest subsequent lines in the
 --   group.
-groupOrNestLine :: Doc -> Doc
+groupOrNestLine :: Doc a -> Doc a
 groupOrNestLine =
   group . ifNotAtRoot (linebreak <>) . nest 2
 
@@ -79,7 +84,7 @@ groupOrNestLine =
 --   does fit on the line, there is at least a space,
 --   but it's possible for y to still appear on the
 --   next line.
-altSep :: Doc -> Doc -> Doc
+altSep :: Doc a -> Doc a -> Doc a
 altSep x y =
   group (x <+> pretty '|' <> line) <> group linebreak <>  y
 
@@ -95,7 +100,7 @@ altSep x y =
 --   operation is put under a `group` then the linebreak
 --   will disappear; then item d will therefore not be at
 --   the starting column, and it won't be indented more.
-hangAtIfOver :: Int -> Int -> Doc -> Doc
+hangAtIfOver :: Int -> Int -> Doc a -> Doc a
 hangAtIfOver i j d =
   column $ \k ->
     if k <= j then
@@ -104,20 +109,23 @@ hangAtIfOver i j d =
       linebreak <> ifAtRoot (indent i) d
 
 
-renderPretty :: Double -> Int -> Doc -> SimpleDocStream AnsiStyle
+renderPretty :: Double -> Int -> Doc a -> SimpleDocStream a
 renderPretty ribbonFraction lineWidth
   = layoutPretty LayoutOptions
       { layoutPageWidth = AvailablePerLine lineWidth ribbonFraction }
 
-prettyString :: Double -> Int -> Doc -> String
-prettyString ribbonFraction lineWidth
-  = streamToString
-  . renderPretty ribbonFraction lineWidth
+-- TODO: All the functions above are for any Doc a, only functions / types below are specific to
+-- AnsiDoc. So look into splitting them into different modules most likely.
 
-streamToString :: SimpleDocStream AnsiStyle -> String
-streamToString sdoc =
-  let
-    rendered =
-      Prettyprinter.Render.Terminal.renderLazy sdoc
-  in
-    Lazy.unpack rendered
+type AnsiDoc = Doc AnsiStyle
+
+ansiDocToPrettyString :: Double -> Int -> AnsiDoc -> String
+ansiDocToPrettyString ribbonFraction lineWidth =
+  ansiStreamToString
+    . renderPretty ribbonFraction lineWidth
+
+ansiStreamToString :: SimpleDocStream AnsiStyle -> String
+ansiStreamToString sdoc =
+  let rendered =
+        Prettyprinter.Render.Terminal.renderLazy sdoc
+   in Lazy.unpack rendered

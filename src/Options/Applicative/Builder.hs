@@ -191,7 +191,7 @@ help s = optionMod $ \p -> p { propHelp = paragraph s }
 
 -- | Specify the help text for an option as a 'Prettyprinter.Doc AnsiStyle'
 -- value.
-helpDoc :: Maybe Doc -> Mod f a
+helpDoc :: Maybe AnsiDoc -> Mod f a
 helpDoc doc = optionMod $ \p -> p { propHelp = Chunk doc }
 
 -- | Specify the error to display when no argument is provided to this option.
@@ -220,7 +220,7 @@ hidden = optionMod $ \p ->
 -- /NOTE/: This builder is more flexible than its name and example
 -- allude. One of the motivating examples for its addition was to
 -- use `const` to completely replace the usage text of an option.
-style :: ( Doc -> Doc ) -> Mod f a
+style :: ( AnsiDoc -> AnsiDoc ) -> Mod f a
 style x = optionMod $ \p ->
   p { propDescMod = Just x }
 
@@ -404,7 +404,7 @@ header s = InfoMod $ \i -> i { infoHeader = paragraph s }
 
 -- | Specify a header for this parser as a 'Prettyprinter.Doc AnsiStyle'
 -- value.
-headerDoc :: Maybe Doc -> InfoMod a
+headerDoc :: Maybe AnsiDoc -> InfoMod a
 headerDoc doc = InfoMod $ \i -> i { infoHeader = Chunk doc }
 
 -- | Specify a footer for this parser.
@@ -413,7 +413,7 @@ footer s = InfoMod $ \i -> i { infoFooter = paragraph s }
 
 -- | Specify a footer for this parser as a 'Prettyprinter.Doc AnsiStyle'
 -- value.
-footerDoc :: Maybe Doc -> InfoMod a
+footerDoc :: Maybe AnsiDoc -> InfoMod a
 footerDoc doc = InfoMod $ \i -> i { infoFooter = Chunk doc }
 
 -- | Specify a short program description.
@@ -422,7 +422,7 @@ progDesc s = InfoMod $ \i -> i { infoProgDesc = paragraph s }
 
 -- | Specify a short program description as a 'Prettyprinter.Doc AnsiStyle'
 -- value.
-progDescDoc :: Maybe Doc -> InfoMod a
+progDescDoc :: Maybe AnsiDoc -> InfoMod a
 progDescDoc doc = InfoMod $ \i -> i { infoProgDesc = Chunk doc }
 
 -- | Specify an exit code if a parse error occurs.
