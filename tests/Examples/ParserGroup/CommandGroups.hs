@@ -112,6 +112,9 @@ sample = do
 
     parseCommand =
       hsubparser
+        ( command "list 2" (info (pure List) $ progDesc "Lists elements")
+        )
+        <|> hsubparser
         ( command "list" (info (pure List) $ progDesc "Lists elements")
             <> command "print" (info (pure Print) $ progDesc "Prints table")
             <> commandGroup "Info commands"

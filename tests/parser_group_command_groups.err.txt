@@ -3,23 +3,30 @@ parser_group.command_groups - a test for optparse-applicative
 Usage: parser_group_command_groups --hello TARGET [--file-log-path PATH] 
                                    [--file-log-verbosity INT] [-q|--quiet] 
                                    [--poll] --timeout INT (-v|--verbosity ARG) 
-                                   (COMMAND | COMMAND | COMMAND)
+                                   (COMMAND | COMMAND | COMMAND | COMMAND)
 
   Option and command groups
 
 Available options:
   --hello TARGET           Target for the greeting
-  -q,--quiet               Whether to be quiet
-  -v,--verbosity ARG       Console verbosity
-  -h,--help                Show this help text
 
 Logging:
   --file-log-path PATH     Log file path
   --file-log-verbosity INT File log verbosity
 
+Available options:
+  -q,--quiet               Whether to be quiet
+
 System Options:
   --poll                   Whether to poll
   --timeout INT            Whether to time out
+
+Available options:
+  -v,--verbosity ARG       Console verbosity
+  -h,--help                Show this help text
+
+Available commands:
+  list 2                   Lists elements
 
 Info commands
   list                     Lists elements

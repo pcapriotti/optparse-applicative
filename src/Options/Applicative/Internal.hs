@@ -28,7 +28,7 @@ module Options.Applicative.Internal
   , disamb
 
   , mapParserOptions
-  , sortGroupFst
+  , groupFst
   ) where
 
 import Control.Applicative
@@ -41,7 +41,7 @@ import Control.Monad.Trans.Reader
   (mapReaderT, runReader, runReaderT, Reader, ReaderT, ask)
 import Control.Monad.Trans.State (StateT, get, put, modify, evalStateT, runStateT)
 import Data.Function (on)
-import Data.List (groupBy, sortBy)
+import Data.List (groupBy)
 import Data.Maybe (catMaybes)
 
 import Options.Applicative.Types
@@ -275,19 +275,15 @@ hoistList = foldr cons empty
   where
     cons x xs = pure x <|> xs
 
--- | Strips 'Nothing', sorts then groups on the first element of the tuple.
-sortGroupFst :: (Ord a) => [Maybe (a, b)] -> [[(a, b)]]
-sortGroupFst =
-  groupFst
-    -- By sorting prior to grouping, we ensure all Eq a's are consecutive,
-    -- meaning we are guaranteed to have exactly one representative for
-    -- each group.
-    . sortBy (compare `on` fst)
-    . catMaybes
-  where
-    groupFst = groupBy ((==) `on` fst)
+-- | Strips 'Nothing', then groups on the first element of the tuple.
+--
+-- @since 0.19.0.0
+groupFst :: (Eq a) => [Maybe (a, b)] -> [[(a, b)]]
+groupFst = groupBy ((==) `on` fst) . catMaybes
 
 -- | Maps an Option modifying function over the Parser.
+--
+-- @since 0.19.0.0
 mapParserOptions :: (forall x. Option x -> Option x) -> Parser a -> Parser a
 mapParserOptions f = go
   where

@@ -1006,24 +1006,6 @@ prop_stringChunk_2 s = isEmpty (stringChunk s) === null s
 prop_paragraph :: String -> Property
 prop_paragraph s = isEmpty (paragraph s) === null (words s)
 
-prop_sortGroupFst :: [Maybe (Maybe String, Int)] -> Property
-prop_sortGroupFst xs =
-  conjoin
-    [ isSorted result
-    , noDuplicates result
-    ]
-  where
-    result :: [[(Maybe String, Int)]]
-    result = Internal.sortGroupFst xs
-
-    isSorted :: Ord a => [a] -> Bool
-    isSorted [] = True
-    isSorted [_] = True
-    isSorted (y1 : y2 : ys) = y1 <= y2 && isSorted (y2 : ys)
-
-    noDuplicates :: [[(Maybe String, Int)]] -> Bool
-    noDuplicates ys = ys == nubBy ((==) `on` fst . unsafeHead) ys
-
 ---
 
 --

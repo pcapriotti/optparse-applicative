@@ -381,27 +381,20 @@ option r m = mkParser d g rdr
     crdr = CReader (optCompleter fields) r
     rdr = OptReader (optNames fields) crdr (optNoArgError fields)
 
--- | Add group to 'OptProperties'. Always overwrites the group, if it exists.
--- This means, in particular, that we do not allow "nested groups" i.e. a
--- parser group within a parser group.
+-- | Prepends a group to 'OptProperties'. Nested groups are concatenated
+-- together e.g.
+--
+-- @
+--   optPropertiesGroup "Group Outer" (optPropertiesGroup "Group Inner" o)
+-- @
+--
+-- will render as "Group Outer.Group Inner".
 optPropertiesGroup :: String -> OptProperties -> OptProperties
--- If we changed this to only overwrite Nothing, it would allow users to
--- defined "nested groups" e.g.
---
---     parserOptionGroup "General group" $
---       (,)
---         <$> parserA
---         <*> parserOptionGroup "B group" parserB
---
--- Despite the nested definition, these would still be flattened on the help
--- page.
---
--- Since we __always__ overwrite the group, the above instead puts
--- parserA and parserB into the same "General group". We judge this to be
--- simpler.
-optPropertiesGroup grp o = o { propGroup = Just grp }
+optPropertiesGroup g o = o { propGroup = OptGroup (g : gs) }
+  where
+    OptGroup gs = propGroup o
 
--- | Add a group to 'Option'.
+-- | Prepends a group per 'optPropertiesGroup'.
 optionGroup :: String -> Option a -> Option a
 optionGroup grp o = o { optProps = props' }
   where
@@ -420,34 +413,28 @@ optionGroup grp o = o { optProps = props' }
 --
 -- > Available options:
 -- >   <main options>
--- >   <other options>
 -- >
 -- > Group A:
 -- >   <A options>
 -- >
 -- > Group B:
 -- >   <B options>
+-- >
+-- > Available options:
+-- >   <other options>
 --
 -- Caveats:
 --
---   - Groups are listed in alphabetical order.
+--   - Parser groups are like command groups in that groups are listed in
+--     creation order, and (non-consecutive) duplicate groups are allowed.
 --
---   - Duplicate groups are merged i.e.
---
---       @
---         -- parseA and parseC will be grouped together
---         parserOptionGroup "Group A" parseA
---         parserOptionGroup "Group B" parseB
---         parserOptionGroup "Group A" parseC
---       @
---
---   - Nested groups are overwritten by the outermost group:
+--   - Nested groups are concatenated:
 --
 --       @
 --         parserOptionGroup "Group A" (parserOptionGroup "Group Z" parseA)
 --       @
 --
---       Will group @parseA@ under @Group A@.
+--       Will group @parseA@ under @"GroupA.Group Z"@.
 --
 -- @since 0.19.0.0
 parserOptionGroup :: String -> Parser a -> Parser a

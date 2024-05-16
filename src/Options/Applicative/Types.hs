@@ -11,6 +11,7 @@ module Options.Applicative.Types (
 
   OptReader(..),
   OptProperties(..),
+  OptGroup(..),
   OptVisibility(..),
   Backtracking(..),
   ReadM(..),
@@ -147,6 +148,18 @@ data OptVisibility
   | Visible           -- ^ visible both in the full and brief descriptions
   deriving (Eq, Ord, Show)
 
+-- | Groups for optionals. Can be multiple in the case of nested groups.
+--
+-- @since 0.19.0.0
+newtype OptGroup = OptGroup [String]
+  deriving (Eq, Show)
+
+instance Semigroup OptGroup where
+  OptGroup xs <> OptGroup ys = OptGroup (xs ++ ys)
+
+instance Monoid OptGroup where
+  mempty = OptGroup []
+
 -- | Specification for an individual parser option.
 data OptProperties = OptProperties
   { propVisibility :: OptVisibility       -- ^ whether this flag is shown in the brief description
@@ -155,7 +168,10 @@ data OptProperties = OptProperties
   , propShowDefault :: Maybe String       -- ^ what to show in the help text as the default
   , propShowGlobal :: Bool                -- ^ whether the option is presented in global options text
   , propDescMod :: Maybe ( Doc -> Doc )   -- ^ a function to run over the brief description
-  , propGroup :: Maybe String             -- ^ optional group name
+  , propGroup :: OptGroup
+    -- ^ optional (nested) group
+    --
+    -- @since 0.19.0.0
   }
 
 instance Show OptProperties where

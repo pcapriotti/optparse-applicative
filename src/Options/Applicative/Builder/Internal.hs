@@ -150,7 +150,7 @@ baseProps = OptProperties
   , propShowDefault = Nothing
   , propDescMod = Nothing
   , propShowGlobal = True
-  , propGroup = Nothing
+  , propGroup = OptGroup []
   }
 
 mkCommand :: Mod CommandFields a -> (Maybe String, [(String, ParserInfo a)])

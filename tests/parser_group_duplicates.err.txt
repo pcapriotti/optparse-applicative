@@ -8,12 +8,18 @@ Usage: parser_group_duplicates --hello TARGET [--file-log-path PATH]
 
 Available options:
   --hello TARGET           Target for the greeting
-  -q,--quiet               Whether to be quiet
-  -v,--verbosity ARG       Console verbosity
-  -h,--help                Show this help text
 
 Logging:
   --file-log-path PATH     Log file path
   --file-log-verbosity INT File log verbosity
+
+Available options:
+  -q,--quiet               Whether to be quiet
+
+Logging:
   --poll                   Whether to poll
   --timeout INT            Whether to time out
+
+Available options:
+  -v,--verbosity ARG       Console verbosity
+  -h,--help                Show this help text

@@ -22,7 +22,7 @@ module Options.Applicative.Help.Core (
 import Control.Applicative
 import Control.Monad (guard)
 import Data.Function (on)
-import Data.List (sort, intersperse, groupBy)
+import Data.List (sort, intercalate, intersperse, groupBy)
 import Data.Foldable (any, foldl')
 import Data.Maybe (fromMaybe)
 #if !MIN_VERSION_base(4,8,0)
@@ -34,7 +34,7 @@ import Data.Semigroup (Semigroup (..))
 import Prelude hiding (any)
 
 import Options.Applicative.Common
-import Options.Applicative.Internal (sortGroupFst)
+import Options.Applicative.Internal (groupFst)
 import Options.Applicative.Types
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
@@ -51,7 +51,7 @@ safelast :: [a] -> Maybe a
 safelast = foldl' (const Just) Nothing
 
 -- | Generate description for a single option.
-optDesc :: ParserPrefs -> OptDescStyle -> ArgumentReachability -> Option a -> (Maybe String, Chunk Doc, Parenthetic)
+optDesc :: ParserPrefs -> OptDescStyle -> ArgumentReachability -> Option a -> (OptGroup, Chunk Doc, Parenthetic)
 optDesc pprefs style _reachability opt =
   let names =
         sort . optionNames . optMain $ opt
@@ -201,19 +201,29 @@ optionsDesc global pprefs p = vsepChunks
   . groupByTitle
   $ mapParser doc p
   where
-    groupByTitle :: [Maybe (Maybe String, (Doc, Doc))] -> [[(Maybe String, (Doc, Doc))]]
-    groupByTitle = sortGroupFst
+    groupByTitle :: [Maybe (OptGroup, (Doc, Doc))] -> [[(OptGroup, (Doc, Doc))]]
+    groupByTitle = groupFst
 
-    tabulateGroup :: [(Maybe String, (Doc, Doc))] -> (Maybe String, Chunk Doc)
+    tabulateGroup :: [(OptGroup, (Doc, Doc))] -> (OptGroup, Chunk Doc)
     tabulateGroup l@((title,_):_) = (title, tabulate (prefTabulateFill pprefs) (snd <$> l))
     tabulateGroup [] = mempty
 
-    formatTitle :: (Maybe String, Chunk Doc) -> Chunk Doc
-    formatTitle (mTitle, opts) = case mTitle of
-      Nothing -> opts
-      Just title -> (pretty (title ++ ":") .$.) <$> opts
+    -- Note that we treat Global/Available options identically, when it comes
+    -- to titles.
+    formatTitle :: (OptGroup, Chunk Doc) -> Chunk Doc
+    formatTitle (OptGroup groups, opts) =
+      case groups of
+        [] -> (pretty defTitle .$.) <$> opts
+        gs@(_:_) -> (renderGroupStr gs .$.) <$> opts
+      where
+        defTitle =
+          if global
+            then "Global options:"
+            else "Available options:"
 
-    doc :: ArgumentReachability -> Option a -> Maybe (Maybe String, (Doc, Doc))
+        renderGroupStr = (<> pretty ":") . pretty . intercalate "."
+
+    doc :: ArgumentReachability -> Option a -> Maybe (OptGroup, (Doc, Doc))
     doc info opt = do
       guard . not . isEmpty $ n
       guard . not . isEmpty $ h
@@ -257,7 +267,7 @@ footerHelp chunk = mempty { helpFooter = chunk }
 parserHelp :: ParserPrefs -> Parser a -> ParserHelp
 parserHelp pprefs p =
   bodyHelp . vsepChunks $
-    with_title "Available options:" (fullDesc pprefs p)
+    (fullDesc pprefs p)
       : (group_title <$> cs)
   where
     def = "Available commands:"
@@ -274,9 +284,7 @@ parserHelp pprefs p =
 
 parserGlobals :: ParserPrefs -> Parser a -> ParserHelp
 parserGlobals pprefs p =
-  globalsHelp $
-    (.$.) <$> stringChunk "Global options:"
-          <*> globalDesc pprefs p
+  globalsHelp $ globalDesc pprefs p
 
 
 
