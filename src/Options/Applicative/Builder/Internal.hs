@@ -120,7 +120,8 @@ instance Semigroup (DefaultProp a) where
 -- Modifiers are instances of 'Monoid', and can be composed as such.
 --
 -- One rarely needs to deal with modifiers directly, as most of the times it is
--- sufficient to pass them to builders (such as 'strOption' or 'flag') to
+-- sufficient to pass them to builders (such as 'Options.Applicative.strOption'
+-- or 'Options.Applicative.flag') to
 -- create options (see 'Options.Applicative.Builder').
 data Mod f a = Mod (f a -> f a)
                    (DefaultProp a)
@@ -184,7 +185,8 @@ mkProps (DefaultProp def sdef) g = props
 
 -- | Hide this option completely from the help text
 --
--- Use 'hidden' if the option should remain visible in the full description.
+-- Use 'Options.Applicative.hidden' if the option should remain visible in the
+-- full description.
 internal :: Mod f a
 internal = optionMod $ \p -> p { propVisibility = Internal }
 

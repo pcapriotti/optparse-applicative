@@ -121,12 +121,13 @@ module Options.Applicative (
   -- the data passed by the user on the command line into a data type.
   --
   -- The most common are 'str' which is used for 'String' like types,
-  -- including 'ByteString' and 'Text'; and 'auto', which uses the 'Read'
-  -- typeclass, and is good for simple types like 'Int' or 'Double'.
+  -- including t'Data.ByteString.ByteString' and t'Data.Text.Text'; and 'auto',
+  -- which uses the 'Read' typeclass, and is good for simple types like 'Int' or
+  -- 'Double'.
   --
   -- More complex types can use the 'eitherReader' or 'maybeReader'
   -- functions to pattern match or use a more expressive parser like a
-  -- member of the 'Parsec' family.
+  -- member of the @Parsec@ family.
   ReadM,
 
   auto,
