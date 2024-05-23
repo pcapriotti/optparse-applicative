@@ -175,8 +175,9 @@ data Option a = Option
 
 data SomeParser = forall a . SomeParser (Parser a)
 
--- | Subparser context, containing the 'name' of the subparser and its parser info.
---   Used by parserFailure to display relevant usage information when parsing inside a subparser fails.
+-- | Subparser context, containing the name of the subparser and its parser info.
+--   Used by 'Options.Applicative.Extra.parserFailure' to display relevant usage
+--   information when parsing inside a subparser fails.
 data Context = forall a. Context String (ParserInfo a)
 
 instance Show (Option a) where
@@ -251,7 +252,7 @@ instance Functor OptReader where
   fmap f (ArgReader cr) = ArgReader (fmap f cr)
   fmap f (CmdReader n cs) = CmdReader n ((fmap . fmap . fmap) f cs)
 
--- | A @Parser a@ is an option parser returning a value of type 'a'.
+-- | A @Parser a@ is an option parser returning a value of type @a@.
 data Parser a
   = NilP (Maybe a)
   | OptP (Option a)
@@ -342,7 +343,7 @@ instance Functor ParserFailure where
   fmap f (ParserFailure err) = ParserFailure $ \progn ->
     let (h, exit, cols) = err progn in (f h, exit, cols)
 
--- | Result of 'execParserPure'.
+-- | Result of 'Options.Applicative.execParserPure'.
 data ParserResult a
   = Success a
   | Failure (ParserFailure ParserHelp)

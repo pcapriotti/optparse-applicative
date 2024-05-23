@@ -22,7 +22,7 @@ import Prelude
 
 import Options.Applicative.Help.Pretty
 
--- | The free monoid on a semigroup 'a'.
+-- | The free monoid on a semigroup @a@.
 newtype Chunk a = Chunk
   { unChunk :: Maybe a }
   deriving (Eq, Show)
@@ -53,7 +53,8 @@ instance MonadPlus Chunk where
   mzero = Chunk mzero
   mplus m1 m2 = Chunk $ mplus (unChunk m1) (unChunk m2)
 
--- | Given a semigroup structure on 'a', return a monoid structure on 'Chunk a'.
+-- | Given a semigroup structure on @a@, return a monoid structure on
+-- @'Chunk' a@.
 --
 -- Note that this is /not/ the same as 'liftA2'.
 chunked :: (a -> a -> a)
