@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE TypeFamilies #-}
 module Options.Applicative.Builder (
   -- * Parser builders
   --
@@ -118,6 +119,7 @@ import Options.Applicative.Common
 import Options.Applicative.Types
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
+import GHC.IsList (IsList(..))
 
 -- Readers --
 
@@ -383,6 +385,11 @@ option r m = mkParser d g rdr
 newtype InfoMod a = InfoMod
   { applyInfoMod :: ParserInfo a -> ParserInfo a }
 
+instance IsList (InfoMod a) where
+  type Item (InfoMod a) = InfoMod a
+  fromList = mconcat
+  toList = pure
+
 instance Monoid (InfoMod a) where
   mempty = InfoMod id
   mappend = (<>)
@@ -473,6 +480,11 @@ newtype PrefsMod = PrefsMod
 instance Monoid PrefsMod where
   mempty = PrefsMod id
   mappend = (<>)
+
+instance IsList PrefsMod where
+  type Item PrefsMod = PrefsMod
+  fromList = mconcat
+  toList = pure
 
 instance Semigroup PrefsMod where
   m1 <> m2 = PrefsMod $ applyPrefsMod m2 . applyPrefsMod m1
