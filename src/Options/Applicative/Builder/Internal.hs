@@ -32,7 +32,7 @@ import Prelude
 
 import Options.Applicative.Common
 import Options.Applicative.Types
-import GHC.IsList (IsList(..))
+import GHC.Exts (IsList(..))
 
 data OptionFields a = OptionFields
   { optNames :: [OptName]

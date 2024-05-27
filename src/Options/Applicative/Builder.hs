@@ -119,7 +119,7 @@ import Options.Applicative.Common
 import Options.Applicative.Types
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
-import GHC.IsList (IsList(..))
+import GHC.Exts (IsList(..))
 
 -- Readers --
 
