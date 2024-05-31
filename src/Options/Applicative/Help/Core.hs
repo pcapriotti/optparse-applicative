@@ -22,9 +22,9 @@ module Options.Applicative.Help.Core (
 import Control.Applicative
 import Control.Monad (guard)
 import Data.Function (on)
-import Data.List (sort, intersperse, groupBy)
+import Data.List (sort, intercalate, intersperse, groupBy)
 import Data.Foldable (any, foldl')
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (fromMaybe)
 #if !MIN_VERSION_base(4,8,0)
 import Data.Monoid (mempty)
 #endif
@@ -34,6 +34,7 @@ import Data.Semigroup (Semigroup (..))
 import Prelude hiding (any)
 
 import Options.Applicative.Common
+import Options.Applicative.Internal (groupFst)
 import Options.Applicative.Types
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
@@ -50,12 +51,13 @@ safelast :: [a] -> Maybe a
 safelast = foldl' (const Just) Nothing
 
 -- | Generate description for a single option.
-optDesc :: ParserPrefs -> OptDescStyle -> ArgumentReachability -> Option a -> (Chunk Doc, Parenthetic)
+optDesc :: ParserPrefs -> OptDescStyle -> ArgumentReachability -> Option a -> (OptGroup, Chunk Doc, Parenthetic)
 optDesc pprefs style _reachability opt =
   let names =
         sort . optionNames . optMain $ opt
       meta =
         stringChunk $ optMetaVar opt
+      grp = propGroup $ optProps opt
       descs =
         map (pretty . showOption) names
       descriptions =
@@ -86,7 +88,7 @@ optDesc pprefs style _reachability opt =
           desc
       modified =
         maybe id fmap (optDescMod opt) rendered
-   in (modified, wrapping)
+   in (grp, modified, wrapping)
 
 -- | Generate descriptions for commands.
 cmdDesc :: ParserPrefs -> Parser a -> [(Maybe String, Chunk Doc)]
@@ -118,7 +120,7 @@ briefDesc' showOptional pprefs =
   wrapOver NoDefault MaybeRequired
     . foldTree pprefs style
     . mfilterOptional
-    . treeMapParser (optDesc pprefs style)
+    . treeMapParser (\a -> (\(_, x, y) -> (x, y)) . optDesc pprefs style a)
   where
     mfilterOptional
       | showOptional =
@@ -193,14 +195,41 @@ globalDesc = optionsDesc True
 
 -- | Common generator for full descriptions and globals
 optionsDesc :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
-optionsDesc global pprefs = tabulate (prefTabulateFill pprefs) . catMaybes . mapParser doc
+optionsDesc global pprefs p = vsepChunks
+  . fmap formatTitle
+  . fmap tabulateGroup
+  . groupByTitle
+  $ mapParser doc p
   where
+    groupByTitle :: [Maybe (OptGroup, (Doc, Doc))] -> [[(OptGroup, (Doc, Doc))]]
+    groupByTitle = groupFst
+
+    tabulateGroup :: [(OptGroup, (Doc, Doc))] -> (OptGroup, Chunk Doc)
+    tabulateGroup l@((title,_):_) = (title, tabulate (prefTabulateFill pprefs) (snd <$> l))
+    tabulateGroup [] = mempty
+
+    -- Note that we treat Global/Available options identically, when it comes
+    -- to titles.
+    formatTitle :: (OptGroup, Chunk Doc) -> Chunk Doc
+    formatTitle (OptGroup groups, opts) =
+      case groups of
+        [] -> (pretty defTitle .$.) <$> opts
+        gs@(_:_) -> (renderGroupStr gs .$.) <$> opts
+      where
+        defTitle =
+          if global
+            then "Global options:"
+            else "Available options:"
+
+        renderGroupStr = (<> pretty ":") . pretty . intercalate "."
+
+    doc :: ArgumentReachability -> Option a -> Maybe (OptGroup, (Doc, Doc))
     doc info opt = do
       guard . not . isEmpty $ n
       guard . not . isEmpty $ h
-      return (extractChunk n, align . extractChunk $ h <</>> hdef)
+      return (grp, (extractChunk n, align . extractChunk $ h <<+>> hdef))
       where
-        n = fst $ optDesc pprefs style info opt
+        (grp, n, _) = optDesc pprefs style info opt
         h = optHelp opt
         hdef = Chunk . fmap show_def . optShowDefault $ opt
         show_def s = parens (pretty "default:" <+> pretty s)
@@ -238,7 +267,7 @@ footerHelp chunk = mempty { helpFooter = chunk }
 parserHelp :: ParserPrefs -> Parser a -> ParserHelp
 parserHelp pprefs p =
   bodyHelp . vsepChunks $
-    with_title "Available options:" (fullDesc pprefs p)
+    (fullDesc pprefs p)
       : (group_title <$> cs)
   where
     def = "Available commands:"
@@ -255,9 +284,7 @@ parserHelp pprefs p =
 
 parserGlobals :: ParserPrefs -> Parser a -> ParserHelp
 parserGlobals pprefs p =
-  globalsHelp $
-    (.$.) <$> stringChunk "Global options:"
-          <*> globalDesc pprefs p
+  globalsHelp $ globalDesc pprefs p
 
 
 

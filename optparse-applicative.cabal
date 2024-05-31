@@ -39,6 +39,11 @@ extra-source-files:  CHANGELOG.md
                      tests/formatting-long-subcommand.err.txt
                      tests/nested.err.txt
                      tests/optional.err.txt
+                     tests/parser_group_all_grouped.err.txt
+                     tests/parser_group_basic.err.txt
+                     tests/parser_group_command_groups.err.txt
+                     tests/parser_group_duplicates.err.txt
+                     tests/parser_group_nested.err.txt
                      tests/nested_optional.err.txt
                      tests/subparsers.err.txt
 
@@ -131,6 +136,11 @@ test-suite tests
                      , Examples.Formatting
                      , Examples.Hello
                      , Examples.LongSub
+                     , Examples.ParserGroup.AllGrouped
+                     , Examples.ParserGroup.Basic
+                     , Examples.ParserGroup.CommandGroups
+                     , Examples.ParserGroup.Duplicates
+                     , Examples.ParserGroup.Nested
 
   build-depends:       base
                      , optparse-applicative
