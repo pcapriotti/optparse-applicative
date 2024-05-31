@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeFamilies #-}
 module Options.Applicative.Builder.Internal (
   -- * Internals
   Mod(..),
@@ -31,6 +32,7 @@ import Prelude
 
 import Options.Applicative.Common
 import Options.Applicative.Types
+import GHC.Exts (IsList(..))
 
 data OptionFields a = OptionFields
   { optNames :: [OptName]
@@ -126,6 +128,11 @@ instance Semigroup (DefaultProp a) where
 data Mod f a = Mod (f a -> f a)
                    (DefaultProp a)
                    (OptProperties -> OptProperties)
+
+instance IsList (Mod f a) where
+  type Item (Mod f a) = Mod f a
+  fromList = mconcat
+  toList = pure
 
 optionMod :: (OptProperties -> OptProperties) -> Mod f a
 optionMod = Mod id mempty
