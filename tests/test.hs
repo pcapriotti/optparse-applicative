@@ -318,7 +318,6 @@ prop_ambiguous = once $
       result = execParserPure (prefs disambiguate) i ["--ba"]
   in  assertError result (\_ -> property succeeded)
 
-
 prop_disambiguate_in_same_subparsers :: Property
 prop_disambiguate_in_same_subparsers = once $
   let p0 = subparser (command "oranges" (info (pure "oranges") idm) <> command "apples" (info (pure "apples") idm) <> metavar "B")
@@ -466,6 +465,36 @@ prop_completion_rich_lengths = once . ioProperty $
     CompletionInvoked (CompletionResult err) -> do
       completions <- lines <$> err "test"
       return $ ["--foo\tFoo...", "--bar\tBar..."] === completions
+    Failure _   -> return $ counterexample "unexpected failure" failed
+    Success val -> return $ counterexample ("unexpected result " ++ show val) failed
+
+prop_completion_v1_legacy :: Property
+prop_completion_v1_legacy = once . ioProperty $
+  let p :: Parser String
+      p = strArgument (completer (mkCompleterWithOptions (pure (pure [legacyCompletionItem "reachable"]))))
+      i = info p idm
+      result = run i [ "--optparse-completion-version", "1"
+                     , "--bash-completion-index=0"
+                     ]
+  in case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      return $ ["%addspace", "%files", "%value", "reachable"] === completions
+    Failure _   -> return $ counterexample "unexpected failure" failed
+    Success val -> return $ counterexample ("unexpected result " ++ show val) failed
+
+prop_completion_v1_minimal :: Property
+prop_completion_v1_minimal = once . ioProperty $
+  let p :: Parser String
+      p = strArgument (completer (mkCompleterWithOptions (pure (pure [CompletionItem mempty "reachable"]))))
+      i = info p idm
+      result = run i [ "--optparse-completion-version", "1"
+                     , "--bash-completion-index=0"
+                     ]
+  in case result of
+    CompletionInvoked (CompletionResult err) -> do
+      completions <- lines <$> err "test"
+      return $ ["%value", "reachable"] === completions
     Failure _   -> return $ counterexample "unexpected failure" failed
     Success val -> return $ counterexample ("unexpected result " ++ show val) failed
 
