@@ -11,6 +11,7 @@ module Options.Applicative.Types (
 
   OptReader(..),
   OptProperties(..),
+  OptGroup(..),
   OptVisibility(..),
   Backtracking(..),
   ReadM(..),
@@ -147,6 +148,18 @@ data OptVisibility
   | Visible           -- ^ visible both in the full and brief descriptions
   deriving (Eq, Ord, Show)
 
+-- | Groups for optionals. Can be multiple in the case of nested groups.
+--
+-- @since 0.19.0.0
+newtype OptGroup = OptGroup [String]
+  deriving (Eq, Show)
+
+instance Semigroup OptGroup where
+  OptGroup xs <> OptGroup ys = OptGroup (xs ++ ys)
+
+instance Monoid OptGroup where
+  mempty = OptGroup []
+
 -- | Specification for an individual parser option.
 data OptProperties = OptProperties
   { propVisibility :: OptVisibility       -- ^ whether this flag is shown in the brief description
@@ -155,17 +168,23 @@ data OptProperties = OptProperties
   , propShowDefault :: Maybe String       -- ^ what to show in the help text as the default
   , propShowGlobal :: Bool                -- ^ whether the option is presented in global options text
   , propDescMod :: Maybe ( Doc -> Doc )   -- ^ a function to run over the brief description
+  , propGroup :: OptGroup
+    -- ^ optional (nested) group
+    --
+    -- @since 0.19.0.0
   }
 
 instance Show OptProperties where
-  showsPrec p (OptProperties pV pH pMV pSD pSG _)
+  showsPrec p (OptProperties pV pH pMV pSD pSG _ pGrp)
     = showParen (p >= 11)
     $ showString "OptProperties { propVisibility = " . shows pV
     . showString ", propHelp = " . shows pH
     . showString ", propMetaVar = " . shows pMV
     . showString ", propShowDefault = " . shows pSD
     . showString ", propShowGlobal = " . shows pSG
-    . showString ", propDescMod = _ }"
+    . showString ", propDescMod = _"
+    . showString ", propGroup = " . shows pGrp
+    . showString "}"
 
 -- | A single option of a parser.
 data Option a = Option

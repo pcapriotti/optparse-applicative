@@ -1,0 +1,25 @@
+parser_group.nested - a test for optparse-applicative
+
+Usage: parser_group_nested --hello TARGET [--file-log-path PATH] [--poll]
+                           --timeout INT [--file-log-verbosity INT] [-q|--quiet]
+                           (-v|--verbosity ARG) Command
+
+  Nested parser groups
+
+Available options:
+  --hello TARGET           Target for the greeting
+
+Logging:
+  --file-log-path PATH     Log file path
+
+Logging.System Options:
+  --poll                   Whether to poll
+  --timeout INT            Whether to time out
+
+Logging:
+  --file-log-verbosity INT File log verbosity
+
+Available options:
+  -q,--quiet               Whether to be quiet
+  -v,--verbosity ARG       Console verbosity
+  -h,--help                Show this help text

@@ -49,6 +49,7 @@ module Options.Applicative.Builder (
   completer,
   idm,
   mappend,
+  parserOptionGroup,
 
   -- * Readers
   --
@@ -118,6 +119,7 @@ import Options.Applicative.Common
 import Options.Applicative.Types
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
+import Options.Applicative.Internal (mapParserOptions)
 
 -- Readers --
 
@@ -378,6 +380,65 @@ option r m = mkParser d g rdr
     fields = f (OptionFields [] mempty ExpectsArgError)
     crdr = CReader (optCompleter fields) r
     rdr = OptReader (optNames fields) crdr (optNoArgError fields)
+
+-- | Prepends a group to 'OptProperties'. Nested groups are concatenated
+-- together e.g.
+--
+-- @
+--   optPropertiesGroup "Group Outer" (optPropertiesGroup "Group Inner" o)
+-- @
+--
+-- will render as "Group Outer.Group Inner".
+optPropertiesGroup :: String -> OptProperties -> OptProperties
+optPropertiesGroup g o = o { propGroup = OptGroup (g : gs) }
+  where
+    OptGroup gs = propGroup o
+
+-- | Prepends a group per 'optPropertiesGroup'.
+optionGroup :: String -> Option a -> Option a
+optionGroup grp o = o { optProps = props' }
+  where
+    props' = optPropertiesGroup grp (optProps o)
+
+-- | This function can be used to group options together under a common
+-- heading. For example, if we have:
+--
+-- > Args
+-- >   <$> parseMain
+-- >   <*> parserOptionGroup "Group A" parseA
+-- >   <*> parserOptionGroup "Group B" parseB
+-- >   <*> parseOther
+--
+-- Then the help page will look like:
+--
+-- > Available options:
+-- >   <main options>
+-- >
+-- > Group A:
+-- >   <A options>
+-- >
+-- > Group B:
+-- >   <B options>
+-- >
+-- > Available options:
+-- >   <other options>
+--
+-- Caveats:
+--
+--   - Parser groups are like command groups in that groups are listed in
+--     creation order, and (non-consecutive) duplicate groups are allowed.
+--
+--   - Nested groups are concatenated:
+--
+--       @
+--         parserOptionGroup "Group A" (parserOptionGroup "Group Z" parseA)
+--       @
+--
+--       Will group @parseA@ under @"GroupA.Group Z"@.
+--
+-- @since 0.19.0.0
+parserOptionGroup :: String -> Parser a -> Parser a
+parserOptionGroup g = mapParserOptions (optionGroup g)
 
 -- | Modifier for 'ParserInfo'.
 newtype InfoMod a = InfoMod

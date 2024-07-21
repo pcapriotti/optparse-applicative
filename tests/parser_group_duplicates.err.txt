@@ -1,0 +1,30 @@
+parser_group.duplicates - a test for optparse-applicative
+
+Usage: parser_group_duplicates --hello TARGET [--file-log-path PATH] 
+                               [--file-log-verbosity INT] [-q|--quiet] [--poll]
+                               --timeout INT [--sysFlag] --log-namespace STR
+                               (-v|--verbosity ARG) Command
+
+  Duplicate consecutive groups consolidated
+
+Available options:
+  --hello TARGET           Target for the greeting
+
+Logging:
+  --file-log-path PATH     Log file path
+  --file-log-verbosity INT File log verbosity
+
+Available options:
+  -q,--quiet               Whether to be quiet
+
+System:
+  --poll                   Whether to poll
+  --timeout INT            Whether to time out
+  --sysFlag                Some flag
+
+Logging:
+  --log-namespace STR      Log namespace
+
+Available options:
+  -v,--verbosity ARG       Console verbosity
+  -h,--help                Show this help text

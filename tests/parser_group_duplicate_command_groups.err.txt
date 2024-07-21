@@ -1,0 +1,26 @@
+parser_group.duplicate_command_groups - a test for optparse-applicative
+
+Usage: parser_group_duplicate_command_groups 
+         --hello TARGET [-q|--quiet] (-v|--verbosity ARG) 
+         (COMMAND | COMMAND | COMMAND | COMMAND | COMMAND)
+
+  Duplicate consecutive command groups consolidated
+
+Available options:
+  --hello TARGET           Target for the greeting
+  -q,--quiet               Whether to be quiet
+  -v,--verbosity ARG       Console verbosity
+  -h,--help                Show this help text
+
+Info commands
+  list                     Lists elements
+
+Update commands
+  delete                   Deletes elements
+  insert                   Inserts elements
+
+Available commands:
+  query                    Runs a query
+
+Info commands
+  print                    Prints table
