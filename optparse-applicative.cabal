@@ -42,6 +42,7 @@ extra-source-files:  CHANGELOG.md
                      tests/parser_group_all_grouped.err.txt
                      tests/parser_group_basic.err.txt
                      tests/parser_group_command_groups.err.txt
+                     tests/parser_group_duplicate_command_groups.err.txt
                      tests/parser_group_duplicates.err.txt
                      tests/parser_group_nested.err.txt
                      tests/nested_optional.err.txt
