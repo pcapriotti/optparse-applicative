@@ -24,7 +24,6 @@ import           Data.List hiding (group)
 import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           Data.Semigroup hiding (option)
 import           Data.String
-import           GHC.Stack.Types (HasCallStack)
 
 import           System.Exit
 import           Test.QuickCheck hiding (Success, Failure)
@@ -40,7 +39,6 @@ import           Options.Applicative.Help.Pretty (Doc)
 import qualified Options.Applicative.Help.Pretty as Doc
 import           Options.Applicative.Help.Chunk
 import           Options.Applicative.Help.Levenshtein
-import qualified Options.Applicative.Internal as Internal
 
 import           Prelude
 
