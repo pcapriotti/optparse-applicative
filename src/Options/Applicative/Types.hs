@@ -159,6 +159,7 @@ instance Semigroup OptGroup where
 
 instance Monoid OptGroup where
   mempty = OptGroup []
+  mappend = (<>)
 
 -- | Specification for an individual parser option.
 data OptProperties = OptProperties
