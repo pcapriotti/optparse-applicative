@@ -227,7 +227,7 @@ optionsDesc global pprefs p = vsepChunks
     doc info opt = do
       guard . not . isEmpty $ n
       guard . not . isEmpty $ h
-      return (grp, (extractChunk n, align . extractChunk $ h <<+>> hdef))
+      return (grp, (extractChunk n, align . extractChunk $ h <</>> hdef))
       where
         (grp, n, _) = optDesc pprefs style info opt
         h = optHelp opt
