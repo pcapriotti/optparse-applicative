@@ -108,8 +108,8 @@ module Options.Applicative.Builder (
   ) where
 
 import Control.Applicative
-#if __GLASGOW_HASKELL__ <= 802
-import Data.Semigroup hiding (option)
+#if __GLASGOW_HASKELL__ < 804
+import Data.Semigroup hiding (Option, option)
 #endif
 import Data.String (fromString, IsString)
 

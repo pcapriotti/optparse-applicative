@@ -3,6 +3,7 @@
 
 module Examples.ParserGroup.Duplicates (opts) where
 
+import Data.Semigroup ((<>))
 import Options.Applicative
 
 -- NOTE: This is the same structure as ParserGroup.Basic __except__

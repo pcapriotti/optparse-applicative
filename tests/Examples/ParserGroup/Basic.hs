@@ -3,6 +3,7 @@
 
 module Examples.ParserGroup.Basic (opts) where
 
+import Data.Semigroup ((<>))
 import Options.Applicative
 
 data LogGroup = LogGroup

@@ -3,6 +3,7 @@
 
 module Examples.ParserGroup.AllGrouped (opts) where
 
+import Data.Semigroup ((<>))
 import Options.Applicative
 
 -- Tests the help page when every option belongs to some group i.e. there are

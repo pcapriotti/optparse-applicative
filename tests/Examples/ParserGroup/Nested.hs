@@ -3,6 +3,7 @@
 
 module Examples.ParserGroup.Nested (opts) where
 
+import Data.Semigroup ((<>))
 import Options.Applicative
 
 -- Nested groups. Demonstrates that group can nest.

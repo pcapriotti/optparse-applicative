@@ -4,6 +4,7 @@
 
 module Examples.ParserGroup.DuplicateCommandGroups (opts) where
 
+import Data.Semigroup ((<>))
 import Options.Applicative
 
 -- This test demonstrates that duplicate + consecutive groups are merged,
