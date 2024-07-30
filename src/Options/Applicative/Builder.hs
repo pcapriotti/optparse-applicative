@@ -390,9 +390,9 @@ option r m = mkParser d g rdr
 --
 -- will render as "Group Outer.Group Inner".
 optPropertiesGroup :: String -> OptProperties -> OptProperties
-optPropertiesGroup g o = o { propGroup = OptGroup (g : gs) }
+optPropertiesGroup g o = o { propGroup = updateGroupName g oldGroup }
   where
-    OptGroup gs = propGroup o
+    oldGroup = propGroup o
 
 -- | Prepends a group per 'optPropertiesGroup'.
 optionGroup :: String -> Option a -> Option a

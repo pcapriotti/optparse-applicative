@@ -17,7 +17,19 @@ data LogGroup = LogGroup
 
 data SystemGroup = SystemGroup
   { poll :: Bool,
+    deepNested :: Nested2,
     timeout :: Int
+  }
+  deriving (Show)
+
+data Nested2 = Nested2
+  { nested2Str :: String,
+    nested3 :: Nested3
+  }
+  deriving (Show)
+
+newtype Nested3 = Nested3
+  { nested3Str :: String
   }
   deriving (Show)
 
@@ -97,6 +109,7 @@ sample = do
             ( long "poll"
                 <> help "Whether to poll"
             )
+          <*> parseNested2
           <*> ( option
                   auto
                   ( long "timeout"
@@ -104,6 +117,27 @@ sample = do
                       <> help "Whether to time out"
                   )
               )
+
+    parseNested2 = parserOptionGroup "Nested2" $ do
+      nestedStr2 <-
+        ( option
+            auto
+            ( long "double-nested"
+                <> metavar "STR"
+                <> help "Some nested option"
+            )
+        )
+      nested3 <- parseNested3
+      pure $ Nested2 nestedStr2 nested3
+
+    parseNested3 = parserOptionGroup "Nested3" $
+      ( option
+          (Nested3 <$> auto)
+          ( long "triple-nested"
+              <> metavar "STR"
+              <> help "Another option"
+          )
+      )
 
     parseVerbosity =
       option

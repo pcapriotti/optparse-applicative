@@ -198,29 +198,93 @@ optionsDesc global pprefs p = vsepChunks
   . fmap formatTitle
   . fmap tabulateGroup
   . groupByTitle
-  $ mapParser doc p
+  $ docs
   where
+    docs :: [Maybe (OptGroup, (Doc, Doc))]
+    docs = mapParser doc p
+
     groupByTitle :: [Maybe (OptGroup, (Doc, Doc))] -> [[(OptGroup, (Doc, Doc))]]
-    groupByTitle = groupFstAll . catMaybes
+    groupByTitle xs = groupFstAll . catMaybes $ xs
+
+    -- NOTE: [Nested group alignment]
+    --
+    -- For nested groups, we want to produce output like:
+    --
+    -- Group 1
+    --   --opt-1 INT          Option 1
+    --
+    -- - Group 2
+    --     --opt-2 INT        Option 2
+    --
+    --   - Group 3
+    --       - opt-3 INT      Option 3
+    --
+    -- That is, we have the following constraints:
+    --
+    --   1. Nested groups are prefixed with a hyphen '- ', where the hyphen
+    --     starts on the same column as the parent group.
+    --
+    --   2. We still want the listed options to be indented twice under the
+    --     group name, so this means nested options need to be indented
+    --     again by the standard amount (2), due to the hyphen.
+    --
+    --   3. Help text should be __globally__ aligned.
 
     tabulateGroup :: [(OptGroup, (Doc, Doc))] -> (OptGroup, Chunk Doc)
-    tabulateGroup l@((title,_):_) = (title, tabulate (prefTabulateFill pprefs) (snd <$> l))
-    tabulateGroup [] = mempty
-
-    -- Note that we treat Global/Available options identically, when it comes
-    -- to titles.
-    formatTitle :: (OptGroup, Chunk Doc) -> Chunk Doc
-    formatTitle (OptGroup groups, opts) =
-      case groups of
-        [] -> (pretty defTitle .$.) <$> opts
-        gs@(_:_) -> (renderGroupStr gs .$.) <$> opts
+    tabulateGroup l@((title,_):_) =
+      (title, tabulate (prefTabulateFill pprefs) (getGroup <$> l))
       where
+        -- Handle NOTE: [Nested group alignment] 3. here i.e. indent the
+        -- right Doc (help text) according to its indention level and
+        -- global maxGroupLevel. Notice there is an inverse relationship here,
+        -- as the further the entire group is indented, the less we need to
+        -- indent the help text.
+        getGroup :: (OptGroup, (Doc, Doc)) -> (Doc, Doc)
+        getGroup o@(_, (x, y)) =
+          let helpIndent = calcOptHelpIndent o
+          in (x, indent helpIndent y)
+
+        -- Indents the option help text, taking the option's group level and
+        -- maximum group level into account.
+        calcOptHelpIndent :: (OptGroup, a) -> Int
+        calcOptHelpIndent g =
+          let groupLvl = optGroupToLevel g
+          in lvlIndent * (maxGroupLevel - groupLvl)
+
+    tabulateGroup [] = (OptGroup 0 Nothing, mempty)
+
+    formatTitle :: (OptGroup, Chunk Doc) -> Chunk Doc
+    formatTitle (OptGroup idx mTitle, opts) =
+      -- Two cases to handle w.r.t group level (i.e. nested groups).
+      case idx of
+        -- Group not nested: no indention.
+        0 -> (\d -> pretty title .$. d) <$> opts
+        -- Handle NOTE: [Nested group alignment] 1 and 2 here.
+        n ->
+          let -- indent entire group based on its level.
+              indentGroup = indent (lvlIndent * (n - 1))
+              -- indent opts an extra lvlIndent to account for hyphen
+              indentOpts = indent lvlIndent
+          in (\d -> indentGroup $ (pretty $ "- " <> title) .$. indentOpts d)
+               <$> opts
+      where
+        title = case mTitle of
+          Nothing -> defTitle
+          Just t -> t
         defTitle =
           if global
             then "Global options:"
             else "Available options:"
 
-        renderGroupStr = pretty . intercalate "."
+    maxGroupLevel :: Int
+    maxGroupLevel = findMaxGroupLevel docs
+
+    -- Finds the maxium OptGroup level.
+    findMaxGroupLevel :: [Maybe (OptGroup, (Doc, Doc))] -> Int
+    findMaxGroupLevel = foldl' (\acc -> max acc . optGroupToLevel) 0 . catMaybes
+
+    optGroupToLevel :: (OptGroup, a) -> Int
+    optGroupToLevel ((OptGroup i _), _) = i
 
     doc :: ArgumentReachability -> Option a -> Maybe (OptGroup, (Doc, Doc))
     doc info opt = do
@@ -237,6 +301,9 @@ optionsDesc global pprefs p = vsepChunks
         descHidden = True,
         descGlobal = global
       }
+
+    lvlIndent :: Int
+    lvlIndent = 2
 
 errorHelp :: Chunk Doc -> ParserHelp
 errorHelp chunk = mempty { helpError = chunk }
