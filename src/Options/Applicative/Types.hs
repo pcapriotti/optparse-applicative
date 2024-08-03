@@ -152,7 +152,7 @@ data OptVisibility
 --
 -- @since 0.19.0.0
 newtype OptGroup = OptGroup [String]
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 instance Semigroup OptGroup where
   OptGroup xs <> OptGroup ys = OptGroup (xs ++ ys)

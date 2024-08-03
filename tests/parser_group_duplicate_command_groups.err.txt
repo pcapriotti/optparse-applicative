@@ -12,15 +12,13 @@ Available options:
   -v,--verbosity ARG       Console verbosity
   -h,--help                Show this help text
 
-Info commands
-  list                     Lists elements
-
-Update commands
-  delete                   Deletes elements
-  insert                   Inserts elements
-
 Available commands:
   query                    Runs a query
 
 Info commands
+  list                     Lists elements
   print                    Prints table
+
+Update commands
+  delete                   Deletes elements
+  insert                   Inserts elements

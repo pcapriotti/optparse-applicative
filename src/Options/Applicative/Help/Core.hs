@@ -21,10 +21,9 @@ module Options.Applicative.Help.Core (
 
 import Control.Applicative
 import Control.Monad (guard)
-import Data.Function (on)
-import Data.List (sort, intercalate, intersperse, groupBy)
+import Data.List (sort, intercalate, intersperse)
 import Data.Foldable (any, foldl')
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, catMaybes)
 #if !MIN_VERSION_base(4,8,0)
 import Data.Monoid (mempty)
 #endif
@@ -34,7 +33,7 @@ import Data.Semigroup (Semigroup (..))
 import Prelude hiding (any)
 
 import Options.Applicative.Common
-import Options.Applicative.Internal (groupFst)
+import Options.Applicative.Internal (groupFstAll)
 import Options.Applicative.Types
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
@@ -202,7 +201,7 @@ optionsDesc global pprefs p = vsepChunks
   $ mapParser doc p
   where
     groupByTitle :: [Maybe (OptGroup, (Doc, Doc))] -> [[(OptGroup, (Doc, Doc))]]
-    groupByTitle = groupFst
+    groupByTitle = groupFstAll . catMaybes
 
     tabulateGroup :: [(OptGroup, (Doc, Doc))] -> (OptGroup, Chunk Doc)
     tabulateGroup l@((title,_):_) = (title, tabulate (prefTabulateFill pprefs) (snd <$> l))
@@ -271,7 +270,7 @@ parserHelp pprefs p =
       : (group_title <$> cs)
   where
     def = "Available commands:"
-    cs = groupBy ((==) `on` fst) $ cmdDesc pprefs p
+    cs = groupFstAll $ cmdDesc pprefs p
 
     group_title a@((n, _) : _) =
       with_title (fromMaybe def n) $
