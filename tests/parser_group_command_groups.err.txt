@@ -10,14 +10,14 @@ Usage: parser_group_command_groups --hello TARGET [--file-log-path PATH]
 Available options:
   --hello TARGET           Target for the greeting
 
-Logging:
+Logging
   --file-log-path PATH     Log file path
   --file-log-verbosity INT File log verbosity
 
 Available options:
   -q,--quiet               Whether to be quiet
 
-System Options:
+System Options
   --poll                   Whether to poll
   --timeout INT            Whether to time out
 

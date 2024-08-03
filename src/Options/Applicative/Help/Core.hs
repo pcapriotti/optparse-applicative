@@ -221,7 +221,7 @@ optionsDesc global pprefs p = vsepChunks
             then "Global options:"
             else "Available options:"
 
-        renderGroupStr = (<> pretty ":") . pretty . intercalate "."
+        renderGroupStr = pretty . intercalate "."
 
     doc :: ArgumentReachability -> Option a -> Maybe (OptGroup, (Doc, Doc))
     doc info opt = do

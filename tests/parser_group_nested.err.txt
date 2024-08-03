@@ -9,14 +9,14 @@ Usage: parser_group_nested --hello TARGET [--file-log-path PATH] [--poll]
 Available options:
   --hello TARGET           Target for the greeting
 
-Logging:
+Logging
   --file-log-path PATH     Log file path
 
-Logging.System Options:
+Logging.System Options
   --poll                   Whether to poll
   --timeout INT            Whether to time out
 
-Logging:
+Logging
   --file-log-verbosity INT File log verbosity
 
 Available options:
