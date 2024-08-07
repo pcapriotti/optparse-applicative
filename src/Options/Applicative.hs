@@ -216,6 +216,9 @@ module Options.Applicative (
   -- convenience, to use 'bashCompleter' and 'listCompleter' as a 'Mod'.
   Completer,
   mkCompleter,
+  CompletionItem(..),
+  CompletionItemOptions(..),
+  mkCompleterWithOptions,
   listIOCompleter,
 
   listCompleter,
