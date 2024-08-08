@@ -400,8 +400,9 @@ optionGroup grp o = o { optProps = props' }
   where
     props' = optPropertiesGroup grp (optProps o)
 
--- | This function can be used to group options together under a common
--- heading. For example, if we have:
+-- | Group options together under a common heading in the help text.
+--
+-- For example, if we have:
 --
 -- > Args
 -- >   <$> parseMain
@@ -413,28 +414,13 @@ optionGroup grp o = o { optProps = props' }
 --
 -- > Available options:
 -- >   <main options>
+-- >   <other options>
 -- >
 -- > Group A:
 -- >   <A options>
 -- >
 -- > Group B:
 -- >   <B options>
--- >
--- > Available options:
--- >   <other options>
---
--- Caveats:
---
---   - Parser groups are like command groups in that groups are listed in
---     creation order, and (non-consecutive) duplicate groups are allowed.
---
---   - Nested groups are concatenated:
---
---       @
---         parserOptionGroup "Group A" (parserOptionGroup "Group Z" parseA)
---       @
---
---       Will group @parseA@ under @"GroupA.Group Z"@.
 --
 -- @since 0.19.0.0
 parserOptionGroup :: String -> Parser a -> Parser a

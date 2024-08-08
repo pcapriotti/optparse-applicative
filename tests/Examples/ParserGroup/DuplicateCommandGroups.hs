@@ -1,8 +1,7 @@
-{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Examples.ParserGroup.DuplicateCommandGroups (opts) where
+module Examples.ParserGroup.DuplicateCommandGroups (opts, main) where
 
 import Data.Semigroup ((<>))
 import Options.Applicative
@@ -27,19 +26,13 @@ data Sample = Sample
   deriving (Show)
 
 sample :: Parser Sample
-sample = do
-  hello <- parseHello
-  quiet <- parseQuiet
-  verbosity <- parseVerbosity
-  cmd <- parseCommand
+sample =
+  Sample
+    <$> parseHello
+    <*> parseQuiet
+    <*> parseVerbosity
+    <*> parseCommand
 
-  pure $
-    Sample
-      { hello,
-        quiet,
-        verbosity,
-        cmd
-      }
   where
     parseHello =
       strOption
@@ -92,3 +85,8 @@ opts =
         <> progDesc "Duplicate consecutive command groups consolidated"
         <> header "parser_group.duplicate_command_groups - a test for optparse-applicative"
     )
+
+main :: IO ()
+main = do
+  r <- customExecParser (prefs helpShowGlobals) opts
+  print r

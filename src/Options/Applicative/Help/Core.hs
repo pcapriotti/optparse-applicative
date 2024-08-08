@@ -19,24 +19,29 @@ module Options.Applicative.Help.Core (
   parserGlobals
   ) where
 
-import Control.Applicative
-import Control.Monad (guard)
-import Data.List (sort, intercalate, intersperse)
-import Data.Foldable (any, foldl')
-import Data.Maybe (fromMaybe, catMaybes)
-#if !MIN_VERSION_base(4,8,0)
-import Data.Monoid (mempty)
-#endif
-#if !MIN_VERSION_base(4,11,0)
-import Data.Semigroup (Semigroup (..))
-#endif
-import Prelude hiding (any)
+import           Control.Applicative
+import           Control.Monad (guard)
+
+import           Data.Foldable (any, foldl')
+import           Data.Function (on)
+import           Data.List (sort, intersperse)
+import           Data.List.NonEmpty (NonEmpty ((:|)))
+import qualified Data.List.NonEmpty as NE
+import           Data.Maybe (fromMaybe, catMaybes)
+
+
+
+
+
+
+
+import           Prelude hiding (any)
 
 import Options.Applicative.Common
-import Options.Applicative.Internal (groupFstAll)
 import Options.Applicative.Types
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
+import qualified Data.List as List
 
 -- | Style for rendering an option.
 data OptDescStyle
@@ -153,11 +158,11 @@ foldTree prefs s (MultNode xs) =
       x =
         foldr go mempty xs
       wrapLevel =
-        mult_wrap xs
+        multi_wrap xs
    in (x, wrapLevel)
   where
-    mult_wrap [_] = NeverRequired
-    mult_wrap _ = MaybeRequired
+    multi_wrap [_] = NeverRequired
+    multi_wrap _ = MaybeRequired
 foldTree prefs s (AltNode b xs) =
   (\x -> (x, NeverRequired))
     . fmap groupOrNestLine
@@ -194,11 +199,11 @@ globalDesc = optionsDesc True
 
 -- | Common generator for full descriptions and globals
 optionsDesc :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
-optionsDesc global pprefs p = vsepChunks
-  . fmap formatTitle
-  . fmap tabulateGroup
-  . groupByTitle
-  $ docs
+optionsDesc global pprefs p =
+  vsepChunks
+    . fmap (formatTitle . tabulateGroup)
+    . groupByTitle
+    $ docs
   where
     docs :: [Maybe (OptGroup, (Doc, Doc))]
     docs = mapParser doc p
@@ -265,13 +270,12 @@ optionsDesc global pprefs p = vsepChunks
               indentGroup = indent (lvlIndent * (n - 1))
               -- indent opts an extra lvlIndent to account for hyphen
               indentOpts = indent lvlIndent
-          in (\d -> indentGroup $ (pretty $ "- " <> title) .$. indentOpts d)
+          in (\d -> indentGroup $ pretty ("- " <> title) .$. indentOpts d)
                <$> opts
       where
-        title = case mTitle of
-          Nothing -> defTitle
-          Just t -> t
-        defTitle =
+        title =
+          fromMaybe defaultTitle mTitle
+        defaultTitle =
           if global
             then "Global options:"
             else "Available options:"
@@ -284,7 +288,7 @@ optionsDesc global pprefs p = vsepChunks
     findMaxGroupLevel = foldl' (\acc -> max acc . optGroupToLevel) 0 . catMaybes
 
     optGroupToLevel :: (OptGroup, a) -> Int
-    optGroupToLevel ((OptGroup i _), _) = i
+    optGroupToLevel (OptGroup i _, _) = i
 
     doc :: ArgumentReachability -> Option a -> Maybe (OptGroup, (Doc, Doc))
     doc info opt = do
@@ -333,7 +337,7 @@ footerHelp chunk = mempty { helpFooter = chunk }
 parserHelp :: ParserPrefs -> Parser a -> ParserHelp
 parserHelp pprefs p =
   bodyHelp . vsepChunks $
-    (fullDesc pprefs p)
+    fullDesc pprefs p
       : (group_title <$> cs)
   where
     def = "Available commands:"
@@ -379,3 +383,52 @@ data Parenthetic
   | AlwaysRequired
   -- ^ Parenthesis should always be used.
   deriving (Eq, Ord, Show)
+
+
+-- | Groups on the first element of the tuple. This differs from the simple
+-- @groupBy ((==) `on` fst)@ in that non-adjacent groups are __also__ grouped
+-- together. For example:
+--
+-- @
+--   groupFst = groupBy ((==) `on` fst)
+--
+--   let xs = [(1, "a"), (1, "b"), (3, "c"), (2, "d"), (3, "e"), (2, "f")]
+--
+--   groupFst xs === [[(1,"a"),(1,"b")],[(3,"c")],[(2,"d")],[(3,"e")],[(2,"f")]]
+--   groupFstAll xs === [[(1,"a"),(1,"b")],[(3,"c"),(3,"e")],[(2,"d"),(2,"f")]]
+-- @
+--
+-- Notice that the original order is preserved i.e. we do not first sort on
+-- the first element.
+--
+-- @since 0.19.0.0
+groupFstAll :: Ord a => [(a, b)] -> [[(a, b)]]
+groupFstAll =
+  -- In order to group all (adjacent + non-adjacent) Eq elements together, we
+  -- sort the list so that the Eq elements are in fact adjacent, _then_ group.
+  -- We don't want to destroy the original order, however, so we add a
+  -- temporary index that maintains this original order. The full logic is:
+  --
+  -- 1. Add index i that preserves original order.
+  -- 2. Sort on tuple's fst.
+  -- 3. Group by fst.
+  -- 4. Sort by i, restoring original order.
+  -- 5. Drop index i.
+  fmap (NE.toList . dropIdx)
+    . List.sortOn toIdx
+    . NE.groupBy ((==) `on` fst')
+    . List.sortOn fst'
+    . zipWithIndex
+  where
+    dropIdx :: NonEmpty (Int, (a, b)) -> NonEmpty (a, b)
+    dropIdx = fmap snd
+
+    toIdx :: NonEmpty (Int, (a, b)) -> Int
+    toIdx ((x, _) :| _) = x
+
+    -- Like fst, ignores our added index
+    fst' :: (Int, (a, b)) -> a
+    fst' (_, (x, _)) = x
+
+    zipWithIndex :: [(a, b)] -> [(Int, (a, b))]
+    zipWithIndex = zip [1 ..]

@@ -1,7 +1,6 @@
-{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Examples.ParserGroup.AllGrouped (opts) where
+module Examples.ParserGroup.AllGrouped (opts, main) where
 
 import Data.Semigroup ((<>))
 import Options.Applicative
@@ -34,17 +33,12 @@ data Sample = Sample
   deriving (Show)
 
 sample :: Parser Sample
-sample = do
-  logGroup <- parseLogGroup
-  systemGroup <- parseSystemGroup
-  cmd <- parseCmd
+sample =
+  Sample
+    <$> parseLogGroup
+    <*> parseSystemGroup
+    <*> parseCmd
 
-  pure $
-    Sample
-      { logGroup,
-        systemGroup,
-        cmd
-      }
   where
     parseLogGroup =
       parserOptionGroup "Logging" $
@@ -73,13 +67,12 @@ sample = do
             ( long "poll"
                 <> help "Whether to poll"
             )
-          <*> ( option
-                  auto
-                  ( long "timeout"
-                      <> metavar "INT"
-                      <> help "Whether to time out"
-                  )
-              )
+          <*> option
+                auto
+                ( long "timeout"
+                    <> metavar "INT"
+                    <> help "Whether to time out"
+                )
 
     parseCmd = argument str (metavar "Command")
 
@@ -91,3 +84,8 @@ opts =
         <> progDesc "Every option is grouped"
         <> header "parser_group.all_grouped - a test for optparse-applicative"
     )
+
+main :: IO ()
+main = do
+  r <- customExecParser (prefs helpShowGlobals) opts
+  print r

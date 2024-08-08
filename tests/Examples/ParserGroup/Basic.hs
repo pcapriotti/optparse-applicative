@@ -1,7 +1,6 @@
-{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Examples.ParserGroup.Basic (opts) where
+module Examples.ParserGroup.Basic (opts, main) where
 
 import Data.Semigroup ((<>))
 import Options.Applicative
@@ -29,23 +28,15 @@ data Sample = Sample
   deriving (Show)
 
 sample :: Parser Sample
-sample = do
-  hello <- parseHello
-  logGroup <- parseLogGroup
-  quiet <- parseQuiet
-  systemGroup <- parseSystemGroup
-  verbosity <- parseVerbosity
-  cmd <- parseCmd
+sample =
+  Sample
+    <$> parseHello
+    <*> parseLogGroup
+    <*> parseQuiet
+    <*> parseSystemGroup
+    <*> parseVerbosity
+    <*> parseCmd
 
-  pure $
-    Sample
-      { hello,
-        logGroup,
-        quiet,
-        systemGroup,
-        verbosity,
-        cmd
-      }
   where
     parseHello =
       strOption
@@ -113,3 +104,8 @@ opts =
         <> progDesc "Shows parser groups"
         <> header "parser_group.basic - a test for optparse-applicative"
     )
+
+main :: IO ()
+main = do
+  r <- customExecParser (prefs helpShowGlobals) opts
+  print r

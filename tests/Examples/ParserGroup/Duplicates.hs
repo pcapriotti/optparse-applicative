@@ -1,7 +1,6 @@
-{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Examples.ParserGroup.Duplicates (opts) where
+module Examples.ParserGroup.Duplicates (opts, main) where
 
 import Data.Semigroup ((<>))
 import Options.Applicative
@@ -51,27 +50,17 @@ data Sample = Sample
   deriving (Show)
 
 sample :: Parser Sample
-sample = do
-  hello <- parseHello
-  logGroup1 <- parseLogGroup1
-  quiet <- parseQuiet
-  systemGroup1 <- parseSystemGroup1
-  systemGroup2 <- parseSystemGroup2
-  logGroup2 <- parseLogGroup2
-  verbosity <- parseVerbosity
-  cmd <- parseCmd
+sample =
+  Sample
+    <$> parseHello
+    <*> parseLogGroup1
+    <*> parseQuiet
+    <*> parseSystemGroup1
+    <*> parseSystemGroup2
+    <*> parseLogGroup2
+    <*> parseVerbosity
+    <*> parseCmd
 
-  pure $
-    Sample
-      { hello,
-        logGroup1,
-        quiet,
-        systemGroup1,
-        systemGroup2,
-        logGroup2,
-        verbosity,
-        cmd
-      }
   where
     parseHello =
       strOption
@@ -113,13 +102,12 @@ sample = do
             ( long "poll"
                 <> help "Whether to poll"
             )
-          <*> ( option
-                  auto
-                  ( long "timeout"
-                      <> metavar "INT"
-                      <> help "Whether to time out"
-                  )
-              )
+          <*> option
+                auto
+                ( long "timeout"
+                    <> metavar "INT"
+                    <> help "Whether to time out"
+                )
 
     parseSystemGroup2 =
       parserOptionGroup "System" $
@@ -133,12 +121,11 @@ sample = do
       parserOptionGroup "Logging" $
         LogGroup2
             <$>
-              ( strOption
-                  ( long "log-namespace"
-                      <> metavar "STR"
-                      <> help "Log namespace"
-                  )
-              )
+              strOption
+                ( long "log-namespace"
+                    <> metavar "STR"
+                    <> help "Log namespace"
+                )
 
     parseVerbosity =
       option
@@ -158,3 +145,9 @@ opts =
         <> progDesc "Duplicate consecutive groups consolidated"
         <> header "parser_group.duplicates - a test for optparse-applicative"
     )
+
+main :: IO ()
+main = do
+  r <- customExecParser (prefs helpShowGlobals) opts
+  print r
+

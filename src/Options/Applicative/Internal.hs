@@ -28,7 +28,6 @@ module Options.Applicative.Internal
   , disamb
 
   , mapParserOptions
-  , groupFstAll
   ) where
 
 import Control.Applicative
@@ -40,10 +39,7 @@ import Control.Monad.Trans.Except
 import Control.Monad.Trans.Reader
   (mapReaderT, runReader, runReaderT, Reader, ReaderT, ask)
 import Control.Monad.Trans.State (StateT, get, put, modify, evalStateT, runStateT)
-import Data.Function (on)
-import qualified Data.List as L
-import Data.List.NonEmpty (NonEmpty ((:|)))
-import qualified Data.List.NonEmpty as NE
+
 
 import Options.Applicative.Types
 
@@ -275,54 +271,6 @@ hoistList :: Alternative m => [a] -> m a
 hoistList = foldr cons empty
   where
     cons x xs = pure x <|> xs
-
--- | Groups on the first element of the tuple. This differs from the simple
--- @groupBy ((==) `on` fst)@ in that non-adjacent groups are __also__ grouped
--- together. For example:
---
--- @
---   groupFst = groupBy ((==) `on` fst)
---
---   let xs = [(1, "a"), (1, "b"), (3, "c"), (2, "d"), (3, "e"), (2, "f")]
---
---   groupFst xs === [[(1,"a"),(1,"b")],[(3,"c")],[(2,"d")],[(3,"e")],[(2,"f")]]
---   groupFstAll xs === [[(1,"a"),(1,"b")],[(3,"c"),(3,"e")],[(2,"d"),(2,"f")]]
--- @
---
--- Notice that the original order is preserved i.e. we do not first sort on
--- the first element.
---
--- @since 0.19.0.0
-groupFstAll :: Ord a => [(a, b)] -> [[(a, b)]]
-groupFstAll =
-  -- In order to group all (adjacent + non-adjacent) Eq elements together, we
-  -- sort the list so that the Eq elements are in fact adjacent, _then_ group.
-  -- We don't want to destroy the original order, however, so we add a
-  -- temporary index that maintains this original order. The full logic is:
-  --
-  -- 1. Add index i that preserves original order.
-  -- 2. Sort on tuple's fst.
-  -- 3. Group by fst.
-  -- 4. Sort by i, restoring original order.
-  -- 5. Drop index i.
-  fmap (NE.toList . dropIdx)
-    . L.sortOn toIdx
-    . NE.groupBy ((==) `on` fst')
-    . L.sortOn fst'
-    . addIdx
-  where
-    dropIdx :: NonEmpty (Int, (a, b)) -> NonEmpty (a, b)
-    dropIdx = fmap (\(_, y) -> y)
-
-    toIdx :: NonEmpty (Int, (a, b)) -> Int
-    toIdx ((x, _) :| _) = x
-
-    -- Like fst, ignores our added index
-    fst' :: (Int, (a, b)) -> a
-    fst' (_, (x, _)) = x
-
-    addIdx :: [(a, b)] -> [(Int, (a, b))]
-    addIdx = zip [1 ..]
 
 -- | Maps an Option modifying function over the Parser.
 --
