@@ -1,3 +1,9 @@
+## Version 0.19.0.0
+
+- Add `parserOptionGroup` for grouping Options together, similar to command
+  groups. Requires the breaking change of adding the `propGroup :: OptGroup`
+  field to `OptProperties`.
+
 ## Version 0.18.1.0 (29 May 2023)
 
 - Change pretty printer layout algorithm used.

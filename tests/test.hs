@@ -10,9 +10,16 @@ import qualified Examples.Cabal as Cabal
 import qualified Examples.Alternatives as Alternatives
 import qualified Examples.Formatting as Formatting
 import qualified Examples.LongSub as LongSub
+import qualified Examples.ParserGroup.AllGrouped as ParserGroup.AllGrouped
+import qualified Examples.ParserGroup.Basic as ParserGroup.Basic
+import qualified Examples.ParserGroup.CommandGroups as ParserGroup.CommandGroups
+import qualified Examples.ParserGroup.DuplicateCommandGroups as ParserGroup.DuplicateCommandGroups
+import qualified Examples.ParserGroup.Duplicates as ParserGroup.Duplicates
+import qualified Examples.ParserGroup.Nested as ParserGroup.Nested
 
 import           Control.Applicative
 import           Control.Monad
+import           Data.Function (on)
 import           Data.List hiding (group)
 import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           Data.Semigroup hiding (option)
@@ -945,6 +952,30 @@ prop_long_command_line_flow = once $
             , "This text should be automatically wrapped "
             , "to fit the size of the terminal" ]) )
   in checkHelpTextWith ExitSuccess (prefs (columns 50)) "formatting-long-subcommand" i ["hello-very-long-sub", "--help"]
+
+prop_parser_group_basic :: Property
+prop_parser_group_basic = once $
+  checkHelpText "parser_group_basic" ParserGroup.Basic.opts ["--help"]
+
+prop_parser_group_command_groups :: Property
+prop_parser_group_command_groups = once $
+  checkHelpText "parser_group_command_groups" ParserGroup.CommandGroups.opts ["--help"]
+
+prop_parser_group_duplicate_command_groups :: Property
+prop_parser_group_duplicate_command_groups = once $
+  checkHelpText "parser_group_duplicate_command_groups" ParserGroup.DuplicateCommandGroups.opts ["--help"]
+
+prop_parser_group_duplicates :: Property
+prop_parser_group_duplicates = once $
+  checkHelpText "parser_group_duplicates" ParserGroup.Duplicates.opts ["--help"]
+
+prop_parser_group_all_grouped :: Property
+prop_parser_group_all_grouped = once $
+  checkHelpText "parser_group_all_grouped" ParserGroup.AllGrouped.opts ["--help"]
+
+prop_parser_group_nested :: Property
+prop_parser_group_nested = once $
+  checkHelpText "parser_group_nested" ParserGroup.Nested.opts ["--help"]
 
 ---
 
