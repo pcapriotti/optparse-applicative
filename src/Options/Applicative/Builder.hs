@@ -381,18 +381,23 @@ option r m = mkParser d g rdr
     crdr = CReader (optCompleter fields) r
     rdr = OptReader (optNames fields) crdr (optNoArgError fields)
 
--- | Prepends a group to 'OptProperties'. Nested groups are concatenated
--- together e.g.
+-- | Prepends a group to 'OptProperties'. Nested groups are indented e.g.
 --
 -- @
 --   optPropertiesGroup "Group Outer" (optPropertiesGroup "Group Inner" o)
 -- @
 --
--- will render as "Group Outer.Group Inner".
+-- will render as:
+--
+-- @
+--  Group Outer
+--   - Group Inner
+--     ...
+-- @
 optPropertiesGroup :: String -> OptProperties -> OptProperties
-optPropertiesGroup g o = o { propGroup = updateGroupName g oldGroup }
+optPropertiesGroup g o = o { propGroup = OptGroup (g : oldGroup) }
   where
-    oldGroup = propGroup o
+    OptGroup oldGroup = propGroup o
 
 -- | Prepends a group per 'optPropertiesGroup'.
 optionGroup :: String -> Option a -> Option a
@@ -416,10 +421,10 @@ optionGroup grp o = o { optProps = props' }
 -- >   <main options>
 -- >   <other options>
 -- >
--- > Group A:
+-- > Group A
 -- >   <A options>
 -- >
--- > Group B:
+-- > Group B
 -- >   <B options>
 --
 -- @since 0.19.0.0

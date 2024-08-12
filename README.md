@@ -766,29 +766,33 @@ Then the `--help` page `Available options` will look like:
 ```
 Available options:
   <main options>
+  <other options>
 
-Group A:
+Group A
   <A options>
 
-Group B:
+Group B
   <B options>
-
-Available options:
-  <other options>
 ```
 
 Caveats:
 
 - Parser groups are like command groups in that groups are listed in creation
-  order, and (non-consecutive) duplicate groups are allowed.
+  order, and duplicate groups are consolidated.
 
-- Nested groups are concatenated:
+- Nested groups are indented:
 
     ```haskell
-    parserOptionGroup "Group A" (parserOptionGroup "Group Z" parseA)
+    parserOptionGroup "Group Outer" (parserOptionGroup "Group Inner" parseA)
     ```
 
-    Will group `parseA` under `GroupA.Group Z`.
+    Will render as:
+
+    ```
+    Group Outer
+    - Group Inner
+      ...
+    ```
 
 ### Command groups
 

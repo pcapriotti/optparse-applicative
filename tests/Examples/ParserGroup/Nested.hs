@@ -37,6 +37,7 @@ data Sample = Sample
     logGroup :: LogGroup,
     quiet :: Bool,
     verbosity :: Int,
+    group2 :: (Int, Int),
     cmd :: String
   }
   deriving (Show)
@@ -48,6 +49,7 @@ sample =
     <*> parseLogGroup
     <*> parseQuiet
     <*> parseVerbosity
+    <*> parseGroup2
     <*> parseCmd
 
   where
@@ -58,11 +60,14 @@ sample =
             <> help "Target for the greeting"
         )
 
-    parseLogGroup = parserOptionGroup "Logging" $
-      LogGroup
-        <$> parseLogPath
-        <*> parseSystemGroup
-        <*> parseLogVerbosity
+    parseLogGroup =
+      parserOptionGroup "First group" $
+      parserOptionGroup "Second group" $
+      parserOptionGroup "Logging" $
+        LogGroup
+          <$> parseLogPath
+          <*> parseSystemGroup
+          <*> parseLogVerbosity
 
       where
         parseLogPath =
@@ -106,6 +111,12 @@ sample =
     parseNested3 =
       parserOptionGroup "Nested3" $
         Nested3 <$> option auto (long "triple-nested" <> metavar "STR" <> help "Another option")
+
+    parseGroup2 :: Parser (Int, Int)
+    parseGroup2 = parserOptionGroup "Group 2" $
+      (,)
+        <$> parserOptionGroup "G 2.1" (option auto (long "one" <> help "Option 1"))
+        <*> parserOptionGroup "G 2.2" (option auto (long "two" <> help "Option 2"))
 
     parseVerbosity =
       option auto (long "verbosity" <> short 'v' <> help "Console verbosity")

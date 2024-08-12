@@ -12,7 +12,6 @@ module Options.Applicative.Types (
   OptReader(..),
   OptProperties(..),
   OptGroup(..),
-  updateGroupName,
   OptVisibility(..),
   Backtracking(..),
   ReadM(..),
@@ -152,16 +151,8 @@ data OptVisibility
 -- | Groups for optionals. Can be multiple in the case of nested groups.
 --
 -- @since 0.19.0.0
-data OptGroup = OptGroup !Int (Maybe String)
+newtype OptGroup = OptGroup [String]
   deriving (Eq, Ord, Show)
-
--- | If the group name is not already set, sets the group name to the
--- parameter and leaves the index as-is. If, on the other hand, the group
--- name already exists, we ignore the parameter and increment the index
--- by one.
-updateGroupName :: String -> OptGroup -> OptGroup
-updateGroupName newName (OptGroup i Nothing) = OptGroup i (Just newName)
-updateGroupName _ (OptGroup i (Just oldName)) = OptGroup (i + 1) (Just oldName)
 
 -- | Specification for an individual parser option.
 data OptProperties = OptProperties
@@ -172,7 +163,7 @@ data OptProperties = OptProperties
   , propShowGlobal :: Bool                -- ^ whether the option is presented in global options text
   , propDescMod :: Maybe ( Doc -> Doc )   -- ^ a function to run over the brief description
   , propGroup :: OptGroup
-    -- ^ optional (nested) group
+    -- ^ optional group(s)
     --
     -- @since 0.19.0.0
   }

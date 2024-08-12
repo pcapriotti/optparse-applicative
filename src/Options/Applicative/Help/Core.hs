@@ -24,16 +24,10 @@ import           Control.Monad (guard)
 
 import           Data.Foldable (any, foldl')
 import           Data.Function (on)
-import           Data.List (sort, intersperse)
+import qualified Data.List as List
 import           Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
 import           Data.Maybe (fromMaybe, catMaybes)
-
-
-
-
-
-
 
 import           Prelude hiding (any)
 
@@ -41,7 +35,6 @@ import Options.Applicative.Common
 import Options.Applicative.Types
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
-import qualified Data.List as List
 
 -- | Style for rendering an option.
 data OptDescStyle
@@ -58,14 +51,14 @@ safelast = foldl' (const Just) Nothing
 optDesc :: ParserPrefs -> OptDescStyle -> ArgumentReachability -> Option a -> (OptGroup, Chunk Doc, Parenthetic)
 optDesc pprefs style _reachability opt =
   let names =
-        sort . optionNames . optMain $ opt
+        List.sort . optionNames . optMain $ opt
       meta =
         stringChunk $ optMetaVar opt
       grp = propGroup $ optProps opt
       descs =
         map (pretty . showOption) names
       descriptions =
-        listToChunk (intersperse (descSep style) descs)
+        listToChunk (List.intersperse (descSep style) descs)
       desc
         | prefHelpLongEquals pprefs && not (isEmpty meta) && any isLongName (safelast names) =
           descriptions <> stringChunk "=" <> meta
@@ -201,7 +194,8 @@ globalDesc = optionsDesc True
 optionsDesc :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
 optionsDesc global pprefs p =
   vsepChunks
-    . fmap (formatTitle . tabulateGroup)
+    . formatTitle'
+    . fmap tabulateGroup
     . groupByTitle
     $ docs
   where
@@ -256,26 +250,54 @@ optionsDesc global pprefs p =
           let groupLvl = optGroupToLevel g
           in lvlIndent * (maxGroupLevel - groupLvl)
 
-    tabulateGroup [] = (OptGroup 0 Nothing, mempty)
+    tabulateGroup [] = (OptGroup [], mempty)
 
-    formatTitle :: (OptGroup, Chunk Doc) -> Chunk Doc
-    formatTitle (OptGroup idx mTitle, opts) =
-      -- Two cases to handle w.r.t group level (i.e. nested groups).
-      case idx of
-        -- Group not nested: no indention.
-        0 -> (\d -> pretty title .$. d) <$> opts
-        -- Handle NOTE: [Nested group alignment] 1 and 2 here.
-        n ->
-          let -- indent entire group based on its level.
-              indentGroup = indent (lvlIndent * (n - 1))
+    -- Fold so we can update the (printedGroups :: [String]) arg as we
+    -- iterate. End with a reverse since we use foldl'.
+    formatTitle' :: [(OptGroup, Chunk Doc)] -> [Chunk Doc]
+    formatTitle' = reverse . snd . foldl' formatTitle ([], [])
+
+    formatTitle :: ([String], [Chunk Doc]) -> (OptGroup, Chunk Doc) -> ([String], [Chunk Doc])
+    formatTitle (printedGroups, acc) o@(OptGroup groups, opts) =
+      case parentGroups of
+        -- No nested groups: No special logic.
+        [] -> (groupTitle : printedGroups, ((\d -> pretty groupTitle .$. d) <$> opts) : acc)
+        -- We have at least one parent group title P for current group G: P has
+        -- already been printed iff it is attached to another (non-grouped)
+        -- option. In other words, P has __not__ been printed if its only
+        -- member is another group.
+        --
+        -- The parameter (printedGroups :: [String]) holds all groups that
+        -- have already been printed.
+        parents@(_ : _) ->
+          let groupLvl = optGroupToLevel o
               -- indent opts an extra lvlIndent to account for hyphen
               indentOpts = indent lvlIndent
-          in (\d -> indentGroup $ pretty ("- " <> title) .$. indentOpts d)
-               <$> opts
+
+              -- new printedGroups is all previous + this and parents.
+              printedGroups' = groupTitle : parents ++ printedGroups
+
+              parentsWithIndent = zip [0 .. ] parents
+
+              -- docs for unprinted parent title groups
+              parentDocs = pure $ mkParentDocs printedGroups parentsWithIndent
+
+              -- docs for the current group
+              thisDocs =
+                (\d -> lvlIndentNSub1 groupLvl $ (hyphenate groupTitle) .$. indentOpts d)
+                  <$> opts
+
+              allDocs = parentDocs <> thisDocs
+
+          in (printedGroups', allDocs : acc)
       where
-        title =
-          fromMaybe defaultTitle mTitle
-        defaultTitle =
+        -- Separate parentGroups and _this_ group, in case we need to also
+        -- print parent groups.
+        (parentGroups, groupTitle) = case unsnoc groups of
+          Nothing -> ([], defTitle)
+          Just (parentGrps, grp) -> (parentGrps, grp)
+
+        defTitle =
           if global
             then "Global options:"
             else "Available options:"
@@ -288,7 +310,10 @@ optionsDesc global pprefs p =
     findMaxGroupLevel = foldl' (\acc -> max acc . optGroupToLevel) 0 . catMaybes
 
     optGroupToLevel :: (OptGroup, a) -> Int
-    optGroupToLevel (OptGroup i _, _) = i
+    -- 0 (defTitle) and 1 (custom group name) are handled identically
+    -- w.r.t indenation (not indented). Hence the subtraction here.
+    optGroupToLevel (OptGroup [], _) = 0
+    optGroupToLevel (OptGroup xs@(_ : _), _) = length xs - 1
 
     doc :: ArgumentReachability -> Option a -> Maybe (OptGroup, (Doc, Doc))
     doc info opt = do
@@ -305,6 +330,27 @@ optionsDesc global pprefs p =
         descHidden = True,
         descGlobal = global
       }
+
+    -- Prints all parent titles that have not already been printed
+    -- (i.e. in printedGroups).
+    mkParentDocs :: [String] -> [(Int, String)] -> Doc
+    mkParentDocs printedGroups = foldl' g (pretty "") . reverse
+      where
+        g :: Doc -> (Int, String) -> Doc
+        g acc (i, s) =
+          if s `List.elem` printedGroups
+            then acc
+            else
+              if i == 0
+                -- Top-level parent has no special formatting
+                then pretty s .$. acc
+                -- Nested parent is hyphenated and possibly indented.
+                else lvlIndentNSub1 i $ hyphenate s .$. acc
+
+    hyphenate s = pretty ("- " <> s)
+
+    lvlIndentNSub1 :: Int -> Doc -> Doc
+    lvlIndentNSub1 n = indent (lvlIndent * (n - 1))
 
     lvlIndent :: Int
     lvlIndent = 2
@@ -384,7 +430,6 @@ data Parenthetic
   -- ^ Parenthesis should always be used.
   deriving (Eq, Ord, Show)
 
-
 -- | Groups on the first element of the tuple. This differs from the simple
 -- @groupBy ((==) `on` fst)@ in that non-adjacent groups are __also__ grouped
 -- together. For example:
@@ -432,3 +477,13 @@ groupFstAll =
 
     zipWithIndex :: [(a, b)] -> [(Int, (a, b))]
     zipWithIndex = zip [1 ..]
+
+unsnoc :: [a] -> Maybe ([a], a)
+unsnoc [] = Nothing
+unsnoc [x] = Just ([], x)
+unsnoc (x:xs) = Just (x:a, b)
+  where
+    (a, b) = case unsnoc xs of
+      Just y -> y
+      Nothing ->
+        error "Options.Applicative.Help.Core.unsnoc: impossible"
