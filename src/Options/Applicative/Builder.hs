@@ -391,8 +391,8 @@ option r m = mkParser d g rdr
 --
 -- @
 --  Group Outer
---   - Group Inner
---     ...
+--  - Group Inner
+--    ...
 -- @
 optPropertiesGroup :: String -> OptProperties -> OptProperties
 optPropertiesGroup g o = o { propGroup = OptGroup (g : oldGroup) }
