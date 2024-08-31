@@ -177,6 +177,18 @@ long = fieldMod . name . OptLong
 value :: HasValue f => a -> Mod f a
 value x = Mod id (DefaultProp (Just x) Nothing) id
 
+-- | Specify an optional default value for an option.
+--
+-- /Note/: Because this modifier means the parser will never fail when the
+-- passed value is not Nothing, do not use it with combinators such as 'some' or
+-- 'many', as these combinators continue until a failure ocurs. Careless use
+-- will thus result in a hang.
+-- 
+-- This also sets showDefault to allow the help output to differentiate when the
+-- default value was used or not.
+maybeValue :: (HasValue f, Show a) => Maybe a -> Mod f a
+maybeValue = maybe mempty (\x -> value x <> showDefault)
+
 -- | Specify a function to show the default value for an option.
 showDefaultWith :: (a -> String) -> Mod f a
 showDefaultWith s = Mod id (DefaultProp Nothing (Just s)) id
