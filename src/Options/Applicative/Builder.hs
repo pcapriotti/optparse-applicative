@@ -90,6 +90,7 @@ module Options.Applicative.Builder (
   helpLongEquals,
   helpShowGlobals,
   helpIndent,
+  briefPrettyPrinter,
   prefs,
   defaultPrefs,
 
@@ -582,6 +583,9 @@ helpShowGlobals = PrefsMod $ \p -> p { prefHelpShowGlobal = True }
 helpIndent :: Int -> PrefsMod
 helpIndent w = PrefsMod $ \p -> p { prefTabulateFill = w }
 
+-- | Set the pretty printer for brief help text.
+briefPrettyPrinter :: BriefPrettyPrinter -> PrefsMod
+briefPrettyPrinter bpp = PrefsMod $ \p -> p { prefBriefPP = bpp }
 
 
 -- | Create a `ParserPrefs` given a modifier
@@ -597,7 +601,8 @@ prefs m = applyPrefsMod m base
       , prefColumns = 80
       , prefHelpLongEquals = False
       , prefHelpShowGlobal = False
-      , prefTabulateFill = 24 }
+      , prefTabulateFill = 24
+      , prefBriefPP = BriefPPHangAtIfOver 9 35 }
 
 -- Convenience shortcuts
 
