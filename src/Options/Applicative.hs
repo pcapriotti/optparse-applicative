@@ -202,6 +202,7 @@ module Options.Applicative (
   helpLongEquals,
   helpShowGlobals,
   helpIndent,
+  briefHangPoint,
   defaultPrefs,
 
   -- * Completions
