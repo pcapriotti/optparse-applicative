@@ -266,8 +266,8 @@ mapParser f = flatten . treeMapParser f
 
 -- | Like 'mapParser', but collect the results in a tree structure.
 treeMapParser :: (forall x. ArgumentReachability -> Option x -> b)
-          -> Parser a
-          -> OptTree b
+              -> Parser a
+              -> OptTree b
 treeMapParser g = simplify . go False g
   where
     has_default :: Parser a -> Bool

@@ -116,10 +116,10 @@ briefDesc' :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
 briefDesc' showOptional pprefs =
   wrapOver NoDefault MaybeRequired
     . foldTree pprefs style
-    . mfilterOptional
-    . treeMapParser (\a -> (\(_, x, y) -> (x, y)) . optDesc pprefs style a)
+    . mFilterOptional
+    . treeMapParser optDesc'
   where
-    mfilterOptional
+    mFilterOptional
       | showOptional =
         id
       | otherwise =
@@ -129,6 +129,12 @@ briefDesc' showOptional pprefs =
         descHidden = False,
         descGlobal = False
       }
+    optDesc' reach opt =
+      let
+        (_, a, b) =
+          optDesc pprefs style reach opt
+      in
+        (a, b)
 
 -- | Wrap a doc in parentheses or brackets if required.
 wrapOver :: AltNodeType -> Parenthetic -> (Chunk Doc, Parenthetic) -> Chunk Doc
@@ -331,21 +337,18 @@ optionsDesc global pprefs p =
         descGlobal = global
       }
 
+    --
     -- Prints all parent titles that have not already been printed
     -- (i.e. in printedGroups).
     mkParentDocs :: [String] -> [(Int, String)] -> Doc
-    mkParentDocs printedGroups = foldl' g (pretty "") . reverse
+    mkParentDocs printedGroups =
+        foldr g mempty
       where
-        g :: Doc -> (Int, String) -> Doc
-        g acc (i, s) =
-          if s `List.elem` printedGroups
-            then acc
-            else
-              if i == 0
-                -- Top-level parent has no special formatting
-                then pretty s .$. acc
-                -- Nested parent is hyphenated and possibly indented.
-                else lvlIndentNSub1 i $ hyphenate s .$. acc
+        g :: (Int, String) -> Doc ->  Doc
+        g (i, s) acc
+          | s `List.elem` printedGroups = acc
+          | i == 0 = pretty s .$. acc
+          | otherwise = lvlIndentNSub1 i $ hyphenate s .$. acc
 
     hyphenate s = pretty ("- " <> s)
 
@@ -478,12 +481,6 @@ groupFstAll =
     zipWithIndex :: [(a, b)] -> [(Int, (a, b))]
     zipWithIndex = zip [1 ..]
 
+-- | From base-4.19.0.0.
 unsnoc :: [a] -> Maybe ([a], a)
-unsnoc [] = Nothing
-unsnoc [x] = Just ([], x)
-unsnoc (x:xs) = Just (x:a, b)
-  where
-    (a, b) = case unsnoc xs of
-      Just y -> y
-      Nothing ->
-        error "Options.Applicative.Help.Core.unsnoc: impossible"
+unsnoc = foldr (\x -> Just . maybe ([], x) (\(~(a, b)) -> (x : a, b))) Nothing
