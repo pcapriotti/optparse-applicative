@@ -951,7 +951,8 @@ prop_long_command_line_flow = once $
             [ "This is a very long program description. "
             , "This text should be automatically wrapped "
             , "to fit the size of the terminal" ]) )
-  in checkHelpTextWith ExitSuccess (prefs (columns 50)) "formatting-long-subcommand" i ["hello-very-long-sub", "--help"]
+      prefsMod = mconcat [columns 50, briefPrettyPrinter BriefPPAlign]
+  in checkHelpTextWith ExitSuccess (prefs prefsMod) "formatting-long-subcommand" i ["hello-very-long-sub", "--help"]
 
 prop_parser_group_basic :: Property
 prop_parser_group_basic = once $

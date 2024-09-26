@@ -3,6 +3,7 @@ module Options.Applicative.Types (
   ParseError(..),
   ParserInfo(..),
   ParserPrefs(..),
+  BriefPrettyPrinter(..),
 
   Option(..),
   OptName(..),
@@ -128,7 +129,15 @@ data ParserPrefs = ParserPrefs
                                   -- show parent options under a "global options"
                                   -- section (default: False)
   , prefTabulateFill ::Int       -- ^ Indentation width for tables
+  , prefBriefPP :: BriefPrettyPrinter -- ^ Function to format the brief description
   } deriving (Eq, Show)
+
+data BriefPrettyPrinter =
+    BriefPPHangAtIfOver Int Int   -- ^ Pretty print with 'Options.Applicative.Help.Pretty.hangAtIfOver'.
+                                  --   Many flags tend to be displayed on a single line. This is the default.
+  | BriefPPAlign                  -- ^ Pretty print with 'Options.Applicative.Help.Pretty.align'.
+                                  --   Each flag is usually displayed on a new line, and is vertically aligned with other flags.
+  deriving (Eq, Show)
 
 data OptName = OptShort !Char
              | OptLong !String

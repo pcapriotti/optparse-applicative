@@ -414,8 +414,13 @@ parserUsage pprefs p progn =
     hsep
       [ pretty "Usage:",
         pretty progn,
-        hangAtIfOver 9 35 (extractChunk (briefDesc pprefs p))
+        briefPP (extractChunk (briefDesc pprefs p))
       ]
+  where
+    briefPP =
+      case prefBriefPP pprefs of
+        BriefPPHangAtIfOver i j -> hangAtIfOver i j
+        BriefPPAlign -> align
 
 -- | Peek at the structure of the rendered tree within.
 --
