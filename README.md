@@ -43,6 +43,7 @@ context-sensitive bash, zsh, and fish completions.
 - [Applicative Do](#applicative-do)
 - [FAQ](#faq)
 - [How it works](#how-it-works)
+- [Tutorials](#tutorials)
 
 ## Introduction
 
@@ -1060,6 +1061,14 @@ value, and if not issue an error.
 
 See [this blog post][blog] for a more detailed explanation based on a
 simplified implementation.
+
+## Tutorials
+
+These are some tutorials found on the web:
+
+- [A Gentle Introduction to optparse-applicative](https://prborges.com/2023/introduction-to-optparse-applicative/).
+- [optparse-applicative quick start](https://ro-che.info/articles/2016-12-30-optparse-applicative-quick-start).
+- [Applicative Options Parsing in Haskell](https://thoughtbot.com/blog/applicative-options-parsing-in-haskell).
 
  [aeson]: http://hackage.haskell.org/package/aeson
  [applicative]: http://hackage.haskell.org/package/base/docs/Control-Applicative.html
