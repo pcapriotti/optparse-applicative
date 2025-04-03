@@ -555,7 +555,7 @@ on each command), and commands can be added with the `command`
 modifier. For example,
 
 ```haskell
-subparser
+hsubparser
   ( command "add" (info addCommand ( progDesc "Add a file to the repository" ))
  <> command "commit" (info commitCommand ( progDesc "Record changes to the repository" ))
   )
@@ -573,7 +573,7 @@ start :: String -> IO ()
 stop :: IO ()
 
 opts :: Parser (IO ())
-opts = subparser
+opts = hsubparser
   ( command "start" (info (start <$> argument str idm) idm)
  <> command "stop"  (info (pure stop) idm) )
 
@@ -810,11 +810,11 @@ hello :: Parser Sample
 hello = Hello <$> many (argument str (metavar "TARGET..."))
 
 sample :: Parser Sample
-sample = subparser
+sample = hsubparser
        ( command "hello" (info hello (progDesc "Print greeting"))
       <> command "goodbye" (info (pure Goodbye) (progDesc "Say goodbye"))
        )
-      <|> subparser
+      <|> hsubparser
        ( command "bonjour" (info hello (progDesc "Print greeting"))
       <> command "au-revoir" (info (pure Goodbye) (progDesc "Say goodbye"))
       <> commandGroup "French commands:"
