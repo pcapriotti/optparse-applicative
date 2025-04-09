@@ -182,7 +182,9 @@ searchArg prefs arg =
 
       ArgReader rdr ->
         fmap pure . lift . lift $ runReadM (crReader rdr) arg
-      _ -> mzero
+
+      _ ->
+        mzero
 
   where
     cmdMatches cs
