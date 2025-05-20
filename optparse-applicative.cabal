@@ -1,5 +1,5 @@
 name:                optparse-applicative
-version:             0.18.1.0
+version:             0.19.0.0
 synopsis:            Utilities and combinators for parsing command line options
 description:
     optparse-applicative is a haskell library for parsing options
@@ -51,6 +51,9 @@ extra-source-files:  CHANGELOG.md
 homepage:            https://github.com/pcapriotti/optparse-applicative
 bug-reports:         https://github.com/pcapriotti/optparse-applicative/issues
 tested-with:
+  GHC==9.12.1
+  GHC==9.10.1
+  GHC==9.8.4
   GHC==9.6.1
   GHC==9.4.4
   GHC==9.2.7
