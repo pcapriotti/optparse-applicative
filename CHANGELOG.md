@@ -1,4 +1,4 @@
-## Version 0.19.0.0 (31 March 2025)
+## Version 0.19.0.0 (03 June 2025)
 
 - Add `briefHangPoint` modifier. This allows one to specify the command length
   after which the rendering will change from aligned with the end of the
