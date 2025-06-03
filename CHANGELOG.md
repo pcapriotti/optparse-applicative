@@ -1,8 +1,13 @@
-## Version 0.19.0.0
+## Version 0.19.0.0 (31 March 2025)
+
+- Add `briefHangPoint` modifier. This allows one to specify the command length
+  after which the rendering will change from aligned with the end of the
+  command name to being indented on the next line.
 
 - Add `parserOptionGroup` for grouping Options together, similar to command
   groups. Requires the breaking change of adding the `propGroup :: OptGroup`
   field to `OptProperties`.
+
 
 ## Version 0.18.1.0 (29 May 2023)
 
