@@ -157,7 +157,10 @@ searchOpt pprefs w = searchParser $ \opt -> do
   let disambiguate = prefDisambiguate pprefs
                   && optVisibility opt > Internal
   case optMatches disambiguate (optMain opt) w of
-    Just matcher -> lift $ fmap pure matcher
+    Just matcher -> lift $ do
+      lift stepContext
+      fmap pure matcher
+
     Nothing -> mzero
 
 searchArg :: MonadP m => ParserPrefs -> String -> Parser a
@@ -174,14 +177,15 @@ searchArg prefs arg =
             fmap pure . lift $ enterContext arg subp *> runParserInfo subp args <* exitContext
 
           Backtrack -> fmap pure . lift . StateT $ \args ->
-            enterContext arg subp *> runParser (infoPolicy subp) CmdStart (infoParser subp) args <* exitContext
+            enterContext arg subp *> runParser (infoPolicy subp) (infoParser subp) args <* exitContext
 
           SubparserInline -> lift $ do
             lift $ enterContext arg subp
             return $ infoParser subp
 
-      ArgReader rdr ->
-        fmap pure . lift . lift $ runReadM (crReader rdr) arg
+      ArgReader rdr -> lift . lift $ do
+        stepContext
+        pure <$> runReadM (crReader rdr) arg
 
       _ ->
         mzero
@@ -206,16 +210,16 @@ stepParser pprefs _ arg p = case parseWord arg of
 -- | Apply a 'Parser' to a command line, and return a result and leftover
 -- arguments.  This function returns an error if any parsing error occurs, or
 -- if any options are missing and don't have a default value.
-runParser :: MonadP m => ArgPolicy -> IsCmdStart -> Parser a -> Args -> m (a, Args)
-runParser policy _ p ("--" : argt) | policy /= AllPositionals
-                                   = runParser AllPositionals CmdCont p argt
-runParser policy isCmdStart p args = case args of
-  [] -> exitP isCmdStart policy p result
+runParser :: MonadP m => ArgPolicy -> Parser a -> Args -> m (a, Args)
+runParser policy p ("--" : argt) | policy /= AllPositionals
+                                 = runParser AllPositionals p argt
+runParser policy p args = case args of
+  [] -> exitP policy p result
   (arg : argt) -> do
     (mp', args') <- do_step arg argt
     case mp' of
       Nothing -> hoistMaybe result <|> parseError arg p
-      Just p' -> runParser (newPolicy arg) CmdCont p' args'
+      Just p' -> runParser (newPolicy arg) p' args'
   where
     result =
       (,) <$> evalParser p <*> pure args
@@ -241,7 +245,7 @@ runParserInfo i = runParserFully (infoPolicy i) (infoParser i)
 
 runParserFully :: MonadP m => ArgPolicy -> Parser a -> Args -> m a
 runParserFully policy p args = do
-  (r, args') <- runParser policy CmdStart p args
+  (r, args') <- runParser policy p args
   case args' of
     []  -> return r
     a:_ -> parseError a (pure ())

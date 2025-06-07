@@ -749,6 +749,18 @@ prop_missing_flags_described = once $
     let text = head . lines . fst $ renderFailure failure "test"
     in  "Missing: -a ARG" === text
 
+prop_missing_flags_described_under_show_help_on_empty :: Property
+prop_missing_flags_described_under_show_help_on_empty = once $
+  let p :: Parser (String, String, Maybe String)
+      p = (,,)
+       <$> option str (short 'a')
+       <*> option str (short 'b')
+       <*> optional (option str (short 'c'))
+      i = info p idm
+  in assertError (execParserPure (prefs showHelpOnEmpty) i ["-b", "3"]) $ \failure ->
+    let text = head . lines . fst $ renderFailure failure "test"
+    in  "Missing: -a ARG" === text
+
 prop_many_missing_flags_described :: Property
 prop_many_missing_flags_described = once $
   let p :: Parser (String, String)
@@ -976,6 +988,54 @@ prop_parser_group_all_grouped = once $
 prop_parser_group_nested :: Property
 prop_parser_group_nested = once $
   checkHelpText "parser_group_nested" ParserGroup.Nested.opts ["--help"]
+
+prop_show_help_on_error_inlined :: Property
+prop_show_help_on_error_inlined = once $
+  let
+    q = (,)
+      <$> flag' () (short 'a' <> help "supply a")
+      <*> flag' () (short 'b' <> help "supply b")
+
+    p =
+      subparser $
+        command "foo" $ info q $
+        progDesc "Foo commands."
+
+    i = info (p <**> helper) briefDesc
+    result = execParserPure (prefs (showHelpOnEmpty <> subparserInline)) i ["foo"]
+  in assertError result $ \failure ->
+    let text = lines . fst $ renderFailure failure "test"
+    in ["Usage: test foo -a -b"
+       ,""
+       ,"  Foo commands."
+       ,""
+       ,"Available options:"
+       ,"  -a                       supply a"
+       ,"  -b                       supply b"] === text
+
+
+prop_show_help_on_error_inlined_pass :: Property
+prop_show_help_on_error_inlined_pass = once $
+  let
+    q = (,)
+      <$> flag' () (short 'a' <> help "supply a")
+      <*> flag' () (short 'b' <> help "supply b")
+
+    p =
+      subparser $
+        command "foo" $ info q $
+        progDesc "Foo commands."
+
+    i = info (p <**> helper) briefDesc
+    result = execParserPure (prefs (showHelpOnEmpty <> subparserInline)) i ["foo", "-a"]
+  in assertError result $ \failure ->
+    let text = lines . fst $ renderFailure failure "test"
+    in ["Missing: -b"
+       ,""
+       ,"Usage: test foo -a -b"
+       ,""
+       ,"  Foo commands."] === text
+
 
 ---
 
