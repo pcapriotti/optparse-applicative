@@ -977,6 +977,54 @@ prop_parser_group_nested :: Property
 prop_parser_group_nested = once $
   checkHelpText "parser_group_nested" ParserGroup.Nested.opts ["--help"]
 
+prop_issue_450_subcommand_show_help_on_empty_inline :: Property
+prop_issue_450_subcommand_show_help_on_empty_inline = once $
+  let
+    q = (,)
+      <$> flag' () (short 'a' <> help "supply a")
+      <*> flag' () (short 'b' <> help "supply b")
+
+    p =
+      subparser $
+        command "foo" $ info q $
+        progDesc "Foo commands."
+
+    i = info (p <**> helper) briefDesc
+    result = execParserPure (prefs (showHelpOnEmpty <> subparserInline)) i ["foo"]
+  in assertError result $ \failure ->
+    let text = lines . fst $ renderFailure failure "test"
+    in ["Usage: test foo -a -b"
+       ,""
+       ,"  Foo commands."
+       ,""
+       ,"Available options:"
+       ,"  -a                       supply a"
+       ,"  -b                       supply b"] === text
+
+
+prop_issue_450_ensure_missing_still_shows :: Property
+prop_issue_450_ensure_missing_still_shows = once $
+  let
+    q = (,)
+      <$> flag' () (short 'a' <> help "supply a")
+      <*> flag' () (short 'b' <> help "supply b")
+
+    p =
+      subparser $
+        command "foo" $ info q $
+        progDesc "Foo commands."
+
+    i = info (p <**> helper) briefDesc
+    result = execParserPure (prefs (showHelpOnEmpty <> subparserInline)) i ["foo", "-a"]
+  in assertError result $ \failure ->
+    let text = lines . fst $ renderFailure failure "test"
+    in ["Missing: -b"
+       ,""
+       ,"Usage: test foo -a -b"
+       ,""
+       ,"  Foo commands."] === text
+
+
 ---
 
 deriving instance Arbitrary a => Arbitrary (Chunk a)

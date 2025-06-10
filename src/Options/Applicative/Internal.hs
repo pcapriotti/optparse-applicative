@@ -46,13 +46,14 @@ import Options.Applicative.Types
 class (Alternative m, MonadPlus m) => MonadP m where
   enterContext :: String -> ParserInfo a -> m ()
   exitContext :: m ()
+  continueContext :: m ()
   getPrefs :: m ParserPrefs
 
   missingArgP :: ParseError -> Completer -> m a
   errorP :: ParseError -> m a
-  exitP :: IsCmdStart -> ArgPolicy -> Parser b -> Maybe a -> m a
+  exitP :: ArgPolicy -> Parser b -> Maybe a -> m a
 
-newtype P a = P (ExceptT ParseError (StateT [Context] (Reader ParserPrefs)) a)
+newtype P a = P (ExceptT ParseError (StateT (IsCmdStart, [Context]) (Reader ParserPrefs)) a)
 
 instance Functor P where
   fmap f (P m) = P $ fmap f m
@@ -79,13 +80,18 @@ contextNames ns =
   in  reverse $ go <$> ns
 
 instance MonadP P where
-  enterContext name pinfo = P $ lift $ modify $ (:) $ Context name pinfo
-  exitContext = P $ lift $ modify $ drop 1
+  enterContext name pinfo = P $ lift $ modify $ \(_, ctxs) -> (CmdStart, (Context name pinfo : ctxs))
+  exitContext = P $ lift $ modify $ fmap (drop 1)
+  continueContext = P $ lift $ modify $ \(_, ctxs) -> (CmdCont, ctxs)
   getPrefs = P . lift . lift $ ask
 
   missingArgP e _ = errorP e
-  exitP i _ p = P . maybe (throwE . MissingError i . SomeParser $ p) return
   errorP = P . throwE
+  exitP _ p ma = P $ do
+    (isCmdStart, _) <- lift get
+    maybe (throwE . MissingError isCmdStart . SomeParser $ p) return ma
+
+
 
 hoistMaybe :: MonadPlus m => Maybe a -> m a
 hoistMaybe = maybe mzero return
@@ -94,7 +100,9 @@ hoistEither :: MonadP m => Either ParseError a -> m a
 hoistEither = either errorP return
 
 runP :: P a -> ParserPrefs -> (Either ParseError a, [Context])
-runP (P p) = runReader . flip runStateT [] . runExceptT $ p
+runP (P p) = do
+  (e, (_, cs)) <- runReader . flip runStateT (CmdStart, []) . runExceptT $ p
+  return (e, cs)
 
 uncons :: [a] -> Maybe (a, [a])
 uncons [] = Nothing
@@ -153,10 +161,11 @@ instance MonadPlus Completion where
 instance MonadP Completion where
   enterContext _ _ = return ()
   exitContext = return ()
+  continueContext = return ()
   getPrefs = Completion $ lift ask
 
   missingArgP _ = Completion . lift . lift . ComplOption
-  exitP _ a p _ = Completion . lift . lift $ ComplParser (SomeParser p) a
+  exitP a p _ = Completion . lift . lift $ ComplParser (SomeParser p) a
   errorP = Completion . throwE
 
 runCompletion :: Completion r -> ParserPrefs -> Maybe (Either (SomeParser, ArgPolicy) Completer)
