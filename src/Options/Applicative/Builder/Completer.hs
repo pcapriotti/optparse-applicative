@@ -1,4 +1,7 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE PackageImports #-}
+{-# LANGUAGE PatternGuards #-}
 
 module Options.Applicative.Builder.Completer
   ( Completer
@@ -13,21 +16,22 @@ module Options.Applicative.Builder.Completer
 import Control.Applicative
 import Prelude
 import Control.Exception (IOException, try)
-import Data.List (isPrefixOf)
-#ifdef MIN_VERSION_process
 import System.Process (readProcess)
-#endif
 
 import Options.Applicative.Types
+import qualified "os-string" System.OsString as OsString
+import "os-string" System.OsString (OsString, osstr)
+import qualified Data.Text as Strict
+import Options.Applicative.Help (osStringToStrictText)
 
 -- | Create a 'Completer' from an IO action
-listIOCompleter :: IO [String] -> Completer
+listIOCompleter :: IO [Strict.Text] -> Completer
 listIOCompleter ss = Completer $ \s ->
-  filter (isPrefixOf s) <$> ss
+  filter (Strict.isPrefixOf (osStringToStrictText s)) <$> ss
 
 -- | Create a 'Completer' from a constant
 -- list of strings.
-listCompleter :: [String] -> Completer
+listCompleter :: [Strict.Text] -> Completer
 listCompleter = listIOCompleter . pure
 
 -- | Run a compgen completion action.
@@ -36,15 +40,11 @@ listCompleter = listIOCompleter . pure
 -- @directory@. See
 -- <http://www.gnu.org/software/bash/manual/html_node/Programmable-Completion-Builtins.html#Programmable-Completion-Builtins>
 -- for a complete list.
-bashCompleter :: String -> Completer
-#ifdef MIN_VERSION_process
+bashCompleter :: OsString -> Completer
 bashCompleter action = Completer $ \word -> do
-  let cmd = unwords ["compgen", "-A", action, "--", requote word]
+  cmd <- OsString.decodeUtf $  OsString.intercalate [osstr| |] [[osstr|compgen|], [osstr|-A|], action, [osstr|--|], requote word]
   result <- tryIO $ readProcess "bash" ["-c", cmd] ""
-  return . lines . either (const []) id $ result
-#else
-bashCompleter = const $ Completer $ const $ return []
-#endif
+  return . (Strict.lines) . either (const Strict.empty) (Strict.pack) $ result
 
 tryIO :: IO a -> IO (Either IOException a)
 tryIO = try
@@ -54,79 +54,103 @@ tryIO = try
 -- We need to do this so bash doesn't expand out any ~ or other
 -- chars we want to complete on, or emit an end of line error
 -- when seeking the close to the quote.
-requote :: String -> String
+requote :: OsString -> OsString
 requote s =
   let
     -- Bash doesn't appear to allow "mixed" escaping
     -- in bash completions. So we don't have to really
     -- worry about people swapping between strong and
     -- weak quotes.
+    
     unescaped =
-      case s of
+       case OsString.uncons s of
         -- It's already strongly quoted, so we
         -- can use it mostly as is, but we must
         -- ensure it's closed off at the end and
         -- there's no single quotes in the
         -- middle which might confuse bash.
-        ('\'': rs) -> unescapeN rs
-
+          Just (c, rs)
+            | c  == OsString.unsafeFromChar '\'' -> unescapeN rs
         -- We're weakly quoted.
-        ('"': rs)  -> unescapeD rs
-
+          Just (c, rs)
+            | c == OsString.unsafeFromChar '"'-> unescapeD rs
         -- We're not quoted at all.
         -- We need to unescape some characters like
         -- spaces and quotation marks.
-        elsewise   -> unescapeU elsewise
+          _ -> unescapeU s
   in
-    strong unescaped
+   strong unescaped
 
   where
-    strong ss = '\'' : foldr go "'" ss
+    strong ss = OsString.unsafeFromChar '\'' `OsString.cons` OsString.foldr go [osstr|'|] ss
       where
         -- If there's a single quote inside the
         -- command: exit from the strong quote and
         -- emit it the quote escaped, then resume.
-        go '\'' t = "'\\''" ++ t
-        go h t    = h : t
+        -- go '\'' t = "'\\''" ++ t
+        -- go h t    = h : t
+        go h t =
+          if h == OsString.unsafeFromChar '\''
+          then [osstr|'\''|] <> t
+          else h `OsString.cons` t
+
 
     -- Unescape a strongly quoted string
     -- We have two recursive functions, as we
     -- can enter and exit the strong escaping.
-    unescapeN = goX
+    unescapeN = OsString.pack . goX
       where
-        goX ('\'' : xs) = goN xs
-        goX (x : xs) = x : goX xs
-        goX [] = []
+        goX v = case OsString.uncons v of
+          Just (x, xs)
+            | x == OsString.unsafeFromChar '\''
+            -> goN xs
+          Just (x, xs) -> x : goX xs
+          Nothing -> []
 
-        goN ('\\' : '\'' : xs) = '\'' : goN xs
-        goN ('\'' : xs) = goX xs
-        goN (x : xs) = x : goN xs
-        goN [] = []
+        goN v = case OsString.uncons v of
+          Just (x, xs)
+            | x == OsString.unsafeFromChar '\\'
+            , Just (x', xs') <- OsString.uncons xs
+            , x' == OsString.unsafeFromChar '\''
+            -> x' : goN xs'
+          Just (x, xs)
+            | x == OsString.unsafeFromChar '\''
+            -> goX xs
+          Just (x, xs) -> x : goN xs
+          Nothing -> []
 
     -- Unescape an unquoted string
-    unescapeU = goX
+    unescapeU = OsString.pack . goX
       where
-        goX [] = []
-        goX ('\\' : x : xs) = x : goX xs
-        goX (x : xs) = x : goX xs
+        goX v = case OsString.uncons v of
+          Nothing -> []
+          Just (c1, xs)
+            | c1 == OsString.unsafeFromChar '\\'
+            , Just (x, xs') <- OsString.uncons xs
+            -> x : goX xs'
+          Just (x, xs) -> x : goX xs
 
     -- Unescape a weakly quoted string
-    unescapeD = goX
+    unescapeD = OsString.pack . goX
       where
-        -- Reached an escape character
-        goX ('\\' : x : xs)
-          -- If it's true escapable, strip the
-          -- slashes, as we're going to strong
-          -- escape instead.
-          | x `elem` "$`\"\\\n" = x : goX xs
-          | otherwise = '\\' : x : goX xs
-        -- We've ended quoted section, so we
-        -- don't recurse on goX, it's done.
-        goX ('"' : xs)
-          = xs
-        -- Not done, but not a special character
-        -- just continue the fold.
-        goX (x : xs)
-          = x : goX xs
-        goX []
-          = []
+        goX v = case OsString.uncons v of
+          -- Reached an escape character
+          Just (x, xs)
+            | x == OsString.unsafeFromChar '\\'
+            , Just (x', xs') <- OsString.uncons xs ->
+                -- If it's true escapable, strip the
+                -- slashes, as we're going to strong
+                -- escape instead.
+                if x'
+                  `OsString.elem` [osstr||$`"|]
+                  then x' : goX xs'
+                  else x : x' : goX xs'
+          -- We've ended quoted section, so we
+          -- don't recurse on goX, it's done.
+          Just (x, xs)
+            | x == OsString.unsafeFromChar '"' ->
+                OsString.unpack xs
+          -- Not done, but not a special character
+          -- just continue the fold.
+          Just (x, xs) -> x : goX xs
+          Nothing -> []

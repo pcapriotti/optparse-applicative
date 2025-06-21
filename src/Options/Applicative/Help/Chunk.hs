@@ -1,3 +1,4 @@
+{-# LANGUAGE PackageImports #-}
 module Options.Applicative.Help.Chunk
   ( Chunk(..)
   , chunked
@@ -21,6 +22,7 @@ import Data.Semigroup
 import Prelude
 
 import Options.Applicative.Help.Pretty
+import qualified Data.Text as Strict
 
 -- | The free monoid on a semigroup @a@.
 newtype Chunk a = Chunk
@@ -114,9 +116,10 @@ isEmpty = isNothing . unChunk
 --
 -- > isEmpty . stringChunk = null
 -- > extractChunk . stringChunk = string
-stringChunk :: String -> Chunk Doc
-stringChunk "" = mempty
-stringChunk s = pure (pretty s)
+stringChunk :: Strict.Text -> Chunk Doc
+stringChunk s = if Strict.null s
+                then mempty
+                else pure (pretty s)
 
 -- | Convert a paragraph into a 'Chunk'.  The resulting chunk is composed by the
 -- words of the original paragraph separated by softlines, so it will be
@@ -125,9 +128,9 @@ stringChunk s = pure (pretty s)
 -- This satisfies:
 --
 -- > isEmpty . paragraph = null . words
-paragraph :: String -> Chunk Doc
+paragraph :: Strict.Text -> Chunk Doc
 paragraph = foldr (chunked (</>) . stringChunk) mempty
-          . words
+           . Strict.words
 
 -- | Display pairs of strings in a table.
 tabulate :: Int -> [(Doc, Doc)] -> Chunk Doc

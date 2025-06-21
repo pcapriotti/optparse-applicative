@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, Rank2Types, ExistentialQuantification #-}
+{-# LANGUAGE CPP, Rank2Types, ExistentialQuantification, QuasiQuotes, PackageImports #-}
 module Options.Applicative.Types (
   ParseError(..),
   ParserInfo(..),
@@ -64,16 +64,20 @@ import System.Exit (ExitCode(..))
 import Options.Applicative.Help.Types
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
+import System.OsPath (OsPath, OsString, OsChar)
+import qualified "os-string" System.OsString as OsString
+import "os-string" System.OsString (osstr)
+import qualified Data.Text as Strict
 
 
 data ParseError
-  = ErrorMsg String
-  | InfoMsg String
-  | ShowHelpText (Maybe String)
+  = ErrorMsg Strict.Text -- ^ Erorr message to prettyprint
+  | InfoMsg Strict.Text -- ^ Erorr message to prettyprint
+  | ShowHelpText (Maybe OsString)
   | UnknownError
   | MissingError IsCmdStart SomeParser
-  | ExpectsArgError String
-  | UnexpectedError String SomeParser
+  | ExpectsArgError OsString -- ^ Expected argument, not received
+  | UnexpectedError OsString SomeParser
 
 data IsCmdStart = CmdStart | CmdCont
   deriving Show
@@ -110,7 +114,7 @@ data Backtracking
 
 -- | Global preferences for a top-level 'Parser'.
 data ParserPrefs = ParserPrefs
-  { prefMultiSuffix :: String     -- ^ metavar suffix for multiple options
+  { prefMultiSuffix :: Strict.Text -- ^ metavar suffix for multiple options
   , prefDisambiguate :: Bool      -- ^ automatically disambiguate abbreviations
                                   -- (default: False)
   , prefShowHelpOnError :: Bool   -- ^ always show help text on parse errors
@@ -131,8 +135,8 @@ data ParserPrefs = ParserPrefs
   , prefBriefHangPoint :: Int     -- ^ Width at which to hang the brief description
   } deriving (Eq, Show)
 
-data OptName = OptShort !Char
-             | OptLong !String
+data OptName = OptShort !OsChar
+             | OptLong !OsString
   deriving (Eq, Ord, Show)
 
 isShortName :: OptName -> Bool
@@ -152,15 +156,15 @@ data OptVisibility
 -- | Groups for optionals. Can be multiple in the case of nested groups.
 --
 -- @since 0.19.0.0
-newtype OptGroup = OptGroup [String]
+newtype OptGroup = OptGroup [OsString]
   deriving (Eq, Ord, Show)
 
 -- | Specification for an individual parser option.
 data OptProperties = OptProperties
   { propVisibility :: OptVisibility       -- ^ whether this flag is shown in the brief description
   , propHelp :: Chunk Doc                 -- ^ help text for this option
-  , propMetaVar :: String                 -- ^ metavariable for this option
-  , propShowDefault :: Maybe String       -- ^ what to show in the help text as the default
+  , propMetaVar :: Strict.Text            -- ^ metavariable for this option
+  , propShowDefault :: Maybe Strict.Text  -- ^ what to show in the help text as the default
   , propShowGlobal :: Bool                -- ^ whether the option is presented in global options text
   , propDescMod :: Maybe ( Doc -> Doc )   -- ^ a function to run over the brief description
   , propGroup :: OptGroup
@@ -192,7 +196,7 @@ data SomeParser = forall a . SomeParser (Parser a)
 -- | Subparser context, containing the name of the subparser and its parser info.
 --   Used by 'Options.Applicative.Extra.parserFailure' to display relevant usage
 --   information when parsing inside a subparser fails.
-data Context = forall a. Context String (ParserInfo a)
+data Context = forall a. Context OsString (ParserInfo a)
 
 instance Show (Option a) where
     show opt = "Option {optProps = " ++ show (optProps opt) ++ "}"
@@ -202,7 +206,7 @@ instance Functor Option where
 
 -- | A newtype over 'ReaderT String Except', used by option readers.
 newtype ReadM a = ReadM
-  { unReadM :: ReaderT String (Except ParseError) a }
+  { unReadM :: ReaderT OsString (Except ParseError) a }
 
 instance Functor ReadM where
   fmap f (ReadM r) = ReadM (fmap f r)
@@ -224,14 +228,14 @@ instance Monad ReadM where
 #endif
 
 instance Fail.MonadFail ReadM where
-  fail = readerError
+  fail v = readerError $ Strict.pack v
 
 instance MonadPlus ReadM where
   mzero = ReadM mzero
   mplus (ReadM x) (ReadM y) = ReadM $ mplus x y
 
 -- | Return the value being read.
-readerAsk :: ReadM String
+readerAsk :: ReadM OsString
 readerAsk = ReadM ask
 
 -- | Abort option reader by exiting with a 'ParseError'.
@@ -239,7 +243,7 @@ readerAbort :: ParseError -> ReadM a
 readerAbort = ReadM . lift . throwE
 
 -- | Abort option reader by exiting with an error message.
-readerError :: String -> ReadM a
+readerError :: Strict.Text -> ReadM a
 readerError = readerAbort . ErrorMsg
 
 data CReader a = CReader
@@ -251,13 +255,13 @@ instance Functor CReader where
 
 -- | An 'OptReader' defines whether an option matches an command line argument.
 data OptReader a
-  = OptReader [OptName] (CReader a) (String -> ParseError)
+  = OptReader [OptName] (CReader a) (OsString -> ParseError)
   -- ^ option reader
   | FlagReader [OptName] !a
   -- ^ flag reader
   | ArgReader (CReader a)
   -- ^ argument reader
-  | CmdReader (Maybe String) [(String, ParserInfo a)]
+  | CmdReader (Maybe OsString) [(OsString, ParserInfo a)]
   -- ^ command reader
 
 instance Functor OptReader where
@@ -323,10 +327,10 @@ instance Alternative Parser where
 
 -- | A shell complete function.
 newtype Completer = Completer
-  { runCompleter :: String -> IO [String] }
+  { runCompleter :: OsString -> IO [Strict.Text] }
 
 -- | Smart constructor for a 'Completer'
-mkCompleter :: (String -> IO [String]) -> Completer
+mkCompleter :: (OsString -> IO [Strict.Text]) -> Completer
 mkCompleter = Completer
 
 instance Semigroup Completer where
@@ -338,20 +342,20 @@ instance Monoid Completer where
   mappend = (<>)
 
 newtype CompletionResult = CompletionResult
-  { execCompletion :: String -> IO String }
+  { execCompletion :: OsString -> IO Strict.Text }
 
 instance Show CompletionResult where
   showsPrec p _ = showParen (p > 10) $
     showString "CompletionResult _"
 
 newtype ParserFailure h = ParserFailure
-  { execFailure :: String -> (h, ExitCode, Int) }
+  { execFailure :: OsString -> (h, ExitCode, Int) }
 
 instance Show h => Show (ParserFailure h) where
   showsPrec p (ParserFailure f)
     = showParen (p > 10)
     $ showString "ParserFailure"
-    . showsPrec 11 (f "<program>")
+    . showsPrec 11 (f [osstr|<program>|])
 
 instance Functor ParserFailure where
   fmap f (ParserFailure err) = ParserFailure $ \progn ->
@@ -386,7 +390,7 @@ instance Monad ParserResult where
   Failure f >>= _ = Failure f
   CompletionInvoked c >>= _ = CompletionInvoked c
 
-type Args = [String]
+type Args = [OsPath]
 
 -- | Policy for how to handle options within the parse
 data ArgPolicy
@@ -449,10 +453,10 @@ optVisibility = propVisibility . optProps
 optHelp :: Option a -> Chunk Doc
 optHelp  = propHelp . optProps
 
-optMetaVar :: Option a -> String
+optMetaVar :: Option a -> Strict.Text
 optMetaVar = propMetaVar . optProps
 
-optShowDefault :: Option a -> Maybe String
+optShowDefault :: Option a -> Maybe Strict.Text
 optShowDefault = propShowDefault . optProps
 
 optDescMod :: Option a -> Maybe ( Doc -> Doc )

@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE PackageImports #-}
 module Options.Applicative.Help.Pretty
   ( module Prettyprinter
   , module Prettyprinter.Render.Terminal
@@ -12,19 +13,27 @@ module Options.Applicative.Help.Pretty
   , altSep
   , hangAtIfOver
 
-  , prettyString
+  , prettyLazyText
+  , osStringToStrictText
+  , osStringToLazyText
   ) where
 
-#if !MIN_VERSION_base(4,11,0)
-import           Data.Semigroup ((<>), mempty)
-#endif
-import qualified Data.Text.Lazy as Lazy
+import qualified Data.Text.Encoding as Strict
+
+import qualified Data.ByteString.Short as Short
 
 import           Prettyprinter hiding (Doc)
 import qualified Prettyprinter as PP
 import           Prettyprinter.Render.Terminal
 
 import           Prelude
+import "os-string" System.OsString (OsString)
+import qualified "os-string" System.OsString.Internal.Types as OsString
+import Data.Coerce (coerce)
+import Data.ByteString (ByteString)
+import Data.Text (Text)
+import qualified Data.Text.Lazy as Lazy
+import qualified Data.Text as Strict
 
 type Doc = PP.Doc AnsiStyle
 type SimpleDoc = SimpleDocStream AnsiStyle
@@ -109,15 +118,25 @@ renderPretty ribbonFraction lineWidth
   = layoutPretty LayoutOptions
       { layoutPageWidth = AvailablePerLine lineWidth ribbonFraction }
 
-prettyString :: Double -> Int -> Doc -> String
-prettyString ribbonFraction lineWidth
+prettyLazyText :: Double -> Int -> Doc -> Lazy.Text
+prettyLazyText ribbonFraction lineWidth
   = streamToString
   . renderPretty ribbonFraction lineWidth
 
-streamToString :: SimpleDocStream AnsiStyle -> String
-streamToString sdoc =
-  let
-    rendered =
-      Prettyprinter.Render.Terminal.renderLazy sdoc
-  in
-    Lazy.unpack rendered
+streamToString :: SimpleDocStream AnsiStyle -> Lazy.Text
+streamToString =
+  Prettyprinter.Render.Terminal.renderLazy
+
+osStringToStrictText :: OsString -> Strict.Text
+osStringToStrictText = decoder . Short.fromShort . coerce 
+  where
+    decoder :: ByteString -> Text
+    decoder =
+#if defined(mingw32_HOST_OS) || defined(__MINGW32__)
+      Strict.decodeUtf16LEWith Strict.lenientDecode
+#else
+      Strict.decodeUtf8Lenient
+#endif
+
+osStringToLazyText :: OsString -> Lazy.Text
+osStringToLazyText = Lazy.fromStrict . osStringToStrictText

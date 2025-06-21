@@ -1,13 +1,18 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE PackageImports #-}
 
 module Examples.ParserGroup.CommandGroups (opts, main) where
 
 import Data.Semigroup ((<>))
 import Options.Applicative
 
+import System.OsString (OsString, osstr)
+import qualified "os-string" System.OsString as OsString
+
 data LogGroup = LogGroup
-  { logPath :: Maybe String,
+  { logPath :: Maybe OsString,
     logVerbosity :: Maybe Int
   }
   deriving (Show)
@@ -26,7 +31,7 @@ data Command
   deriving (Show)
 
 data Sample = Sample
-  { hello :: String,
+  { hello :: OsString,
     logGroup :: LogGroup,
     quiet :: Bool,
     systemGroup :: SystemGroup,
@@ -47,18 +52,18 @@ sample =
 
   where
     parseHello =
-      strOption
-        ( long "hello"
+      osStrOption
+        ( long [osstr|hello|]
             <> metavar "TARGET"
             <> help "Target for the greeting"
         )
 
     parseLogGroup =
-      parserOptionGroup "Logging" $
+      parserOptionGroup [osstr|Logging|] $
         LogGroup
           <$> optional
-            ( strOption
-                ( long "file-log-path"
+            ( osStrOption
+                ( long [osstr|file-log-path|]
                     <> metavar "PATH"
                     <> help "Log file path"
                 )
@@ -66,7 +71,7 @@ sample =
           <*> optional
             ( option
                 auto
-                ( long "file-log-verbosity"
+                ( long [osstr|file-log-verbosity|]
                     <> metavar "INT"
                     <> help "File log verbosity"
                 )
@@ -74,21 +79,21 @@ sample =
 
     parseQuiet =
       switch
-        ( long "quiet"
-            <> short 'q'
+        ( long [osstr|quiet|]
+            <> short (OsString.unsafeFromChar 'q')
             <> help "Whether to be quiet"
         )
 
     parseSystemGroup =
-      parserOptionGroup "System Options" $
+      parserOptionGroup [osstr|System Options|] $
         SystemGroup
           <$> switch
-            ( long "poll"
+            ( long [osstr|poll|]
                 <> help "Whether to poll"
             )
           <*> ( option
                   auto
-                  ( long "timeout"
+                  ( long [osstr|timeout|]
                       <> metavar "INT"
                       <> help "Whether to time out"
                   )
@@ -97,26 +102,26 @@ sample =
     parseVerbosity =
       option
         auto
-        ( long "verbosity"
-            <> short 'v'
+        ( long [osstr|verbosity|]
+            <> short (OsString.unsafeFromChar 'v')
             <> help "Console verbosity"
         )
 
     parseCommand =
       hsubparser
-        ( command "list 2" (info (pure List) $ progDesc "Lists elements")
+        ( command [osstr|list 2|] (info (pure List) $ progDesc "Lists elements")
         )
         <|> hsubparser
-        ( command "list" (info (pure List) $ progDesc "Lists elements")
-            <> command "print" (info (pure Print) $ progDesc "Prints table")
-            <> commandGroup "Info commands"
+        ( command [osstr|list|] (info (pure List) $ progDesc "Lists elements")
+            <> command [osstr|print|] (info (pure Print) $ progDesc "Prints table")
+            <> commandGroup [osstr|Info commands|]
         )
         <|> hsubparser
-          ( command "delete" (info (pure Delete) $ progDesc "Deletes elements")
+          ( command [osstr|delete|] (info (pure Delete) $ progDesc "Deletes elements")
           )
         <|> hsubparser
-          ( command "query" (info (pure Query) $ progDesc "Runs a query")
-              <> commandGroup "Query commands"
+          ( command [osstr|query|] (info (pure Query) $ progDesc "Runs a query")
+              <> commandGroup [osstr|Query commands|]
           )
 
 opts :: ParserInfo Sample

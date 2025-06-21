@@ -1,4 +1,9 @@
 {-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE PackageImports #-}
+{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Options.Applicative.Common (
   -- * Option parsers
   --
@@ -23,7 +28,7 @@ module Options.Applicative.Common (
   liftOpt,
   showOption,
 
-  -- * Program descriptions
+ -- * Program descriptions
   --
   -- A 'ParserInfo' describes a command line program, used to generate a help
   -- screen. Two help modes are supported: brief and full. In brief mode, only
@@ -33,6 +38,7 @@ module Options.Applicative.Common (
   -- A basic 'ParserInfo' with default values for fields can be created using
   -- the 'info' function.
   --
+  -- 
   -- A 'ParserPrefs' contains general preferences for all command-line
   -- options, and can be built with the 'prefs' function.
   ParserInfo(..),
@@ -55,16 +61,20 @@ import Control.Applicative
 import Control.Monad (guard, mzero, msum, when)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), get, put, runStateT)
-import Data.List (isPrefixOf)
 import Data.Maybe (maybeToList, isJust, isNothing)
 import Prelude
 
 import Options.Applicative.Internal
 import Options.Applicative.Types
 
-showOption :: OptName -> String
-showOption (OptLong n) = "--" ++ n
-showOption (OptShort n) = '-' : [n]
+import qualified "os-string" System.OsString as OsString
+import "os-string" System.OsString (osstr, OsString)
+import qualified Data.Text as Strict
+import Options.Applicative.Help.Pretty (osStringToStrictText)
+
+showOption :: OptName -> OsString
+showOption (OptLong n) = [osstr|--|] <> n
+showOption (OptShort n) = OsString.pack [OsString.unsafeFromChar '-',n]
 
 optionNames :: OptReader a -> [OptName]
 optionNames (OptReader names _ _) = names
@@ -73,7 +83,7 @@ optionNames _ = []
 
 isOptionPrefix :: OptName -> OptName -> Bool
 isOptionPrefix (OptShort x) (OptShort y) = x == y
-isOptionPrefix (OptLong x) (OptLong y) = x `isPrefixOf` y
+isOptionPrefix (OptLong x) (OptLong y) = x `OsString.isPrefixOf` y
 isOptionPrefix _ _ = False
 
 -- | Create a parser composed of a single option.
@@ -101,7 +111,7 @@ optMatches disambiguate opt (OptWord arg1 val) = case opt of
     guard $ isShortName arg1 || isNothing val
     Just $ do
       args <- get
-      let val' = ('-' :) <$> val
+      let val' = (OsString.unsafeFromChar '-' `OsString.cons`) <$> val
       put $ maybeToList val' ++ args
       return x
 
@@ -109,7 +119,8 @@ optMatches disambiguate opt (OptWord arg1 val) = case opt of
     Nothing
 
   where
-    errorFor name msg = "option " ++ showOption name ++ ": " ++ msg
+    errorFor :: OptName -> Strict.Text -> Strict.Text
+    errorFor name msg = "option " <> osStringToStrictText (showOption name) <> ": " <> msg
 
     has_name a
       | disambiguate = any (isOptionPrefix a)
@@ -119,20 +130,23 @@ isArg :: OptReader a -> Bool
 isArg (ArgReader _) = True
 isArg _ = False
 
-data OptWord = OptWord OptName (Maybe String)
+data OptWord = OptWord OptName (Maybe OsString)
 
-parseWord :: String -> Maybe OptWord
-parseWord ('-' : '-' : w) = Just $ let
-  (opt, arg) = case span (/= '=') w of
-    (_, "") -> (w, Nothing)
-    (w', _ : rest) -> (w', Just rest)
+parseWord :: OsString -> Maybe OptWord
+parseWord s
+  | ([osstr|--|], w) <- OsString.splitAt 2 s =
+  Just $ let
+    (opt, arg) = case OsString.span (/= OsString.unsafeFromChar '=') w of
+      (_, t) | OsString.null t -> (w, Nothing)
+      (w', rest) -> (w', Just (OsString.drop 1 rest))
   in OptWord (OptLong opt) arg
-parseWord ('-' : w) = case w of
-  [] -> Nothing
-  (a : rest) -> Just $ let
-    arg = rest <$ guard (not (null rest))
-    in OptWord (OptShort a) arg
-parseWord _ = Nothing
+  | ([osstr|-|], w) <- OsString.splitAt 1 s =
+        case OsString.uncons w of
+          Nothing -> Nothing
+          Just (a, rest) -> Just $ let
+                arg = rest <$ guard (not (OsString.null rest))
+                in OptWord (OptShort a) arg
+  | otherwise = Nothing
 
 searchParser :: Monad m
              => (forall r . Option r -> NondetT m (Parser r))
@@ -166,7 +180,7 @@ searchOpt pprefs w = searchParser $ \opt -> do
 
     Nothing -> mzero
 
-searchArg :: MonadP m => ParserPrefs -> String -> Parser a
+searchArg :: MonadP m => ParserPrefs -> OsString -> Parser a
           -> NondetT (StateT Args m) (Parser a)
 searchArg prefs arg =
   searchParser $ \opt -> do
@@ -194,11 +208,12 @@ searchArg prefs arg =
         mzero
 
   where
+    cmdMatches :: [(OsString, ParserInfo r)] -> [ParserInfo r]
     cmdMatches cs
-      | prefDisambiguate prefs = snd <$> filter (isPrefixOf arg . fst) cs
+      | prefDisambiguate prefs = snd <$> filter (OsString.isPrefixOf arg . fst) cs
       | otherwise = maybeToList (lookup arg cs)
 
-stepParser :: MonadP m => ParserPrefs -> ArgPolicy -> String
+stepParser :: MonadP m => ParserPrefs -> ArgPolicy -> OsString
            -> Parser a -> NondetT (StateT Args m) (Parser a)
 stepParser pprefs AllPositionals arg p =
   searchArg pprefs arg p
@@ -214,7 +229,7 @@ stepParser pprefs _ arg p = case parseWord arg of
 -- arguments.  This function returns an error if any parsing error occurs, or
 -- if any options are missing and don't have a default value.
 runParser :: MonadP m => ArgPolicy -> Parser a -> Args -> m (a, Args)
-runParser policy p ("--" : argt) | policy /= AllPositionals
+runParser policy p ([osstr|--|] : argt) | policy /= AllPositionals
                                  = runParser AllPositionals p argt
 runParser policy p args = case args of
   [] -> exitP policy p result
@@ -233,14 +248,14 @@ runParser policy p args = case args of
       NoIntersperse -> if isJust (parseWord a) then NoIntersperse else AllPositionals
       x             -> x
 
-runParserStep :: MonadP m => ArgPolicy -> Parser a -> String -> Args -> m (Maybe (Parser a), Args)
+runParserStep :: MonadP m => ArgPolicy -> Parser a -> OsString -> Args -> m (Maybe (Parser a), Args)
 runParserStep policy p arg args = do
   prefs <- getPrefs
   flip runStateT args
     $ disamb (not (prefDisambiguate prefs))
     $ stepParser prefs policy arg p
 
-parseError :: MonadP m => String -> Parser x -> m a
+parseError :: MonadP m => OsString -> Parser x -> m a
 parseError arg = errorP . UnexpectedError arg . SomeParser
 
 runParserInfo :: MonadP m => ParserInfo a -> Args -> m a

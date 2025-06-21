@@ -1,4 +1,7 @@
 {-# LANGUAGE Arrows, CPP #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE PackageImports #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Examples.Cabal where
 
 import Options.Applicative
@@ -6,10 +9,9 @@ import Options.Applicative.Arrows
 
 import Data.Monoid
 
-#if __GLASGOW_HASKELL__ <= 702
-(<>) :: Monoid a => a -> a -> a
-(<>) = mappend
-#endif
+import System.OsString (OsString, osstr)
+import qualified "os-string" System.OsString as OsString
+import System.OsPath (OsPath)
 
 data Args = Args CommonOpts Command
   deriving Show
@@ -32,11 +34,11 @@ data InstallOpts = InstallOpts
 
 data ConfigureOpts = ConfigureOpts
   { configTests :: Bool
-  , configFlags :: [String] }
+  , configFlags :: [OsString] }
   deriving Show
 
 data BuildOpts = BuildOpts
-  { buildDir :: FilePath }
+  { buildDir :: OsPath }
   deriving Show
 
 
@@ -44,16 +46,16 @@ parser :: Parser Args
 parser = runA $ proc () -> do
   opts <- asA commonOpts -< ()
   cmds <- (asA . hsubparser)
-            ( command "install"
+            ( command [osstr|install|]
               (info installParser
                     (progDesc "Installs a list of packages"))
-           <> command "update"
+           <> command [osstr|update|]
               (info updateParser
                     (progDesc "Updates list of known packages"))
-           <> command "configure"
+           <> command [osstr|configure|]
               (info configureParser
                     (progDesc "Prepare to build the package"))
-           <> command "build"
+           <> command [osstr|build|]
               (info buildParser
                     (progDesc "Make this package ready for installation")) ) -< ()
   A (simpleVersioner "0.0.0") >>> A helper -< Args opts cmds
@@ -61,8 +63,8 @@ parser = runA $ proc () -> do
 commonOpts :: Parser CommonOpts
 commonOpts = CommonOpts
   <$> option auto
-      ( short 'v'
-     <> long "verbose"
+      ( short (OsString.unsafeFromChar 'v')
+     <> long [osstr|verbose|]
      <> metavar "LEVEL"
      <> help "Set verbosity to LEVEL"
      <> value 0 )
@@ -75,8 +77,8 @@ installParser = runA $ proc () -> do
 
 installOpts :: Parser InstallOpts
 installOpts = runA $ proc () -> do
-  reinst <- asA (switch (long "reinstall")) -< ()
-  force <- asA (switch (long "force-reinstall")) -< ()
+  reinst <- asA (switch (long [osstr|reinstall|])) -< ()
+  force <- asA (switch (long [osstr|force-reinstall|])) -< ()
   returnA -< InstallOpts
              { instReinstall = reinst
              , instForce = force }
@@ -92,11 +94,11 @@ configureParser = runA $ proc () -> do
 configureOpts :: Parser ConfigureOpts
 configureOpts = runA $ proc () -> do
   tests <- (asA . switch)
-             ( long "enable-tests"
+             ( long [osstr|enable-tests|]
             <> help "Enable compilation of test suites" ) -< ()
-  flags <- (asA . many . strOption)
-             ( short 'f'
-            <> long "flags"
+  flags <- (asA . many . osStrOption)
+             ( short (OsString.unsafeFromChar 'f')
+            <> long [osstr|flags|]
             <> metavar "FLAGS"
             <> help "Enable the given flag" ) -< ()
   returnA -< ConfigureOpts tests flags
@@ -108,10 +110,10 @@ buildParser = runA $ proc () -> do
 
 buildOpts :: Parser BuildOpts
 buildOpts = runA $ proc () -> do
-  bdir <- (asA . strOption)
-            ( long "builddir"
+  bdir <- (asA . osStrOption)
+            ( long [osstr|builddir|]
            <> metavar "DIR"
-           <> value "dist" ) -< ()
+           <> value [osstr|dist|] ) -< ()
   returnA -< BuildOpts bdir
 
 pinfo :: ParserInfo Args

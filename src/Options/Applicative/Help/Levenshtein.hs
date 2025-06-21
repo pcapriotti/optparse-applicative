@@ -17,7 +17,7 @@ module Options.Applicative.Help.Levenshtein (
 --
 --   Complexity
 --     O(|a|*(1 + editDistance a b))
-editDistance :: Eq a => [a] -> [a] -> Int
+editDistance :: String -> String -> Int
 editDistance a b =
   let
     mainDiag =

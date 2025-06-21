@@ -1,4 +1,7 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE PackageImports #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Options.Applicative.Builder (
   -- * Parser builders
   --
@@ -19,6 +22,7 @@ module Options.Applicative.Builder (
   -- creates a parser for an option called \"output\".
   subparser,
   strArgument,
+  osStrArgument,
   argument,
   flag,
   flag',
@@ -26,6 +30,7 @@ module Options.Applicative.Builder (
   abortOption,
   infoOption,
   strOption,
+  osStrOption,
   option,
 
   -- * Modifiers
@@ -56,6 +61,7 @@ module Options.Applicative.Builder (
   -- | A collection of basic 'Option' readers.
   auto,
   str,
+  osStr,
   maybeReader,
   eitherReader,
   disabled,
@@ -105,14 +111,13 @@ module Options.Applicative.Builder (
   HasName,
   HasCompleter,
   HasValue,
-  HasMetavar
+  HasMetavar,
   ) where
 
 import Control.Applicative
-#if __GLASGOW_HASKELL__ < 804
-import Data.Semigroup hiding (Option, option)
-#endif
-import Data.String (fromString, IsString)
+
+
+
 
 import Options.Applicative.Builder.Completer
 import Options.Applicative.Builder.Internal
@@ -122,19 +127,34 @@ import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
 import Options.Applicative.Internal (mapParserOptions)
 
+import qualified "os-string" System.OsString as OsString
+import System.IO.Unsafe (unsafePerformIO)
+import "os-string" System.OsString (OsString, osstr, OsChar)
+import qualified Data.Text as Strict
+import Data.String (IsString (fromString))
+
 -- Readers --
 
 -- | 'Option' reader based on the 'Read' type class.
 auto :: Read a => ReadM a
-auto = eitherReader $ \arg -> case reads arg of
+auto = eitherReader $ \arg ->
+  let arg' = unsafePerformIO $ OsString.decodeLE arg
+  in case reads arg'  of
   [(r, "")] -> return r
-  _         -> Left $ "cannot parse value `" ++ arg ++ "'"
+  _         -> Left $ "cannot parse value `" <> osStringToStrictText arg <> "'"
 
 -- | String 'Option' reader.
 --
---   Polymorphic over the `IsString` type class since 0.14.
+--   Polymorphic over the `IsString` type class since 0.4.
 str :: IsString s => ReadM s
-str = fromString <$> readerAsk
+str = do
+  fromString . unsafePerformIO . OsString.decodeLE <$> readerAsk
+
+-- | OsString 'Option' reader.
+--
+--   Synonim for 'readerAsk'
+osStr :: ReadM OsString
+osStr = readerAsk
 
 -- | Convert a function producing an 'Either' into a reader.
 --
@@ -145,14 +165,14 @@ str = fromString <$> readerAsk
 -- > import qualified Data.Text as T
 -- > attoparsecReader :: A.Parser a -> ReadM a
 -- > attoparsecReader p = eitherReader (A.parseOnly p . T.pack)
-eitherReader :: (String -> Either String a) -> ReadM a
+eitherReader :: (OsString -> Either Strict.Text a) -> ReadM a
 eitherReader f = readerAsk >>= either readerError return . f
 
 -- | Convert a function producing a 'Maybe' into a reader.
-maybeReader :: (String -> Maybe a) -> ReadM a
+maybeReader :: (OsString -> Maybe a) -> ReadM a
 maybeReader f = do
   arg  <- readerAsk
-  maybe (readerError $ "cannot parse value `" ++ arg ++ "'") return . f $ arg
+  maybe (readerError $ "cannot parse value `" <> osStringToStrictText arg <> "'") return . f $ arg
 
 -- | Null 'Option' reader. All arguments will fail validation.
 disabled :: ReadM a
@@ -161,11 +181,11 @@ disabled = readerError "disabled option"
 -- modifiers --
 
 -- | Specify a short name for an option.
-short :: HasName f => Char -> Mod f a
+short :: HasName f => OsChar -> Mod f a
 short = fieldMod . name . OptShort
 
 -- | Specify a long name for an option.
-long :: HasName f => String -> Mod f a
+long :: HasName f => OsString -> Mod f a
 long = fieldMod . name . OptLong
 
 -- | Specify a default value for an option.
@@ -181,15 +201,15 @@ value :: HasValue f => a -> Mod f a
 value x = Mod id (DefaultProp (Just x) Nothing) id
 
 -- | Specify a function to show the default value for an option.
-showDefaultWith :: (a -> String) -> Mod f a
+showDefaultWith :: (a -> Strict.Text) -> Mod f a
 showDefaultWith s = Mod id (DefaultProp Nothing (Just s)) id
 
 -- | Show the default value for this option using its 'Show' instance.
 showDefault :: Show a => Mod f a
-showDefault = showDefaultWith show
+showDefault = showDefaultWith (Strict.pack . show)
 
 -- | Specify the help text for an option.
-help :: String -> Mod f a
+help :: Strict.Text -> Mod f a
 help s = optionMod $ \p -> p { propHelp = paragraph s }
 
 -- | Specify the help text for an option as a 'Prettyprinter.Doc AnsiStyle'
@@ -205,7 +225,7 @@ noArgError e = fieldMod $ \p -> p { optNoArgError = const e }
 --
 -- Metavariables have no effect on the actual parser, and only serve to specify
 -- the symbolic name for an argument to be displayed in the help text.
-metavar :: HasMetavar f => String -> Mod f a
+metavar :: HasMetavar f => Strict.Text -> Mod f a
 metavar var = optionMod $ \p -> p { propMetaVar = var }
 
 -- | Hide this option from the brief description.
@@ -240,7 +260,7 @@ style x = optionMod $ \p ->
 --          (info goodbye (progDesc "Say goodbye"))
 --        )
 -- @
-command :: String -> ParserInfo a -> Mod CommandFields a
+command :: OsString -> ParserInfo a -> Mod CommandFields a
 command cmd pinfo = fieldMod $ \p ->
   p { cmdCommands = (cmd, pinfo) : cmdCommands p }
 
@@ -250,19 +270,19 @@ command cmd pinfo = fieldMod $ \p ->
 --
 -- If using the same `metavar` for each group of commands, it may yield a more
 -- attractive usage text combined with `hidden` for some groups.
-commandGroup :: String -> Mod CommandFields a
+commandGroup :: OsString -> Mod CommandFields a
 commandGroup g = fieldMod $ \p ->
   p { cmdGroup = Just g }
 
 -- | Add a list of possible completion values.
-completeWith :: HasCompleter f => [String] -> Mod f a
+completeWith :: HasCompleter f => [Strict.Text] -> Mod f a
 completeWith = completer . listCompleter
 
 -- | Add a bash completion action. Common actions include @file@ and
 -- @directory@. See
 -- <http://www.gnu.org/software/bash/manual/html_node/Programmable-Completion-Builtins.html#Programmable-Completion-Builtins>
 -- for a complete list.
-action :: HasCompleter f => String -> Mod f a
+action :: HasCompleter f => OsString -> Mod f a
 action = completer . bashCompleter
 
 -- | Add a completer to an argument.
@@ -296,9 +316,13 @@ argument p m = mkParser d g (ArgReader rdr)
     ArgumentFields compl = f (ArgumentFields mempty)
     rdr = CReader compl p
 
--- | Builder for a 'String' argument.
+-- | Builder for an 'IsString' argument.
 strArgument :: IsString s => Mod ArgumentFields s -> Parser s
 strArgument = argument str
+
+-- | Builder for a 'OsString' argument.
+osStrArgument :: Mod ArgumentFields OsString -> Parser OsString
+osStrArgument = argument osStr
 
 -- | Builder for a flag parser.
 --
@@ -357,15 +381,19 @@ abortOption :: ParseError -> Mod OptionFields (a -> a) -> Parser (a -> a)
 abortOption err m = option (readerAbort err) . (`mappend` m) $ mconcat
   [ noArgError err
   , value id
-  , metavar "" ]
+  , metavar Strict.empty ]
 
 -- | An option that always fails and displays a message.
-infoOption :: String -> Mod OptionFields (a -> a) -> Parser (a -> a)
+infoOption :: Strict.Text -> Mod OptionFields (a -> a) -> Parser (a -> a)
 infoOption = abortOption . InfoMsg
 
--- | Builder for an option taking a 'String' argument.
+-- | Builder for an option taking a 'IsString' argument.
 strOption :: IsString s => Mod OptionFields s -> Parser s
 strOption = option str
+
+-- | Builder for an option taking a 'OsString' argument.
+osStrOption :: Mod OptionFields OsString -> Parser OsString
+osStrOption = option osStr
 
 -- | Builder for an option using the given reader.
 --
@@ -395,13 +423,13 @@ option r m = mkParser d g rdr
 --  - Group Inner
 --    ...
 -- @
-optPropertiesGroup :: String -> OptProperties -> OptProperties
+optPropertiesGroup :: OsString -> OptProperties -> OptProperties
 optPropertiesGroup g o = o { propGroup = OptGroup (g : oldGroup) }
   where
     OptGroup oldGroup = propGroup o
 
 -- | Prepends a group per 'optPropertiesGroup'.
-optionGroup :: String -> Option a -> Option a
+optionGroup :: OsString -> Option a -> Option a
 optionGroup grp o = o { optProps = props' }
   where
     props' = optPropertiesGroup grp (optProps o)
@@ -428,8 +456,8 @@ optionGroup grp o = o { optProps = props' }
 -- > Group B
 -- >   <B options>
 --
--- @since 0.19.0.0
-parserOptionGroup :: String -> Parser a -> Parser a
+-- @since 0.9.0.0
+parserOptionGroup :: OsString -> Parser a -> Parser a
 parserOptionGroup g = mapParserOptions (optionGroup g)
 
 -- | Modifier for 'ParserInfo'.
@@ -452,7 +480,7 @@ briefDesc :: InfoMod a
 briefDesc = InfoMod $ \i -> i { infoFullDesc = False }
 
 -- | Specify a header for this parser.
-header :: String -> InfoMod a
+header :: Strict.Text -> InfoMod a
 header s = InfoMod $ \i -> i { infoHeader = paragraph s }
 
 -- | Specify a header for this parser as a 'Prettyprinter.Doc AnsiStyle'
@@ -461,7 +489,7 @@ headerDoc :: Maybe Doc -> InfoMod a
 headerDoc doc = InfoMod $ \i -> i { infoHeader = Chunk doc }
 
 -- | Specify a footer for this parser.
-footer :: String -> InfoMod a
+footer :: Strict.Text -> InfoMod a
 footer s = InfoMod $ \i -> i { infoFooter = paragraph s }
 
 -- | Specify a footer for this parser as a 'Prettyprinter.Doc AnsiStyle'
@@ -470,7 +498,7 @@ footerDoc :: Maybe Doc -> InfoMod a
 footerDoc doc = InfoMod $ \i -> i { infoFooter = Chunk doc }
 
 -- | Specify a short program description.
-progDesc :: String -> InfoMod a
+progDesc :: Strict.Text -> InfoMod a
 progDesc s = InfoMod $ \i -> i { infoProgDesc = paragraph s }
 
 -- | Specify a short program description as a 'Prettyprinter.Doc AnsiStyle'
@@ -532,7 +560,7 @@ instance Semigroup PrefsMod where
 
 -- | Include a suffix to attach to the metavar when multiple values
 --   can be entered.
-multiSuffix :: String -> PrefsMod
+multiSuffix :: Strict.Text -> PrefsMod
 multiSuffix s = PrefsMod $ \p -> p { prefMultiSuffix = s }
 
 -- | Turn on disambiguation.
@@ -593,7 +621,7 @@ prefs :: PrefsMod -> ParserPrefs
 prefs m = applyPrefsMod m base
   where
     base = ParserPrefs
-      { prefMultiSuffix = ""
+      { prefMultiSuffix = Strict.empty
       , prefDisambiguate = False
       , prefShowHelpOnError = False
       , prefShowHelpOnEmpty = False
@@ -613,3 +641,5 @@ idm = mempty
 -- | Default preferences.
 defaultPrefs :: ParserPrefs
 defaultPrefs = prefs idm
+
+
