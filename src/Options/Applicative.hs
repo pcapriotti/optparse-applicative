@@ -63,9 +63,11 @@ module Options.Applicative (
   switch,
 
   strOption,
+  osStrOption,
   option,
 
   strArgument,
+  osStrArgument,
   argument,
 
   subparser,
@@ -134,6 +136,7 @@ module Options.Applicative (
 
   auto,
   str,
+  osStr,
   maybeReader,
   eitherReader,
   disabled,

@@ -1,4 +1,2 @@
 cradle:
   cabal:
-    - path: "./"
-      component: "optparse-applicative:lib:optparse-applicative"

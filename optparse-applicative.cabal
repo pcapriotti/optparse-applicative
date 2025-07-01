@@ -61,24 +61,10 @@ tested-with:
   GHC==8.10.7
   GHC==8.8.4
   GHC==8.6.5
-  GHC==8.4.4
-  GHC==8.2.2
-  GHC==8.0.2
-  GHC==7.10.3
-  GHC==7.8.4
-  GHC==7.6.3
-  GHC==7.4.2
-  GHC==7.2.2
-  GHC==7.0.4
 
 source-repository head
   type:     git
   location: https://github.com/pcapriotti/optparse-applicative.git
-
-flag process
-  description:
-    Depend on the process package for Bash autocompletion
-  default: True
 
 library
   hs-source-dirs:      src
@@ -86,10 +72,9 @@ library
   default-language:    Haskell98
 
   -- See https://ghc.haskell.org/trac/ghc/wiki/Migration/8.0#base-4.9.0.0
-  if impl(ghc >= 8.0)
-    ghc-options:  -Wno-redundant-constraints -Wcompat -Wnoncanonical-monad-instances
-    if impl(ghc < 8.8)
-      ghc-options: -Wnoncanonical-monadfail-instances
+  ghc-options:  -Wno-redundant-constraints -Wcompat -Wnoncanonical-monad-instances
+  if impl(ghc < 8.8)
+    ghc-options: -Wnoncanonical-monadfail-instances
 
   exposed-modules:     Options.Applicative
                      , Options.Applicative.Arrows
@@ -109,18 +94,16 @@ library
                      , Options.Applicative.Types
                      , Options.Applicative.Internal
 
-  build-depends:       base                            >= 4.5   && < 5
+  build-depends:       base                            >= 4.12   && < 5
                      , text                            >= 1.2
                      , transformers                    >= 0.5   && < 0.7
                      , prettyprinter                   >= 1.7   && < 1.8
                      , prettyprinter-ansi-terminal     >= 1.1.2 && < 1.2
-
-  if flag(process)
-    build-depends:     process                         >= 1.0   && < 1.7
-
-  if !impl(ghc >= 8)
-    build-depends:     semigroups                      >= 0.10  && < 0.21
-                     , fail                            == 4.9.*
+                     -- 1.6.26.0 due to System.Process.Environment.OsString.getArgs
+                     , process                         >= 1.6.26.0   && < 1.7
+                     , bytestring
+                     , os-string                       >= 2.0.5 && < 3
+                     , filepath                        >=  1.5
 
 test-suite tests
   type:                exitcode-stdio-1.0
@@ -148,7 +131,9 @@ test-suite tests
 
   build-depends:       base
                      , optparse-applicative
+                     , os-string
+                     , file-io
+                     , filepath
+                     , text
                      , QuickCheck                      >= 2.8 && < 2.16
 
-  if !impl(ghc >= 8)
-    build-depends:     semigroups

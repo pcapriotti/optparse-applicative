@@ -1,3 +1,4 @@
+{-# LANGUAGE PackageImports #-}
 module Options.Applicative.Builder.Internal (
   -- * Internals
   Mod(..),
@@ -31,19 +32,22 @@ import Prelude
 
 import Options.Applicative.Common
 import Options.Applicative.Types
+import "os-string" System.OsString (OsString)
+import qualified "os-string" System.OsString as OsString
+import qualified Data.Text as Strict
 
 data OptionFields a = OptionFields
   { optNames :: [OptName]
   , optCompleter :: Completer
-  , optNoArgError :: String -> ParseError }
+  , optNoArgError :: OsString -> ParseError }
 
 data FlagFields a = FlagFields
   { flagNames :: [OptName]
   , flagActive :: a }
 
 data CommandFields a = CommandFields
-  { cmdCommands :: [(String, ParserInfo a)]
-  , cmdGroup :: Maybe String }
+  { cmdCommands :: [(OsString, ParserInfo a)]
+  , cmdGroup :: Maybe OsString }
 
 data ArgumentFields a = ArgumentFields
   { argCompleter :: Completer }
@@ -86,8 +90,8 @@ instance HasMetavar CommandFields where
 -- mod --
 
 data DefaultProp a = DefaultProp
-  (Maybe a)
-  (Maybe (a -> String))
+  (Maybe a)               -- ^ Default value
+  (Maybe (a -> Strict.Text)) -- ^ Function to show the default value
 
 instance Monoid (DefaultProp a) where
   mempty = DefaultProp Nothing Nothing
@@ -145,7 +149,7 @@ instance Semigroup (Mod f a) where
 -- | Base default properties.
 baseProps :: OptProperties
 baseProps = OptProperties
-  { propMetaVar = ""
+  { propMetaVar = Strict.empty
   , propVisibility = Visible
   , propHelp = mempty
   , propShowDefault = Nothing
@@ -154,7 +158,7 @@ baseProps = OptProperties
   , propGroup = OptGroup []
   }
 
-mkCommand :: Mod CommandFields a -> (Maybe String, [(String, ParserInfo a)])
+mkCommand :: Mod CommandFields a -> (Maybe OsString, [(OsString, ParserInfo a)])
 mkCommand m = (group, cmds)
   where
     Mod f _ _ = m

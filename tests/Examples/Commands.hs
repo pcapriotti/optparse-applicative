@@ -1,46 +1,50 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE PackageImports #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Examples.Commands where
 
 import Data.List
 import Data.Monoid
 import Options.Applicative
 
-#if __GLASGOW_HASKELL__ <= 702
-(<>) :: Monoid a => a -> a -> a
-(<>) = mappend
-#endif
+import System.OsString (OsString, osstr)
+import qualified "os-string" System.OsString as OsString
+import qualified Data.Text as Strict
+import qualified Data.Text.IO as Strict.IO
+import Options.Applicative.Help (osStringToStrictText)
 
 data Sample
-  = Hello [String]
+  = Hello [OsString]
   | Goodbye
   deriving (Eq, Show)
 
 hello :: Parser Sample
-hello = Hello <$> many (argument str (metavar "TARGET..."))
+hello = Hello <$> many (argument osStr (metavar "TARGET..."))
 
 sample :: Parser Sample
 sample = subparser
-       ( command "hello"
+       ( command [osstr|hello|]
          (info hello
                (progDesc "Print greeting"))
-      <> command "goodbye"
+      <> command [osstr|goodbye|]
          (info (pure Goodbye)
                (progDesc "Say goodbye"))
        )
       <|> subparser
-       ( command "bonjour"
+       ( command [osstr|bonjour|]
          (info hello
                (progDesc "Print greeting"))
-      <> command "au-revoir"
+      <> command [osstr|au-revoir|]
          (info (pure Goodbye)
                (progDesc "Say goodbye"))
-      <> commandGroup "French commands:"
+      <> commandGroup [osstr|French commands:|]
       <> hidden
        )
 
 run :: Sample -> IO ()
-run (Hello targets) = putStrLn $ "Hello, " ++ intercalate ", " targets ++ "!"
-run Goodbye = putStrLn "Goodbye."
+run (Hello targets) = Strict.IO.putStrLn $ "Hello, " <> Strict.intercalate ", " (osStringToStrictText <$> targets) <> "!"
+run Goodbye = Strict.IO.putStrLn "Goodbye."
 
 opts :: ParserInfo Sample
 opts = info (sample <**> helper) idm
