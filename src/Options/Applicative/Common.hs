@@ -55,6 +55,7 @@ import Control.Applicative
 import Control.Monad (guard, mzero, msum, when)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), get, put, runStateT)
+import Control.Selective (select)
 import Data.List (isPrefixOf)
 import Data.Maybe (maybeToList, isJust, isNothing)
 import Prelude
@@ -270,7 +271,7 @@ evalParser (NilP r) = r
 evalParser (OptP _) = Nothing
 evalParser (MultP p1 p2) = evalParser p1 <*> evalParser p2
 evalParser (AltP p1 p2) = evalParser p1 <|> evalParser p2
-evalParser (SelectP p k) = evalParser p >>= either (\a -> ($ a) <$> evalParser k) pure
+evalParser (SelectP p k) = select (evalParser p) (evalParser k)
 evalParser (BindP p k) = evalParser p >>= evalParser . k
 
 -- | Map a polymorphic function over all the options of a parser, and collect

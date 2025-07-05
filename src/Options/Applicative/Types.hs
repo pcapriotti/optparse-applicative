@@ -280,7 +280,7 @@ instance Functor Parser where
   fmap f (NilP x) = NilP (fmap f x)
   fmap f (OptP opt) = OptP (fmap f opt)
   fmap f (MultP p1 p2) = MultP (fmap (f.) p1) p2
-  fmap f (SelectP p1 p2) = SelectP (fmap (fmap f) p1) (fmap (fmap f) p2)
+  fmap f (SelectP p k) = SelectP (fmap (fmap f) p) (fmap (f.) k)
   fmap f (AltP p1 p2) = AltP (fmap f p1) (fmap f p2)
   fmap f (BindP p k) = BindP p (fmap f . k)
 
