@@ -102,9 +102,27 @@ data ParserInfo a = ParserInfo
 instance Functor ParserInfo where
   fmap f i = i { infoParser = fmap f (infoParser i) }
 
+-- | Behaviour for how subcommands are executed within a parser.
 data Backtracking
+  -- | When a subcommand is complete, parsing will drop back to the parent
+  -- command (this is the default behaviour).
+  --
+  -- /NOTE:/ Options which aren't recognised by the subcommand may be tried
+  -- by the parent (if the subcommand is satisfied) and errors raised against
+  -- the parent parser.
   = Backtrack
+  -- | Subcommands do not drop back to the parent when complete, and must
+  -- consume all remaining arguments provided.
+  --
+  -- This means that multiple sub-commands can not be required at the same
+  -- level, and all global options /must/ be specified before entering the
+  -- subcommand.
   | NoBacktrack
+  -- | Subcommands are embeddeed into the parent parser, allowing full mixing
+  -- of their arguments and that of their parent.
+  --
+  -- /NOTE:/ When this option is used, preferences for the subparser which
+  -- effect the parser behaviour (such as 'noIntersperse') are ignored.
   | SubparserInline
   deriving (Eq, Show)
 

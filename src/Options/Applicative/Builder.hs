@@ -555,14 +555,17 @@ showHelpOnEmpty :: PrefsMod
 showHelpOnEmpty = PrefsMod $ \p -> p { prefShowHelpOnEmpty = True }
 
 -- | Turn off backtracking after subcommand is parsed.
+--
+-- /NOTE:/ When this option is used, all remaining arguments /must/ be
+-- consumed by the subcommand once it entered.
 noBacktrack :: PrefsMod
 noBacktrack = PrefsMod $ \p -> p { prefBacktrack = NoBacktrack }
 
--- | Allow full mixing of subcommand and parent arguments by inlining
+-- | Allow full mixing of subcommand and parent arguments by embedding
 -- selected subparsers into the parent parser.
 --
 -- /NOTE:/ When this option is used, preferences for the subparser which
--- effect the parser behaviour (such as noIntersperse) are ignored.
+-- effect the parser behaviour (such as @noIntersperse@) are ignored.
 subparserInline :: PrefsMod
 subparserInline = PrefsMod $ \p -> p { prefBacktrack = SubparserInline }
 
