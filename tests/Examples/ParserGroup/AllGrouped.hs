@@ -80,8 +80,7 @@ opts :: ParserInfo Sample
 opts =
   info
     sample
-    ( fullDesc
-        <> progDesc "Every option is grouped"
+    (  progDesc "Every option is grouped"
         <> header "parser_group.all_grouped - a test for optparse-applicative"
     )
 

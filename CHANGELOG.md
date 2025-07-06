@@ -3,6 +3,8 @@
 - Fix for showHelpOnEmpty so that it works correctly when subParserInline is
   also active.
 
+- Remove `fullDesc` and `briefDesc` builder modifiers – they have not had an
+  effect since version 0.8.
 
 ## Version 0.19.0.0 (03 June 2025)
 

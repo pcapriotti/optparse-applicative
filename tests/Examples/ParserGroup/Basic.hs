@@ -100,8 +100,7 @@ opts :: ParserInfo Sample
 opts =
   info
     (sample <**> helper)
-    ( fullDesc
-        <> progDesc "Shows parser groups"
+    (  progDesc "Shows parser groups"
         <> header "parser_group.basic - a test for optparse-applicative"
     )
 

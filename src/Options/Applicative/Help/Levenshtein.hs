@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unrecognised-warning-flags #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
 module Options.Applicative.Help.Levenshtein (
     editDistance
   ) where

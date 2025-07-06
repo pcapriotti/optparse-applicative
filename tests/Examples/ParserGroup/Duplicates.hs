@@ -141,8 +141,7 @@ opts :: ParserInfo Sample
 opts =
   info
     (sample <**> helper)
-    ( fullDesc
-        <> progDesc "Duplicate consecutive groups consolidated"
+    ( progDesc "Duplicate consecutive groups consolidated"
         <> header "parser_group.duplicates - a test for optparse-applicative"
     )
 

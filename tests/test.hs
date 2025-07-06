@@ -177,7 +177,7 @@ prop_optional_requiring_parens = once $
             (,)
             <$> flag' () ( short 'a' <> long "a" )
             <*> flag' () ( short 'b' <> long "b" )
-      i = info (p <**> helper) briefDesc
+      i = info (p <**> helper) mempty
       result = run i ["--help"]
   in assertError result $ \failure ->
     let text = head . lines . fst $ renderFailure failure "test"
@@ -188,7 +188,7 @@ prop_optional_alt_requiring_parens = once $
   let p = optional $
                 flag' () ( short 'a' <> long "a" )
             <|> flag' () ( short 'b' <> long "b" )
-      i = info (p <**> helper) briefDesc
+      i = info (p <**> helper) mempty
       result = run i ["--help"]
   in assertError result $ \failure ->
     let text = head . lines . fst $ renderFailure failure "test"
@@ -221,7 +221,7 @@ prop_long_equals = once $
                        <> long "intval2"
                        <> short 'i'
                        <> help "integer value")
-      i = info (p <**> helper) fullDesc
+      i = info (p <**> helper) mempty
   in checkHelpTextWith ExitSuccess (prefs helpLongEquals) "long_equals" i ["--help"]
 
 prop_long_equals_doesnt_do_shorts :: Property
@@ -229,7 +229,7 @@ prop_long_equals_doesnt_do_shorts = once $
   let p :: Parser String
       p = option auto (   short 'i'
                        <> help "integer value")
-      i = info (p <**> helper) fullDesc
+      i = info (p <**> helper) mempty
       result = execParserPure (prefs helpLongEquals) i ["--help"]
   in assertError result $ \failure ->
     let text = head . lines . fst $ renderFailure failure "test"
@@ -244,7 +244,7 @@ prop_nested_fun = once $
            ((,) <$>
             (strOption (short 'b' <> long "b" <> metavar "B")) <*>
             (optional (strOption (short 'c' <> long "c" <> metavar "C")))))
-      i = info (p <**> helper) briefDesc
+      i = info (p <**> helper) mempty
       result = run i ["--help"]
   in assertError result $ \failure ->
     let text = head . lines . fst $ renderFailure failure "test"
@@ -480,7 +480,7 @@ prop_bind_usage :: Property
 prop_bind_usage = once $
   let p :: Parser [String]
       p = many (argument str (metavar "ARGS..."))
-      i = info (p <**> helper) briefDesc
+      i = info (p <**> helper) mempty
       result = run i ["--help"]
   in assertError result $ \failure ->
     let text = head . lines . fst $ renderFailure failure "test"
@@ -989,7 +989,7 @@ prop_issue_450_subcommand_show_help_on_empty_inline = once $
         command "foo" $ info q $
         progDesc "Foo commands."
 
-    i = info (p <**> helper) briefDesc
+    i = info (p <**> helper) mempty
     result = execParserPure (prefs (showHelpOnEmpty <> subparserInline)) i ["foo"]
   in assertError result $ \failure ->
     let text = lines . fst $ renderFailure failure "test"
@@ -1014,7 +1014,7 @@ prop_issue_450_ensure_missing_still_shows = once $
         command "foo" $ info q $
         progDesc "Foo commands."
 
-    i = info (p <**> helper) briefDesc
+    i = info (p <**> helper) mempty
     result = execParserPure (prefs (showHelpOnEmpty <> subparserInline)) i ["foo", "-a"]
   in assertError result $ \failure ->
     let text = lines . fst $ renderFailure failure "test"

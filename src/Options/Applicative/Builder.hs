@@ -64,8 +64,6 @@ module Options.Applicative.Builder (
 
   -- * Builder for 'ParserInfo'
   InfoMod,
-  fullDesc,
-  briefDesc,
   header,
   headerDoc,
   footer,
@@ -443,14 +441,6 @@ instance Monoid (InfoMod a) where
 instance Semigroup (InfoMod a) where
   m1 <> m2 = InfoMod $ applyInfoMod m2 . applyInfoMod m1
 
--- | Show a full description in the help text of this parser (default).
-fullDesc :: InfoMod a
-fullDesc = InfoMod $ \i -> i { infoFullDesc = True }
-
--- | Only show a brief description in the help text of this parser.
-briefDesc :: InfoMod a
-briefDesc = InfoMod $ \i -> i { infoFullDesc = False }
-
 -- | Specify a header for this parser.
 header :: String -> InfoMod a
 header s = InfoMod $ \i -> i { infoHeader = paragraph s }
@@ -513,7 +503,6 @@ info parser m = applyInfoMod m base
   where
     base = ParserInfo
       { infoParser = parser
-      , infoFullDesc = True
       , infoProgDesc = mempty
       , infoHeader = mempty
       , infoFooter = mempty

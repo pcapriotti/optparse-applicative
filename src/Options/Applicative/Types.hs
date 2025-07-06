@@ -89,8 +89,6 @@ instance Semigroup ParseError where
 -- | A full description for a runnable 'Parser' for a program.
 data ParserInfo a = ParserInfo
   { infoParser :: Parser a    -- ^ the option parser for the program
-  , infoFullDesc :: Bool      -- ^ whether the help text should contain full
-                              -- documentation
   , infoProgDesc :: Chunk Doc -- ^ brief parser description
   , infoHeader :: Chunk Doc   -- ^ header of the full parser description
   , infoFooter :: Chunk Doc   -- ^ footer of the full parser description

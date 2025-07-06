@@ -157,8 +157,6 @@ module Options.Applicative (
   ParserInfo(..),
 
   InfoMod,
-  fullDesc,
-  briefDesc,
   header,
   headerDoc,
   footer,
