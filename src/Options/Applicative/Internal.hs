@@ -292,4 +292,5 @@ mapParserOptions f = go
     go (OptP o) = OptP (f o)
     go (MultP p1 p2) = MultP (go p1) (go p2)
     go (AltP p1 p2) = AltP (go p1) (go p2)
+    go (SelectP p1 p2) = SelectP (go p1) (go p2)
     go (BindP p1 p2) = BindP (go p1) (\x -> go (p2 x))

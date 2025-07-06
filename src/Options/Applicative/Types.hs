@@ -51,6 +51,7 @@ module Options.Applicative.Types (
   ) where
 
 import Control.Applicative
+import Control.Selective (Selective (..), selectM)
 import Control.Monad (ap, liftM, MonadPlus, mzero, mplus)
 import Control.Monad.Trans.Except (Except, throwE)
 import Control.Monad.Trans.Class (lift)
@@ -287,6 +288,7 @@ data Parser a
   = NilP (Maybe a)
   | OptP (Option a)
   | forall x . MultP (Parser (x -> a)) (Parser x)
+  | forall x . SelectP (Parser (Either x a)) (Parser (x -> a))
   | AltP (Parser a) (Parser a)
   | forall x . BindP (Parser x) (x -> Parser a)
 
@@ -294,6 +296,7 @@ instance Functor Parser where
   fmap f (NilP x) = NilP (fmap f x)
   fmap f (OptP opt) = OptP (fmap f opt)
   fmap f (MultP p1 p2) = MultP (fmap (f.) p1) p2
+  fmap f (SelectP p k) = SelectP (fmap (fmap f) p) (fmap (f.) k)
   fmap f (AltP p1 p2) = AltP (fmap f p1) (fmap f p2)
   fmap f (BindP p k) = BindP p (fmap f . k)
 
@@ -301,12 +304,11 @@ instance Applicative Parser where
   pure = NilP . Just
   (<*>) = MultP
 
+instance Selective Parser where
+  select = SelectP
+
 newtype ParserM r = ParserM
   { runParserM :: forall x . (r -> Parser x) -> Parser x }
-
-instance Monad ParserM where
-  return = pure
-  ParserM f >>= g = ParserM $ \k -> f (\x -> runParserM (g x) k)
 
 instance Functor ParserM where
   fmap = liftM
@@ -314,6 +316,13 @@ instance Functor ParserM where
 instance Applicative ParserM where
   pure x = ParserM $ \k -> k x
   (<*>) = ap
+
+instance Selective ParserM where
+  select = selectM
+
+instance Monad ParserM where
+  return = pure
+  ParserM f >>= g = ParserM $ \k -> f (\x -> runParserM (g x) k)
 
 fromM :: ParserM a -> Parser a
 fromM (ParserM f) = f pure
