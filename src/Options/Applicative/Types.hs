@@ -50,7 +50,7 @@ module Options.Applicative.Types (
   optDescMod
   ) where
 
-import qualified Options.Applicative.ConsumeM.Internal as CMI
+import qualified Options.Applicative.ConsumeA.Internal as CMI
 
 import Control.Applicative
 import Control.Monad (ap, liftM, MonadPlus, mzero, mplus)
@@ -277,7 +277,7 @@ data OptReader a
   -- ^ argument reader
   | CmdReader (Maybe String) [(String, ParserInfo a)]
   -- ^ command reader
-  | ConsumeReader [OptName] (CMI.ConsumeM ParseError a) (String -> ParseError)
+  | ConsumeReader [OptName] (CMI.ConsumeA (String -> ParseError) a) (String -> ParseError)
   -- ^ multi-argument option consumer
 
 instance Functor OptReader where

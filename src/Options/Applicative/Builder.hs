@@ -117,7 +117,8 @@ import Options.Applicative.Builder.Completer
 import Options.Applicative.Builder.Internal
 import Options.Applicative.Common
 import Options.Applicative.Types
-import qualified Options.Applicative.ConsumeM as ConsumeM
+import qualified Options.Applicative.ConsumeA as ConsumeA
+import qualified Options.Applicative.ConsumeA.Internal as CMI
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
 import Options.Applicative.Internal (mapParserOptions)
@@ -385,49 +386,52 @@ option r m = mkParser d g rdr
 -- | Builder for an option that consumes a specific number of arguments.
 --
 -- Multi-argument parsing is intentionally restricted to consuming 0, 1, or 2
--- arguments using 'Options.Applicative.ConsumeM.consumePair',
--- 'Options.Applicative.ConsumeM.consumeOne', or
--- 'Options.Applicative.ConsumeM.consumeNone'.
+-- arguments using 'Options.Applicative.ConsumeA.consumePair',
+-- 'Options.Applicative.ConsumeA.consumeOne', or
+-- 'Options.Applicative.ConsumeA.consumeNone'.
 --
 -- The arguments are parsed using 'ReadM' readers, which can perform validation
 -- and type conversion.
 --
 -- Example usage for consuming two arguments:
 --
--- > import qualified Options.Applicative.ConsumeM as ConsumeM
+-- > import qualified Options.Applicative.ConsumeA as ConsumeA
 -- >
 -- > data Config = Config { pairs :: [(String, String)] }
 -- >
 -- > configParser :: Parser Config
 -- > configParser = Config
--- >   <$> many (consumeOption (ConsumeM.consumePair str str)
+-- >   <$> many (consumeOption (ConsumeA.consumePair "KEY" str "VALUE" str)
 -- >       ( long "set"
--- >      <> metavar "KEY VALUE"  -- Metavar should describe both arguments
 -- >      <> help "Set a configuration key-value pair" ))
 --
 -- This will parse:
 --
 -- > --set name Alice --set age 30
 --
--- as @Config {pairs = [("name","Alice"),("age","30")]}@.
+-- as @Config {pairs = [("name","Alice"),("age","30")]}@ and display
+-- @--set KEY VALUE@ in help text.
 --
 -- Example usage for consuming one argument:
 --
 -- > outputOption :: Parser FilePath
--- > outputOption = consumeOption (ConsumeM.consumeOne str)
+-- > outputOption = consumeOption (ConsumeA.consumeOne "FILE" str)
 -- >   ( long "output"
--- >  <> metavar "FILE"  -- Metavar describes the single argument
 -- >  <> help "Output file path" )
 --
 -- Example usage for consuming zero arguments (flag-like):
 --
 -- > verboseFlag :: Parser (Maybe ())
--- > verboseFlag = optional $ consumeOption ConsumeM.consumeNone (long "verbose")
-consumeOption :: ConsumeM.ConsumeM a -> Mod OptionFields a -> Parser a
-consumeOption cm (Mod f d g) = mkParser d g rdr
+-- > verboseFlag = optional $ consumeOption ConsumeA.consumeNone (long "verbose")
+consumeOption :: ConsumeA.ConsumeA a -> Mod OptionFields a -> Parser a
+consumeOption cm (Mod f d g) = mkParser d g' rdr
   where
     fields = f (OptionFields [] mempty ExpectsArgError)
-    rdr = ConsumeReader (optNames fields) (ConsumeM.unwrapConsumeM cm) (optNoArgError fields)
+    (metavars, _) = CMI.runConsumeA (ConsumeA.unwrapConsumeA cm)
+    metavarStr = unwords metavars
+    -- Add the metavar from ConsumeA to the properties
+    g' = if null metavars then g else g . (\props -> props { propMetaVar = metavarStr })
+    rdr = ConsumeReader (optNames fields) (ConsumeA.unwrapConsumeA cm) (optNoArgError fields)
 
 -- | Prepends a group to 'OptProperties'. Nested groups are indented e.g.
 --

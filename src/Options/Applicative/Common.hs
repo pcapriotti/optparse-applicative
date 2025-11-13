@@ -61,7 +61,7 @@ import Prelude
 
 import Options.Applicative.Internal
 import Options.Applicative.Types
-import qualified Options.Applicative.ConsumeM.Internal as CMI
+import qualified Options.Applicative.ConsumeA.Internal as CMI
 
 showOption :: OptName -> String
 showOption (OptLong n) = "--" ++ n
@@ -94,13 +94,17 @@ optMatches disambiguate opt (OptWord arg1 val) = case opt of
       put args'
       lift $ runReadM (withReadM (errorFor arg1) (crReader rdr)) arg'
 
-  ConsumeReader names consumeM no_arg_err -> do
+  ConsumeReader names consumeA no_arg_err -> do
     guard $ has_name arg1 names
     Just $ do
       args <- get
       let input_args = maybeToList val ++ args
-      case CMI.runConsumeM consumeM input_args of
-        Left err -> lift $ errorP err
+      let (_metavars, consumer) = CMI.runConsumeA consumeA
+      case CMI.runArgConsumer consumer input_args of
+        Left err ->
+          case err (showOption arg1) of
+            ExpectsArgError e -> lift $ errorP (no_arg_err e)
+            _ -> lift $ errorP (err $ showOption arg1)
         Right (result, remaining) -> do
           put remaining
           return result
