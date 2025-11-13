@@ -37,7 +37,7 @@ import Options.Applicative.Types (ReadM(..), CReader(..), ParseError(..), Comple
 -- This cleanly avoids having to create a custom string format for pairwise arguments.
 --
 -- Note: This type is intentionally limited to avoid overly complex parsers.
-newtype ConsumeA a = ConsumeA (CMI.ConsumeA Completer ContextualError a)
+newtype ConsumeA a = ConsumeA (CMI.ConsumeA ([String], [Completer]) ContextualError a)
 
 -- | A ParseError that can make use of the real option name
 type ContextualError = String -> ParseError
@@ -48,8 +48,13 @@ instance Functor ConsumeA where
 
 -- | Unwrap a ConsumeA to get the internal ConsumeA implementation.
 -- This is used internally by optparse-applicative to analyze and run the consumer.
-unwrapConsumeA :: ConsumeA a -> CMI.ConsumeA Completer ContextualError a
+unwrapConsumeA :: ConsumeA a -> CMI.ConsumeA ([String], [Completer]) ContextualError a
 unwrapConsumeA (ConsumeA p) = p
+
+-- | Attach a metavar and completer to an argument consumer.
+-- This creates the metadata pair ([metavar], [completer]) for the Writer pattern.
+withMetavar :: String -> Completer -> CMI.ArgConsumer ContextualError a -> CMI.ConsumeA ([String], [Completer]) ContextualError a
+withMetavar metavar completer consumer = CMI.makeConsumeA ([metavar], [completer]) consumer
 
 -- | Consume exactly two arguments using the given readers.
 --
@@ -83,9 +88,9 @@ consumePair metavar1 cra metavar2 crb = ConsumeA consumer
           <*> consumeWithCReader metavar2 crb (ExpectsArgError)
 
 -- | Helper to consume using a CReader, tracking both completer and metavar
-consumeWithCReader :: String -> CReader x -> ContextualError -> CMI.ConsumeA Completer ContextualError x
+consumeWithCReader :: String -> CReader x -> ContextualError -> CMI.ConsumeA ([String], [Completer]) ContextualError x
 consumeWithCReader metavar (CReader completer (ReadM r)) err =
-  CMI.withMetavar metavar completer $ do
+  withMetavar metavar completer $ do
     str <- CMI.consumeAsk err
     case runExcept (runReaderT r str) of
       Right x -> pure x
