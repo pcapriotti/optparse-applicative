@@ -50,6 +50,8 @@ module Options.Applicative.Types (
   optDescMod
   ) where
 
+import qualified Options.Applicative.ConsumeM.Internal as CMI
+
 import Control.Applicative
 import Control.Monad (ap, liftM, MonadPlus, mzero, mplus)
 import Control.Monad.Trans.Except (Except, throwE)
@@ -275,12 +277,15 @@ data OptReader a
   -- ^ argument reader
   | CmdReader (Maybe String) [(String, ParserInfo a)]
   -- ^ command reader
+  | ConsumeReader [OptName] (CMI.ConsumeM ParseError a) (String -> ParseError)
+  -- ^ multi-argument option consumer
 
 instance Functor OptReader where
   fmap f (OptReader ns cr e) = OptReader ns (fmap f cr) e
   fmap f (FlagReader ns x) = FlagReader ns (f x)
   fmap f (ArgReader cr) = ArgReader (fmap f cr)
   fmap f (CmdReader n cs) = CmdReader n ((fmap . fmap . fmap) f cs)
+  fmap f (ConsumeReader ns cm e) = ConsumeReader ns (fmap f cm) e
 
 -- | A @Parser a@ is an option parser returning a value of type @a@.
 data Parser a

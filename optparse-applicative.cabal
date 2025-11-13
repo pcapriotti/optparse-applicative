@@ -106,6 +106,8 @@ library
                      , Options.Applicative.Help.Pretty
                      , Options.Applicative.Help.Types
                      , Options.Applicative.NonEmpty
+                     , Options.Applicative.ConsumeM
+                     , Options.Applicative.ConsumeM.Internal
                      , Options.Applicative.Types
                      , Options.Applicative.Internal
 
