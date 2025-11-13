@@ -112,6 +112,7 @@ module Options.Applicative (
   OptionFields,
   FlagFields,
   ArgumentFields,
+  OptionArgumentFields,
   CommandFields,
 
   HasName,
