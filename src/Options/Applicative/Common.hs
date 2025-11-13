@@ -56,7 +56,7 @@ import Control.Monad (guard, mzero, msum, when)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), get, put, runStateT)
 import Data.List (isPrefixOf)
-import Data.Maybe (maybeToList, isJust, isNothing)
+import Data.Maybe (maybeToList, isJust, isNothing, listToMaybe, fromMaybe)
 import Prelude
 
 import Options.Applicative.Internal
@@ -99,11 +99,15 @@ optMatches disambiguate opt (OptWord arg1 val) = case opt of
     Just $ do
       args <- get
       let input_args = maybeToList val ++ args
-      let (_metavars, consumer) = CMI.runConsumeA consumeA
+      let ((_metavars, completers), consumer) = CMI.runConsumeA consumeA
       case CMI.runArgConsumer consumer input_args of
         Left err ->
           case err (showOption arg1) of
-            ExpectsArgError e -> lift $ errorP (no_arg_err e)
+            ExpectsArgError e -> do
+              -- The completion position is the number of arguments consumed so far
+              let completionIndex = length input_args
+              let completer = fromMaybe mempty $ listToMaybe $ drop completionIndex completers
+              lift $ missingArgP (no_arg_err e) completer
             _ -> lift $ errorP (err $ showOption arg1)
         Right (result, remaining) -> do
           put remaining

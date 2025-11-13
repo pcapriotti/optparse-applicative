@@ -11,10 +11,10 @@ data Config = Config
 
 configParser :: Parser Config
 configParser = Config
-  <$> optional (consumeOption (ConsumeA.consumeOne "FILE" str)
+  <$> optional (consumeOption (ConsumeA.consumeOne "FILE" (ConsumeA.withoutCompleter str))
       ( long "output"
      <> help "Output file path" ))
-  <*> many (consumeOption (ConsumeA.consumePair "KEY" str "VALUE" str)
+  <*> many (consumeOption (ConsumeA.consumePair "KEY" (ConsumeA.withoutCompleter str) "VALUE" (ConsumeA.withoutCompleter str))
       ( long "set"
      <> help "Set a configuration key-value pair" ))
   <*> optional (consumeOption ConsumeA.consumeNone

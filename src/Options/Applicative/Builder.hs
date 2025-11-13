@@ -427,7 +427,7 @@ consumeOption :: ConsumeA.ConsumeA a -> Mod OptionFields a -> Parser a
 consumeOption cm (Mod f d g) = mkParser d g' rdr
   where
     fields = f (OptionFields [] mempty ExpectsArgError)
-    (metavars, _) = CMI.runConsumeA (ConsumeA.unwrapConsumeA cm)
+    ((metavars, _completers), _consumer) = CMI.runConsumeA (ConsumeA.unwrapConsumeA cm)
     metavarStr = unwords metavars
     -- Add the metavar from ConsumeA to the properties
     g' = if null metavars then g else g . (\props -> props { propMetaVar = metavarStr })
