@@ -1,7 +1,11 @@
+{-# LANGUAGE CPP #-}
 module Examples.ConsumeOptions where
 
 import Options.Applicative
 import qualified Options.Applicative.ConsumeA as ConsumeA
+#if __GLASGOW_HASKELL__ < 804
+import Data.Semigroup hiding (Option, option)
+#endif
 
 data Config = Config
   { outputFile :: Maybe FilePath
@@ -11,10 +15,10 @@ data Config = Config
 
 configParser :: Parser Config
 configParser = Config
-  <$> optional (consumeOption (ConsumeA.consumeOne "FILE" (ConsumeA.withoutCompleter str))
+  <$> optional (consumeOption (ConsumeA.consumeOne str (metavar "FILE"))
       ( long "output"
      <> help "Output file path" ))
-  <*> many (consumeOption (ConsumeA.consumePair "KEY" (ConsumeA.withoutCompleter str) "VALUE" (ConsumeA.withoutCompleter str))
+  <*> many (consumeOption (ConsumeA.consumePair str (metavar "KEY") str (metavar "VALUE"))
       ( long "set"
      <> help "Set a configuration key-value pair" ))
   <*> optional (consumeOption ConsumeA.consumeNone

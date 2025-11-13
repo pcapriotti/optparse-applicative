@@ -99,6 +99,7 @@ module Options.Applicative.Builder (
   OptionFields,
   FlagFields,
   ArgumentFields,
+  OptionArgumentFields,
   CommandFields,
 
   HasName,
@@ -207,7 +208,12 @@ noArgError e = fieldMod $ \p -> p { optNoArgError = const e }
 -- Metavariables have no effect on the actual parser, and only serve to specify
 -- the symbolic name for an argument to be displayed in the help text.
 metavar :: HasMetavar f => String -> Mod f a
-metavar var = optionMod $ \p -> p { propMetaVar = var }
+metavar var =
+  -- some use cases (consumeOption) store it in the field
+  fieldMod (setFieldMetavar var)
+  `mappend`
+  -- whereas others rely exclusively on storing it in the option
+  optionMod (\p -> p { propMetaVar = var })
 
 -- | Hide this option from the brief description.
 --
@@ -401,7 +407,7 @@ option r m = mkParser d g rdr
 -- >
 -- > configParser :: Parser Config
 -- > configParser = Config
--- >   <$> many (consumeOption (ConsumeA.consumePair "KEY" str "VALUE" str)
+-- >   <$> many (consumeOption (ConsumeA.consumePair str (metavar "KEY") str (metavar "VALUE"))
 -- >       ( long "set"
 -- >      <> help "Set a configuration key-value pair" ))
 --
@@ -415,7 +421,7 @@ option r m = mkParser d g rdr
 -- Example usage for consuming one argument:
 --
 -- > outputOption :: Parser FilePath
--- > outputOption = consumeOption (ConsumeA.consumeOne "FILE" str)
+-- > outputOption = consumeOption (ConsumeA.consumeOne str (metavar "FILE"))
 -- >   ( long "output"
 -- >  <> help "Output file path" )
 --

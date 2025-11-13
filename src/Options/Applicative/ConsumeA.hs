@@ -7,10 +7,6 @@ module Options.Applicative.ConsumeA (
   consumeOne,
   consumeNone,
 
-  -- * Helpers for creating CReaders
-  withCompleter,
-  withoutCompleter,
-
   -- * Internal
   unwrapConsumeA
   ) where
@@ -20,7 +16,8 @@ import Control.Monad.Trans.Reader (runReaderT)
 import Prelude
 
 import qualified Options.Applicative.ConsumeA.Internal as CMI
-import Options.Applicative.Types (ReadM(..), CReader(..), ParseError(..), Completer(..))
+import Options.Applicative.Types (ReadM(..), ParseError(..), Completer(..))
+import Options.Applicative.Builder.Internal (Mod(..), OptionArgumentFields(..))
 
 -- | An option parsing implementation that may consume multiple command-line arguments.
 --
@@ -58,16 +55,18 @@ withMetavar metavar completer consumer = CMI.makeConsumeA ([metavar], [completer
 
 -- | Consume exactly two arguments using the given readers.
 --
--- The first 'CReader' is applied to the first argument, and the second 'CReader'
--- is applied to the second argument. The metavar strings are used in help text.
--- Each CReader bundles a completer with its reader for shell completion support.
+-- The first 'ReadM' is applied to the first argument, and the second 'ReadM'
+-- is applied to the second argument.
+-- Use 'metavar' to specify the metavar string for each argument (defaults to "ARG").
+-- Use 'completer' to specify shell completion behavior for each argument.
 --
 -- Example:
 --
 -- > import Options.Applicative
 -- >
 -- > setOption :: Parser (String, String)
--- > setOption = consumeOption (consumePair "KEY" str "VALUE" str)
+-- > setOption = consumeOption
+-- >   (consumePair str (metavar "KEY") str (metavar "VALUE"))
 -- >   ( long "set"
 -- >  <> help "Set a configuration value" )
 --
@@ -76,20 +75,24 @@ withMetavar metavar completer consumer = CMI.makeConsumeA ([metavar], [completer
 -- > --set name Alice
 --
 -- as @("name", "Alice")@ and display @--set KEY VALUE@ in help text.
-consumePair :: String -> CReader a -> String -> CReader b -> ConsumeA (a, b)
-consumePair metavar1 cra metavar2 crb = ConsumeA consumer
+consumePair :: ReadM a -> Mod OptionArgumentFields a
+            -> ReadM b -> Mod OptionArgumentFields b
+            -> ConsumeA (a, b)
+consumePair readerA (Mod fA _dA _gA) readerB (Mod fB _dB _gB) = ConsumeA consumer
   where
+    OptionArgumentFields complA mvA = fA (OptionArgumentFields mempty "ARG")
+    OptionArgumentFields complB mvB = fB (OptionArgumentFields mempty "ARG")
     -- TODO: Custom error message would be nice for second argument
     --       Is it ok to extend the error type with more constructors?
     --       - The option `--foo` expects two arguments.
     --       - The option `--foo` expects a second argument.
     consumer =
-      (,) <$> consumeWithCReader metavar1 cra (ExpectsArgError)
-          <*> consumeWithCReader metavar2 crb (ExpectsArgError)
+      (,) <$> consumeWithCReader mvA complA readerA (ExpectsArgError)
+          <*> consumeWithCReader mvB complB readerB (ExpectsArgError)
 
--- | Helper to consume using a CReader, tracking both completer and metavar
-consumeWithCReader :: String -> CReader x -> ContextualError -> CMI.ConsumeA ([String], [Completer]) ContextualError x
-consumeWithCReader metavar (CReader completer (ReadM r)) err =
+-- | Helper to consume using a ReadM with metavar and completer, tracking both
+consumeWithCReader :: String -> Completer -> ReadM x -> ContextualError -> CMI.ConsumeA ([String], [Completer]) ContextualError x
+consumeWithCReader metavar completer (ReadM r) err =
   withMetavar metavar completer $ do
     str <- CMI.consumeAsk err
     case runExcept (runReaderT r str) of
@@ -98,16 +101,17 @@ consumeWithCReader metavar (CReader completer (ReadM r)) err =
 
 -- | Consume exactly one argument using the given reader.
 --
--- The 'CReader' is applied to the argument to parse and validate it.
--- The metavar string is used in help text.
--- The CReader bundles a completer for shell completion support.
+-- The 'ReadM' is applied to the argument to parse and validate it.
+-- Use 'metavar' to specify the metavar string for help text (defaults to "ARG").
+-- Use 'completer' to specify shell completion behavior.
 --
 -- Example:
 --
 -- > import Options.Applicative
 -- >
 -- > outputOption :: Parser FilePath
--- > outputOption = consumeOption (consumeOne "FILE" str)
+-- > outputOption = consumeOption
+-- >   (consumeOne str (metavar "FILE"))
 -- >   ( long "output"
 -- >  <> help "Output file path" )
 --
@@ -116,9 +120,11 @@ consumeWithCReader metavar (CReader completer (ReadM r)) err =
 -- > --output results.txt
 --
 -- as @"results.txt"@ and display @--output FILE@ in help text.
-consumeOne :: String -> CReader a -> ConsumeA a
-consumeOne metavar cra =
-  ConsumeA (consumeWithCReader metavar cra (ExpectsArgError))
+consumeOne :: ReadM a -> Mod OptionArgumentFields a -> ConsumeA a
+consumeOne reader (Mod f _d _g) =
+  ConsumeA (consumeWithCReader mv compl reader (ExpectsArgError))
+  where
+    OptionArgumentFields compl mv = f (OptionArgumentFields mempty "ARG")
 
 -- | Consume no arguments and return unit.
 --
@@ -147,39 +153,8 @@ consumeOne metavar cra =
 -- > options :: Parser Options
 -- > options = Options
 -- >   <$> optional (consumeOption ConsumeA.consumeNone (long "verbose"))
--- >   <*> optional (consumeOption (ConsumeA.consumeOne "FILE" str) (long "output"))
--- >   <*> many (consumeOption (ConsumeA.consumePair "KEY" str "VALUE" str) (long "map"))
+-- >   <*> optional (consumeOption (ConsumeA.consumeOne str (metavar "FILE")) (long "output"))
+-- >   <*> many (consumeOption (ConsumeA.consumePair str (metavar "KEY") str (metavar "VALUE")) (long "map"))
 consumeNone :: ConsumeA ()
 consumeNone = ConsumeA (pure ())
 
--- | Create a CReader from a ReadM with a custom completer.
---
--- This allows specifying custom shell completion for an argument.
---
--- Example:
---
--- > import Options.Applicative
--- > import qualified Options.Applicative.ConsumeA as ConsumeA
--- >
--- > outputWithCompletion :: Parser FilePath
--- > outputWithCompletion = consumeOption
--- >   (ConsumeA.consumeOne "FILE" (ConsumeA.withCompleter (listFiles "output") str))
--- >   (long "output")
-withCompleter :: Completer -> ReadM a -> CReader a
-withCompleter = CReader
-
--- | Create a CReader from a ReadM with no completion (empty completer).
---
--- This is useful when you don't want shell completion for an argument.
---
--- Example:
---
--- > import Options.Applicative
--- > import qualified Options.Applicative.ConsumeA as ConsumeA
--- >
--- > secretOption :: Parser String
--- > secretOption = consumeOption
--- >   (ConsumeA.consumeOne "SECRET" (ConsumeA.withoutCompleter str))
--- >   (long "secret")
-withoutCompleter :: ReadM a -> CReader a
-withoutCompleter = CReader (Completer (const (return [])))

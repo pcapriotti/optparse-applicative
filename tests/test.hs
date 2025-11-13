@@ -1121,7 +1121,7 @@ prop_consumeNone_help_no_arg = once $
 prop_consumeOne_basic :: Property
 prop_consumeOne_basic = once $
   let p :: Parser String
-      p = consumeOption (ConsumeA.consumeOne "NAME" (ConsumeA.withoutCompleter str)) (long "name")
+      p = consumeOption (ConsumeA.consumeOne str (metavar "NAME")) (long "name")
       i = info p idm
       result = run i ["--name", "Alice"]
   in  assertResult result ((===) "Alice")
@@ -1129,7 +1129,7 @@ prop_consumeOne_basic = once $
 prop_consumeOne_with_reader :: Property
 prop_consumeOne_with_reader = once $
   let p :: Parser Int
-      p = consumeOption (ConsumeA.consumeOne "N" (ConsumeA.withoutCompleter auto)) (long "count")
+      p = consumeOption (ConsumeA.consumeOne auto (metavar "N")) (long "count")
       i = info p idm
       result = run i ["--count", "42"]
   in  assertResult result ((===) 42)
@@ -1137,7 +1137,7 @@ prop_consumeOne_with_reader = once $
 prop_consumeOne_missing_arg :: Property
 prop_consumeOne_missing_arg = once $
   let p :: Parser String
-      p = consumeOption (ConsumeA.consumeOne "NAME" (ConsumeA.withoutCompleter str)) (long "name")
+      p = consumeOption (ConsumeA.consumeOne str (metavar "NAME")) (long "name")
       i = info p idm
       result = run i ["--name"]
   in  assertError result $ \failure ->
@@ -1148,7 +1148,7 @@ prop_consumeOne_missing_arg = once $
 prop_parsepair_basic :: Property
 prop_parsepair_basic = once $
   let p :: Parser (String, String)
-      p = consumeOption (ConsumeA.consumePair "K" (ConsumeA.withoutCompleter str) "V" (ConsumeA.withoutCompleter str)) (long "set")
+      p = consumeOption (ConsumeA.consumePair str (metavar "K") str (metavar "V")) (long "set")
       i = info p idm
       result = run i ["--set", "key", "value"]
   in  assertResult result ((===) ("key", "value"))
@@ -1156,7 +1156,7 @@ prop_parsepair_basic = once $
 prop_parsepair_multiple :: Property
 prop_parsepair_multiple = once $
   let p :: Parser [(String, String)]
-      p = many (consumeOption (ConsumeA.consumePair "K" (ConsumeA.withoutCompleter str) "V" (ConsumeA.withoutCompleter str)) (long "set"))
+      p = many (consumeOption (ConsumeA.consumePair str (metavar "K") str (metavar "V")) (long "set"))
       i = info p idm
       result = run i ["--set", "a", "1", "--set", "b", "2"]
   in  assertResult result ((===) [("a", "1"), ("b", "2")])
@@ -1164,7 +1164,7 @@ prop_parsepair_multiple = once $
 prop_parsepair_with_readers :: Property
 prop_parsepair_with_readers = once $
   let p :: Parser (String, Int)
-      p = consumeOption (ConsumeA.consumePair "K" (ConsumeA.withoutCompleter str) "V" (ConsumeA.withoutCompleter auto)) (long "config")
+      p = consumeOption (ConsumeA.consumePair str (metavar "K") auto (metavar "V")) (long "config")
       i = info p idm
       result = run i ["--config", "port", "8080"]
   in  assertResult result ((===) ("port", 8080 :: Int))
@@ -1172,7 +1172,7 @@ prop_parsepair_with_readers = once $
 prop_parsepair_missing_second_arg :: Property
 prop_parsepair_missing_second_arg = once $
   let p :: Parser (String, String)
-      p = consumeOption (ConsumeA.consumePair "K" (ConsumeA.withoutCompleter str) "V" (ConsumeA.withoutCompleter str)) (long "set")
+      p = consumeOption (ConsumeA.consumePair str (metavar "K") str (metavar "V")) (long "set")
       i = info p idm
       result = run i ["--set", "key"]
   in  assertError result $ \failure ->
@@ -1183,7 +1183,7 @@ prop_parsepair_missing_second_arg = once $
 prop_parsepair_missing_both_args :: Property
 prop_parsepair_missing_both_args = once $
   let p :: Parser (String, String)
-      p = consumeOption (ConsumeA.consumePair "K" (ConsumeA.withoutCompleter str) "V" (ConsumeA.withoutCompleter str)) (long "set")
+      p = consumeOption (ConsumeA.consumePair str (metavar "K") str (metavar "V")) (long "set")
       i = info p idm
       result = run i ["--set"]
   in  assertError result $ \failure ->
@@ -1194,7 +1194,7 @@ prop_parsepair_missing_both_args = once $
 prop_parsepair_mixed :: Property
 prop_parsepair_mixed = once $
   let p :: Parser ((String, String), String)
-      p = (,) <$> consumeOption (ConsumeA.consumePair "K" (ConsumeA.withoutCompleter str) "V" (ConsumeA.withoutCompleter str)) (long "set")
+      p = (,) <$> consumeOption (ConsumeA.consumePair str (metavar "K") str (metavar "V")) (long "set")
               <*> strOption (long "name")
       i = info p idm
       result = run i ["--set", "a", "b", "--name", "test"]
@@ -1203,7 +1203,7 @@ prop_parsepair_mixed = once $
 prop_parsepair_extra_arg_consumed :: Property
 prop_parsepair_extra_arg_consumed = once $
   let p :: Parser ((String, String), String)
-      p = (,) <$> consumeOption (ConsumeA.consumePair "K" (ConsumeA.withoutCompleter str) "V" (ConsumeA.withoutCompleter str)) (long "set")
+      p = (,) <$> consumeOption (ConsumeA.consumePair str (metavar "K") str (metavar "V")) (long "set")
               <*> strArgument idm
       i = info p idm
       result = run i ["--set", "key", "value", "extra"]
@@ -1212,7 +1212,7 @@ prop_parsepair_extra_arg_consumed = once $
 prop_parsepair_extra_arg_unconsumed :: Property
 prop_parsepair_extra_arg_unconsumed = once $
   let p :: Parser (String, String)
-      p = consumeOption (ConsumeA.consumePair "K" (ConsumeA.withoutCompleter str) "V" (ConsumeA.withoutCompleter str)) (long "set")
+      p = consumeOption (ConsumeA.consumePair str (metavar "K") str (metavar "V")) (long "set")
       i = info p idm
       result = run i ["--set", "key", "value", "extra"]
   in  assertError result $ \failure ->
@@ -1223,7 +1223,7 @@ prop_parsepair_extra_arg_unconsumed = once $
 prop_parsepair_reader_error_first :: Property
 prop_parsepair_reader_error_first = once $
   let p :: Parser (Int, Int)
-      p = consumeOption (ConsumeA.consumePair "MIN" (ConsumeA.withoutCompleter auto) "MAX" (ConsumeA.withoutCompleter auto)) (long "range")
+      p = consumeOption (ConsumeA.consumePair auto (metavar "MIN") auto (metavar "MAX")) (long "range")
       i = info p idm
       result = run i ["--range", "notanumber", "10"]
   in  assertError result $ \failure ->
@@ -1234,7 +1234,7 @@ prop_parsepair_reader_error_first = once $
 prop_parsepair_reader_error_second :: Property
 prop_parsepair_reader_error_second = once $
   let p :: Parser (Int, Int)
-      p = consumeOption (ConsumeA.consumePair "MIN" (ConsumeA.withoutCompleter auto) "MAX" (ConsumeA.withoutCompleter auto)) (long "range")
+      p = consumeOption (ConsumeA.consumePair auto (metavar "MIN") auto (metavar "MAX")) (long "range")
       i = info p idm
       result = run i ["--range", "10", "notanumber"]
   in  assertError result $ \failure ->
