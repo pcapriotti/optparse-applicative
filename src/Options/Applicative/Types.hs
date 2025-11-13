@@ -280,8 +280,8 @@ data OptReader a
   -- ^ argument reader
   | CmdReader (Maybe String) [(NonEmpty String, ParserInfo a)]
   -- ^ command reader
-  | ConsumeReader [OptName] (CMI.ConsumeA (String -> ParseError) a) (String -> ParseError)
-  -- ^ multi-argument option consumer
+  | ConsumeReader [OptName] (CMI.ConsumeA Completer (String -> ParseError) a) (String -> ParseError)
+  -- ^ multi-argument option consumer (with completers for each argument)
 
 instance Functor OptReader where
   fmap f (OptReader ns cr e) = OptReader ns (fmap f cr) e

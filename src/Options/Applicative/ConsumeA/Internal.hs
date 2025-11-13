@@ -47,21 +47,28 @@ consumeAsk errMsg = ArgConsumer $ \input -> case input of
 consumeAbort :: e -> ArgConsumer e a
 consumeAbort e = ArgConsumer $ \_ -> Left e
 
--- | Internal consumer that accumulates metavars using Writer behavior.
+-- | Metadata pair: metavars and completers (opaque type to avoid exporting implementation details)
+-- Parameterized by c to avoid circular imports with Types.hs
+type MetadataPair c = ([String], [c])
+
+-- | Internal consumer that accumulates metavars and completers using Writer behavior.
 --
--- The structure is @Compose ((,) [String]) (ArgConsumer e) a@ which expands to
--- @([String], ArgConsumer e a)@ where:
--- - [String] accumulates metavar names for help text generation (Writer behavior)
+-- The structure is @Compose ((,) ([String], [c])) (ArgConsumer e) a@ which expands to
+-- @(([String], [c]), ArgConsumer e a)@ where:
+-- - ([String], [c]) accumulates metavar names and completers for help/completion (Writer behavior)
 -- - ArgConsumer e a handles the actual argument consumption
 --
 -- By using 'Compose', the Functor and Applicative instances are automatically
--- derived, combining the monoidal accumulation of metavars with the applicative
+-- derived, combining the monoidal accumulation of metadata with the applicative
 -- behavior of ArgConsumer.
-type ConsumeA e a = Compose ((,) [String]) (ArgConsumer e) a
+--
+-- The 'c' parameter avoids circular imports: Types.hs imports ConsumeA.Internal,
+-- so Internal can't import Completer from Types. The consumer instantiates it as Completer.
+type ConsumeA c e a = Compose ((,) (MetadataPair c)) (ArgConsumer e) a
 
--- | Run a ConsumeA to extract both the metavars and the argument consumer.
-runConsumeA :: ConsumeA e a -> ([String], ArgConsumer e a)
+-- | Run a ConsumeA to extract both the metavars, completers, and the argument consumer.
+runConsumeA :: ConsumeA c e a -> (MetadataPair c, ArgConsumer e a)
 runConsumeA (Compose pair) = pair
 
-withMetavar :: String -> ArgConsumer e a -> ConsumeA e a
-withMetavar mv p = Compose ([mv], p)
+withMetavar :: String -> c -> ArgConsumer e a -> ConsumeA c e a
+withMetavar mv completer p = Compose (([mv], [completer]), p)
