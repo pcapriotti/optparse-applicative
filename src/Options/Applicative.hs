@@ -64,6 +64,7 @@ module Options.Applicative (
 
   strOption,
   option,
+  consumeOption,
 
   strArgument,
   argument,
