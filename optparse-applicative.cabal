@@ -27,6 +27,7 @@ extra-source-files:  CHANGELOG.md
                      tests/alt.err.txt
                      tests/cabal.err.txt
                      tests/carry.err.txt
+                     tests/consumeoptions.err.txt
                      tests/commands.err.txt
                      tests/commands_header.err.txt
                      tests/commands_header_full.err.txt
@@ -106,6 +107,8 @@ library
                      , Options.Applicative.Help.Pretty
                      , Options.Applicative.Help.Types
                      , Options.Applicative.NonEmpty
+                     , Options.Applicative.ConsumeA
+                     , Options.Applicative.ConsumeA.Internal
                      , Options.Applicative.Types
                      , Options.Applicative.Internal
 
@@ -136,6 +139,7 @@ test-suite tests
   other-modules:       Examples.Alternatives
                      , Examples.Cabal
                      , Examples.Commands
+                     , Examples.ConsumeOptions
                      , Examples.Formatting
                      , Examples.Hello
                      , Examples.LongSub

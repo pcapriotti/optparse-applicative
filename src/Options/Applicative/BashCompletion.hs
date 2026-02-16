@@ -121,6 +121,11 @@ bashCompletionQuery pinfo pprefs richness ws i _ = case runCompletion compl ppre
         -> return []
          | otherwise
         -> return . with_cmd_help $ filter (is_completion . fst) ns
+      ConsumeReader ns _ _
+         | argPolicy /= AllPositionals
+        -> return . add_opt_help opt $ show_names ns
+         | otherwise
+        -> return []
 
     -- When doing enriched completions, add any help specified
     -- to the completion variables (tab separated).

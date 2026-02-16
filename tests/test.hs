@@ -10,6 +10,7 @@ import qualified Examples.Cabal as Cabal
 import qualified Examples.Alternatives as Alternatives
 import qualified Examples.Formatting as Formatting
 import qualified Examples.LongSub as LongSub
+import qualified Examples.ConsumeOptions as ConsumeOptions
 import qualified Examples.ParserGroup.AllGrouped as ParserGroup.AllGrouped
 import qualified Examples.ParserGroup.Basic as ParserGroup.Basic
 import qualified Examples.ParserGroup.CommandGroups as ParserGroup.CommandGroups
@@ -32,6 +33,8 @@ import           Test.QuickCheck.Property
 import           Options.Applicative
 import           Options.Applicative.Types
 import qualified Options.Applicative.NonEmpty
+import qualified Options.Applicative.ConsumeA as ConsumeA
+import qualified Options.Applicative.ConsumeA.Internal as CMI
 
 
 import qualified Options.Applicative.Help as H
@@ -83,6 +86,10 @@ prop_hello = once $
 prop_modes :: Property
 prop_modes = once $
   checkHelpText "commands" Commands.opts ["--help"]
+
+prop_consumeoptions :: Property
+prop_consumeoptions = once $
+  checkHelpText "consumeoptions" ConsumeOptions.opts ["--help"]
 
 prop_cmd_header :: Property
 prop_cmd_header = once $
@@ -775,8 +782,8 @@ prop_missing_option_parameter_err = once $
       p = option str (short 'a')
       i = info p idm
   in assertError (run i ["-a"]) $ \failure ->
-    let text = head . lines . fst $ renderFailure failure "test"
-    in  "The option `-a` expects an argument." === text
+    let text = fst $ renderFailure failure "test"
+    in  assertHasLine "The option `-a` expects an argument." text
 
 prop_many_pairs_success :: Property
 prop_many_pairs_success = once $
@@ -1088,6 +1095,273 @@ prop_edit_substitution as bs a b = a /= b ==>
 prop_edit_transposition :: [Char] -> [Char] -> Char -> Char -> Property
 prop_edit_transposition as bs a b = a /= b ==>
   editDistance (as ++ [a,b] ++ bs) (as ++ [b,a] ++ bs) === 1
+
+-- ConsumeA tests
+
+prop_consumeNone_basic :: Property
+prop_consumeNone_basic = once $
+  let p :: Parser ()
+      p = consumeOption ConsumeA.consumeNone (long "flag")
+      i = info p idm
+      result = run i ["--flag"]
+  in  assertResult result ((===) ())
+
+prop_consumeNone_help_no_arg :: Property
+prop_consumeNone_help_no_arg = once $
+  let switchP = switch (long "switch-flag" <> help "A switch")
+      consumeNoneP = optional (consumeOption ConsumeA.consumeNone (long "consume-flag" <> help "A consume flag"))
+      p = (,) <$> switchP <*> consumeNoneP
+      i = info p idm
+      failure = parserFailure defaultPrefs i (ShowHelpText Nothing) mempty
+      helpText = fst $ renderFailure failure "test"
+  in  counterexample ("Help text:\n" ++ helpText) $
+      -- Both should appear without ARG
+      property (not ("--consume-flag ARG" `isInfixOf` helpText))
+
+prop_consumeOne_basic :: Property
+prop_consumeOne_basic = once $
+  let p :: Parser String
+      p = consumeOption (ConsumeA.consumeOne str (metavar "NAME")) (long "name")
+      i = info p idm
+      result = run i ["--name", "Alice"]
+  in  assertResult result ((===) "Alice")
+
+prop_consumeOne_with_reader :: Property
+prop_consumeOne_with_reader = once $
+  let p :: Parser Int
+      p = consumeOption (ConsumeA.consumeOne auto (metavar "N")) (long "count")
+      i = info p idm
+      result = run i ["--count", "42"]
+  in  assertResult result ((===) 42)
+
+prop_consumeOne_missing_arg :: Property
+prop_consumeOne_missing_arg = once $
+  let p :: Parser String
+      p = consumeOption (ConsumeA.consumeOne str (metavar "NAME")) (long "name")
+      i = info p idm
+      result = run i ["--name"]
+  in  assertError result $ \failure ->
+    let text = fst $ renderFailure failure "test"
+    in  counterexample ("Error message: " ++ text) $
+        property (text /= "")
+
+prop_parsepair_basic :: Property
+prop_parsepair_basic = once $
+  let p :: Parser (String, String)
+      p = consumeOption (ConsumeA.consumePair str (metavar "K") str (metavar "V")) (long "set")
+      i = info p idm
+      result = run i ["--set", "key", "value"]
+  in  assertResult result ((===) ("key", "value"))
+
+prop_parsepair_multiple :: Property
+prop_parsepair_multiple = once $
+  let p :: Parser [(String, String)]
+      p = many (consumeOption (ConsumeA.consumePair str (metavar "K") str (metavar "V")) (long "set"))
+      i = info p idm
+      result = run i ["--set", "a", "1", "--set", "b", "2"]
+  in  assertResult result ((===) [("a", "1"), ("b", "2")])
+
+prop_parsepair_with_readers :: Property
+prop_parsepair_with_readers = once $
+  let p :: Parser (String, Int)
+      p = consumeOption (ConsumeA.consumePair str (metavar "K") auto (metavar "V")) (long "config")
+      i = info p idm
+      result = run i ["--config", "port", "8080"]
+  in  assertResult result ((===) ("port", 8080 :: Int))
+
+prop_parsepair_missing_second_arg :: Property
+prop_parsepair_missing_second_arg = once $
+  let p :: Parser (String, String)
+      p = consumeOption (ConsumeA.consumePair str (metavar "K") str (metavar "V")) (long "set")
+      i = info p idm
+      result = run i ["--set", "key"]
+  in  assertError result $ \failure ->
+    let text = fst $ renderFailure failure "test"
+    in  counterexample ("Error message: " ++ text) $
+        assertHasLine "The option `--set` expects an argument." text
+
+prop_parsepair_missing_both_args :: Property
+prop_parsepair_missing_both_args = once $
+  let p :: Parser (String, String)
+      p = consumeOption (ConsumeA.consumePair str (metavar "K") str (metavar "V")) (long "set")
+      i = info p idm
+      result = run i ["--set"]
+  in  assertError result $ \failure ->
+    let text = fst $ renderFailure failure "test"
+    in  counterexample ("Error message: " ++ text) $
+        assertHasLine "The option `--set` expects an argument." text
+
+prop_parsepair_mixed :: Property
+prop_parsepair_mixed = once $
+  let p :: Parser ((String, String), String)
+      p = (,) <$> consumeOption (ConsumeA.consumePair str (metavar "K") str (metavar "V")) (long "set")
+              <*> strOption (long "name")
+      i = info p idm
+      result = run i ["--set", "a", "b", "--name", "test"]
+  in  assertResult result ((===) (("a", "b"), "test"))
+
+prop_parsepair_extra_arg_consumed :: Property
+prop_parsepair_extra_arg_consumed = once $
+  let p :: Parser ((String, String), String)
+      p = (,) <$> consumeOption (ConsumeA.consumePair str (metavar "K") str (metavar "V")) (long "set")
+              <*> strArgument idm
+      i = info p idm
+      result = run i ["--set", "key", "value", "extra"]
+  in  assertResult result ((===) (("key", "value"), "extra"))
+
+prop_parsepair_extra_arg_unconsumed :: Property
+prop_parsepair_extra_arg_unconsumed = once $
+  let p :: Parser (String, String)
+      p = consumeOption (ConsumeA.consumePair str (metavar "K") str (metavar "V")) (long "set")
+      i = info p idm
+      result = run i ["--set", "key", "value", "extra"]
+  in  assertError result $ \failure ->
+    let text = fst $ renderFailure failure "test"
+    in  counterexample ("Error message: " ++ text) $
+        assertHasLine "Invalid argument `extra'" text
+
+prop_parsepair_reader_error_first :: Property
+prop_parsepair_reader_error_first = once $
+  let p :: Parser (Int, Int)
+      p = consumeOption (ConsumeA.consumePair auto (metavar "MIN") auto (metavar "MAX")) (long "range")
+      i = info p idm
+      result = run i ["--range", "notanumber", "10"]
+  in  assertError result $ \failure ->
+    let text = fst $ renderFailure failure "test"
+    in  counterexample ("Error message: " ++ text) $
+        property (text /= "")
+
+prop_parsepair_reader_error_second :: Property
+prop_parsepair_reader_error_second = once $
+  let p :: Parser (Int, Int)
+      p = consumeOption (ConsumeA.consumePair auto (metavar "MIN") auto (metavar "MAX")) (long "range")
+      i = info p idm
+      result = run i ["--range", "10", "notanumber"]
+  in  assertError result $ \failure ->
+    let text = fst $ renderFailure failure "test"
+    in  counterexample ("Error message: " ++ text) $
+        property (text /= "")
+
+-- ConsumeA Tests
+-- These test the internal ArgConsumer type to ensure correctness
+
+-- Helper: Compare ArgConsumer results on various inputs
+consumeAEq :: (Eq a, Show a, Eq e, Show e)
+         => CMI.ArgConsumer e a -> CMI.ArgConsumer e a -> [String] -> Property
+consumeAEq p1 p2 input =
+  let r1 = CMI.runArgConsumer p1 input
+      r2 = CMI.runArgConsumer p2 input
+  in  counterexample ("Input: " ++ show input) $
+      counterexample ("Result 1: " ++ show r1) $
+      counterexample ("Result 2: " ++ show r2) $
+      r1 === r2
+
+-- Basic Primitives
+
+prop_ArgConsumer_consumeAsk_success :: Property
+prop_ArgConsumer_consumeAsk_success = once $
+  let p = CMI.consumeAsk "error" :: CMI.ArgConsumer String String
+      result = CMI.runArgConsumer p ["first", "second"]
+  in  result === Right ("first", ["second"])
+
+prop_ArgConsumer_consumeAsk_empty :: Property
+prop_ArgConsumer_consumeAsk_empty = once $
+  let p = CMI.consumeAsk "no input" :: CMI.ArgConsumer String String
+      result = CMI.runArgConsumer p []
+  in  result === Left "no input"
+
+prop_ArgConsumer_consumeAbort :: Property
+prop_ArgConsumer_consumeAbort = once $
+  let p = CMI.consumeAbort "failed" :: CMI.ArgConsumer String Int
+      result = CMI.runArgConsumer p ["ignored"]
+  in  result === Left "failed"
+
+-- Functor Laws
+
+prop_ArgConsumer_functor_identity :: Property
+prop_ArgConsumer_functor_identity = property $ \xs ->
+  let p :: CMI.ArgConsumer String Int
+      p = CMI.consumeAsk "need input" >> return 42
+  in  consumeAEq (fmap id p) p (xs :: [String])
+
+prop_ArgConsumer_functor_composition :: Property
+prop_ArgConsumer_functor_composition = property $ \xs ->
+  let p :: CMI.ArgConsumer String Int
+      p = CMI.consumeAsk "need input" >> return 10
+      f = (* 2)
+      g = (+ 3)
+  in  consumeAEq (fmap (f . g) p) (fmap f . fmap g $ p) (xs :: [String])
+
+-- Applicative Laws
+
+prop_ArgConsumer_applicative_identity :: Property
+prop_ArgConsumer_applicative_identity = property $ \xs ->
+  let p :: CMI.ArgConsumer String Int
+      p = CMI.consumeAsk "need input" >> return 42
+  in  consumeAEq (pure id <*> p) p (xs :: [String])
+
+prop_ArgConsumer_applicative_homomorphism :: Property
+prop_ArgConsumer_applicative_homomorphism = property $ \xs ->
+  let f :: Int -> Int
+      f = (* 2)
+      x = 42
+      p1, p2 :: CMI.ArgConsumer String Int
+      p1 = pure f <*> pure x
+      p2 = pure (f x)
+  in  consumeAEq p1 p2 (xs :: [String])
+
+prop_ArgConsumer_applicative_interchange :: Property
+prop_ArgConsumer_applicative_interchange = property $ \xs ->
+  let f :: Int -> Int
+      f = (* 2)
+      y = 42
+      pf :: CMI.ArgConsumer String (Int -> Int)
+      pf = pure f
+      p1, p2 :: CMI.ArgConsumer String Int
+      p1 = pf <*> pure y
+      p2 = pure ($ y) <*> pf
+  in  consumeAEq p1 p2 (xs :: [String])
+
+prop_ArgConsumer_applicative_composition :: Property
+prop_ArgConsumer_applicative_composition = property $ \xs ->
+  let u, v, w :: CMI.ArgConsumer String Int
+      u = CMI.consumeAsk "u" >> return 10
+      v = CMI.consumeAsk "v" >> return 20
+      w = CMI.consumeAsk "w" >> return 30
+      fu :: CMI.ArgConsumer String (Int -> Int)
+      fu = CMI.consumeAsk "fu" >> return (* 2)
+      fv :: CMI.ArgConsumer String (Int -> Int)
+      fv = CMI.consumeAsk "fv" >> return (+ 5)
+      p1 :: CMI.ArgConsumer String Int
+      p1 = pure (.) <*> fu <*> fv <*> w
+      p2 :: CMI.ArgConsumer String Int
+      p2 = fu <*> (fv <*> w)
+  in  consumeAEq p1 p2 (xs :: [String])
+
+-- Monad Laws
+
+prop_ArgConsumer_monad_left_identity :: Property
+prop_ArgConsumer_monad_left_identity = property $ \xs ->
+  let x = 42 :: Int
+      f :: Int -> CMI.ArgConsumer String Int
+      f a = CMI.consumeAsk "need input" >> return (a * 2)
+  in  consumeAEq (return x >>= f) (f x) (xs :: [String])
+
+prop_ArgConsumer_monad_right_identity :: Property
+prop_ArgConsumer_monad_right_identity = property $ \xs ->
+  let p :: CMI.ArgConsumer String Int
+      p = CMI.consumeAsk "need input" >> return 42
+  in  consumeAEq (p >>= return) p (xs :: [String])
+
+prop_ArgConsumer_monad_associativity :: Property
+prop_ArgConsumer_monad_associativity = property $ \xs ->
+  let p :: CMI.ArgConsumer String Int
+      p = CMI.consumeAsk "need input" >> return 10
+      f :: Int -> CMI.ArgConsumer String Int
+      f a = CMI.consumeAsk "f" >> return (a * 2)
+      g :: Int -> CMI.ArgConsumer String Int
+      g b = CMI.consumeAsk "g" >> return (b + 5)
+  in  consumeAEq ((p >>= f) >>= g) (p >>= (\x -> f x >>= g)) (xs :: [String])
 
 ---
 

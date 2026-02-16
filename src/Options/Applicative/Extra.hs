@@ -321,6 +321,7 @@ parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
                                -> []
                                 | otherwise
                                -> fst <$> ns
+              ConsumeReader ns _ _ -> fmap showOption ns
       _
         -> mempty
 

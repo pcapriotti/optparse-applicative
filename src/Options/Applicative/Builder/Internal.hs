@@ -9,6 +9,7 @@ module Options.Applicative.Builder.Internal (
   FlagFields(..),
   CommandFields(..),
   ArgumentFields(..),
+  OptionArgumentFields(..),
   DefaultProp(..),
 
   optionMod,
@@ -48,6 +49,10 @@ data CommandFields a = CommandFields
 data ArgumentFields a = ArgumentFields
   { argCompleter :: Completer }
 
+data OptionArgumentFields a = OptionArgumentFields
+  { optArgCompleter :: Completer
+  , optArgMetavar :: String }
+
 class HasName f where
   name :: OptName -> f a -> f a
 
@@ -66,6 +71,9 @@ instance HasCompleter OptionFields where
 instance HasCompleter ArgumentFields where
   modCompleter f p = p { argCompleter = f (argCompleter p) }
 
+instance HasCompleter OptionArgumentFields where
+  modCompleter f p = p { optArgCompleter = f (optArgCompleter p) }
+
 class HasValue f where
   -- this is just so that it is not necessary to specify the kind of f
   hasValueDummy :: f a -> ()
@@ -76,12 +84,22 @@ instance HasValue ArgumentFields where
 
 class HasMetavar f where
   hasMetavarDummy :: f a -> ()
+  -- | Set the metavar in the field. Default is no-op (metavar stored in properties).
+  setFieldMetavar :: String -> f a -> f a
+  setFieldMetavar _ = id
+
 instance HasMetavar OptionFields where
   hasMetavarDummy _ = ()
+
 instance HasMetavar ArgumentFields where
   hasMetavarDummy _ = ()
+
 instance HasMetavar CommandFields where
   hasMetavarDummy _ = ()
+
+instance HasMetavar OptionArgumentFields where
+  hasMetavarDummy _ = ()
+  setFieldMetavar mv p = p { optArgMetavar = mv }
 
 -- mod --
 
