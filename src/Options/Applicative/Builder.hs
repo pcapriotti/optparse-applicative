@@ -257,7 +257,7 @@ command cmd pinfo = fieldMod $ \p ->
 -- @
 --
 -- > Available commands:
--- >   hello, hi                Print greeting
+-- >   hello,hi                 Print greeting
 -- >   goodbye                  Say goodbye
 --
 -- @since 0.20.0.0
