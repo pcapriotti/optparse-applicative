@@ -3,6 +3,7 @@ module Options.Applicative.Types (
   ParseError(..),
   ParserInfo(..),
   ParserPrefs(..),
+  BriefDescOpt (..),
 
   Option(..),
   OptName(..),
@@ -148,7 +149,36 @@ data ParserPrefs = ParserPrefs
                                   -- section (default: False)
   , prefTabulateFill ::Int        -- ^ Indentation width for tables
   , prefBriefHangPoint :: Int     -- ^ Width at which to hang the brief description
+  , prefBriefDescOpt :: BriefDescOpt -- ^ Styles the brief option description
   } deriving (Eq, Show)
+
+-- | How to style options in the brief description.
+--
+-- @since 0.20.0.0
+data BriefDescOpt
+  -- | Lists all option groups. The parameter function is used to style
+  -- the group names. Groups can be omitted by returning 'Nothing'.
+  --
+  -- If no function is provided, a default style is applied, which adds
+  -- brackets and drops a trailing colon.
+  --
+  -- @since 0.20.0.0
+  = BriefDescOptGroups (Maybe (String -> Maybe Doc))
+  -- | Lists all options individually. This is the default.
+  --
+  -- @since 0.20.0.0
+  | BriefDescOptList
+
+instance Show BriefDescOpt where
+  show (BriefDescOptGroups Nothing) = "BriefDescOptGroups Nothing"
+  show (BriefDescOptGroups (Just _)) = "BriefDescOptGroups (Just _)"
+  show BriefDescOptList = "BriefDescOptList"
+
+instance Eq BriefDescOpt where
+  BriefDescOptGroups Nothing == BriefDescOptGroups Nothing = True
+  BriefDescOptGroups (Just _) == BriefDescOptGroups (Just _) = True
+  BriefDescOptList == BriefDescOptList = True
+  _ == _ = False
 
 data OptName = OptShort !Char
              | OptLong !String

@@ -44,6 +44,8 @@ extra-source-files:  CHANGELOG.md
                      tests/parser_group_command_groups.err.txt
                      tests/parser_group_duplicate_command_groups.err.txt
                      tests/parser_group_duplicates.err.txt
+                     tests/parser_group_nested_desc_opt_groups.err.txt
+                     tests/parser_group_nested_desc_opt_groups_style.err.txt
                      tests/parser_group_nested.err.txt
                      tests/prop_cmd_alias_dupes.err.txt
                      tests/prop_cmd_aliases.err.txt
@@ -151,6 +153,8 @@ test-suite tests
                      , Examples.ParserGroup.DuplicateCommandGroups
                      , Examples.ParserGroup.Duplicates
                      , Examples.ParserGroup.Nested
+                     , Examples.ParserGroup.NestedDescOptGroups
+                     , Examples.ParserGroup.NestedDescOptGroupsStyle
 
   build-depends:       base
                      , optparse-applicative

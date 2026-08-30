@@ -19,7 +19,7 @@ module Options.Applicative.Help.Core (
   ) where
 
 import           Control.Applicative
-import           Control.Monad (guard)
+import           Control.Monad (guard, join)
 
 import           Data.Foldable (any, foldl')
 import           Data.Function (on)
@@ -34,6 +34,7 @@ import Options.Applicative.Common
 import Options.Applicative.Types
 import Options.Applicative.Help.Pretty
 import Options.Applicative.Help.Chunk
+import qualified Options.Applicative.Internal as Internal
 
 -- | Style for rendering an option.
 data OptDescStyle
@@ -53,7 +54,7 @@ optDesc pprefs style _reachability opt =
         List.sort . optionNames . optMain $ opt
       meta =
         stringChunk $ optMetaVar opt
-      grp = propGroup $ optProps opt
+      grp = optToGroup opt
       descs =
         map (pretty . showOption) names
       descriptions =
@@ -117,12 +118,24 @@ missingDesc = briefDesc' False
 -- | Generate a brief help text for a parser, allowing the specification
 --   of if optional arguments are show.
 briefDesc' :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
-briefDesc' showOptional pprefs =
+briefDesc' showOptional pprefs p =
   wrapOver NoDefault MaybeRequired
     . foldTree pprefs style
     . mFilterOptional
+    . addGroupsFn
     . treeMapParser optDesc'
+    $ p'
   where
+    -- (Filtered parser, add groups function)
+    (p', addGroupsFn) = case prefBriefDescOpt pprefs of
+      -- Normal: do not filter parser, and do not add groups.
+      BriefDescOptList -> (p, id)
+      -- For both group options, filter the tree such that all options/flags
+      -- are removed. Then return a function that adds the group names to
+      -- the OptTree, to be rendered in front of the rest of the tree.
+      BriefDescOptGroups optPrefs ->
+        (Internal.filterParserOptions isNotOpt p, addGroups optPrefs p)
+
     mFilterOptional
       | showOptional =
         id
@@ -139,6 +152,47 @@ briefDesc' showOptional pprefs =
           optDesc pprefs style reach opt
       in
         (a, b)
+
+    -- Adds groups in front of the rest of the tree as single leaves.
+    addGroups ::
+      -- Optional style function.
+      Maybe (String -> Maybe Doc) ->
+      Parser a ->
+      OptTree (Chunk Doc, Parenthetic) ->
+      OptTree (Chunk Doc, Parenthetic)
+    addGroups optStyle pGroups tr = case tr of
+      n@(Leaf _) -> MultNode (nodes ++ [n])
+      MultNode xs -> MultNode (nodes ++ xs)
+      n@(AltNode {}) -> MultNode (nodes ++ [n])
+      n@(BindNode {}) -> MultNode (nodes ++ [n])
+      where
+        groups = allOptionGroups pGroups
+        nodes = fmap (groupNameToNode optStyle) groups
+
+    -- Turns a single group name into an OptTree doc, styling as requested.
+    groupNameToNode :: Maybe (String -> Maybe Doc) -> String -> OptTree (Chunk Doc, Parenthetic)
+    groupNameToNode styleGroups =
+      Leaf
+        -- The Parenthetic value here actually isn't used, since these
+        -- are leaves. Potential bracketing and other styling is handled by
+        -- the param function.
+        . (\x -> (x,NeverRequired))
+        . Chunk
+        . fromMaybe defStyleGroups styleGroups
+
+    isNotOpt opt = case optMain opt of
+      OptReader {} -> False
+      FlagReader {} -> False
+      _ -> True
+
+    defStyleGroups :: String -> Maybe Doc
+    defStyleGroups = Just . brackets . pretty . dropColon
+      where
+        -- Default style adds brackets and drops a trailing colon if it exists
+        -- e.g. "Available options:" -> "[Available options]".
+        dropColon [] = []
+        dropColon [':'] = []
+        dropColon (x : xs) = x : dropColon xs
 
 -- | Wrap a doc in parentheses or brackets if required.
 wrapOver :: AltNodeType -> Parenthetic -> (Chunk Doc, Parenthetic) -> Chunk Doc
@@ -205,15 +259,15 @@ optionsDesc :: Bool -> ParserPrefs -> Parser a -> Chunk Doc
 optionsDesc global pprefs p =
   vsepChunks
     . formatTitle'
-    . fmap tabulateGroup
+    . fmap (tabulateGroup . NE.toList)
     . groupByTitle
     $ docs
   where
     docs :: [Maybe (OptGroup, (Doc, Doc))]
     docs = mapParser doc p
 
-    groupByTitle :: [Maybe (OptGroup, (Doc, Doc))] -> [[(OptGroup, (Doc, Doc))]]
-    groupByTitle xs = groupFstAll . catMaybes $ xs
+    groupByTitle :: [Maybe (OptGroup, (Doc, Doc))] -> [NonEmpty (OptGroup, (Doc, Doc))]
+    groupByTitle = groupFstAll . catMaybes
 
     -- NOTE: [Nested group alignment]
     --
@@ -307,10 +361,7 @@ optionsDesc global pprefs p =
           Nothing -> ([], defTitle)
           Just (parentGrps, grp) -> (parentGrps, grp)
 
-        defTitle =
-          if global
-            then "Global options:"
-            else "Available options:"
+        defTitle = mkDefTitle global
 
     maxGroupLevel :: Int
     maxGroupLevel = findMaxGroupLevel docs
@@ -362,6 +413,12 @@ optionsDesc global pprefs p =
     lvlIndent :: Int
     lvlIndent = 2
 
+mkDefTitle :: Bool -> String
+mkDefTitle global =
+  if global
+    then "Global options:"
+    else "Available options:"
+
 errorHelp :: Chunk Doc -> ParserHelp
 errorHelp chunk = mempty { helpError = chunk }
 
@@ -394,7 +451,7 @@ parserHelp pprefs p =
       : (group_title <$> cs)
   where
     def = "Available commands:"
-    cs = groupFstAll $ cmdDesc pprefs p
+    cs = fmap NE.toList $ groupFstAll $ cmdDesc pprefs p
 
     group_title a@((n, _) : _) =
       with_title (fromMaybe def n) $
@@ -437,6 +494,39 @@ data Parenthetic
   -- ^ Parenthesis should always be used.
   deriving (Eq, Ord, Show)
 
+optToGroup :: Option a -> OptGroup
+optToGroup = propGroup . optProps
+
+-- | Returns all groups associated to this option. Returns
+-- [default_group_name] if there are none. Hence this is morally
+-- NonEmpty, though we return List since our immediate usage requires a
+-- List.
+optGroupToNames :: OptGroup -> [String]
+optGroupToNames (OptGroup xs) = case xs of
+  [] -> [mkDefTitle False]
+  ys -> ys
+
+-- Given a parser, returns a list of all option groups. This includes groups
+-- that do not have any bare options themselves i.e. they only contain
+-- other groups.
+--
+-- If we wanted to return only those groups that directly contained /some/
+-- options, we'd instead do 'getOptionGroups optGroupToName id', where
+--
+--   optGroupToName :: OptGroup -> String
+--   optGroupToName = -- returns the last group name or default.
+allOptionGroups :: Parser a -> [String]
+allOptionGroups = getOptionGroups optGroupToNames join
+
+getOptionGroups :: (OptGroup -> b) -> ([b] -> [String]) -> Parser a -> [String]
+getOptionGroups toGroup toStrs =
+  fmap NE.head
+    . groupAllOn id
+    . toStrs
+    . mapParser go
+  where
+    go = const (toGroup . optToGroup)
+
 -- | Groups on the first element of the tuple. This differs from the simple
 -- @groupBy ((==) `on` fst)@ in that non-adjacent groups are __also__ grouped
 -- together. For example:
@@ -454,35 +544,34 @@ data Parenthetic
 -- the first element.
 --
 -- @since 0.19.0.0
-groupFstAll :: Ord a => [(a, b)] -> [[(a, b)]]
-groupFstAll =
+groupFstAll :: Ord a => [(a, b)] -> [NonEmpty (a, b)]
+groupFstAll = groupAllOn fst
+
+groupAllOn :: Ord b => (a -> b) -> [a] -> [NonEmpty a]
+groupAllOn f =
   -- In order to group all (adjacent + non-adjacent) Eq elements together, we
   -- sort the list so that the Eq elements are in fact adjacent, _then_ group.
   -- We don't want to destroy the original order, however, so we add a
   -- temporary index that maintains this original order. The full logic is:
   --
   -- 1. Add index i that preserves original order.
-  -- 2. Sort on tuple's fst.
-  -- 3. Group by fst.
+  -- 2. Sort on function.
+  -- 3. Group on function.
   -- 4. Sort by i, restoring original order.
   -- 5. Drop index i.
-  fmap (NE.toList . dropIdx)
+  fmap dropIdx
     . List.sortOn toIdx
-    . NE.groupBy ((==) `on` fst')
-    . List.sortOn fst'
+    . NE.groupBy ((==) `on` f . snd)
+    . List.sortOn (f . snd)
     . zipWithIndex
   where
-    dropIdx :: NonEmpty (Int, (a, b)) -> NonEmpty (a, b)
+    dropIdx :: NonEmpty (Int, a) -> NonEmpty a
     dropIdx = fmap snd
 
-    toIdx :: NonEmpty (Int, (a, b)) -> Int
+    toIdx :: NonEmpty (Int, a) -> Int
     toIdx ((x, _) :| _) = x
 
-    -- Like fst, ignores our added index
-    fst' :: (Int, (a, b)) -> a
-    fst' (_, (x, _)) = x
-
-    zipWithIndex :: [(a, b)] -> [(Int, (a, b))]
+    zipWithIndex :: [a] -> [(Int, a)]
     zipWithIndex = zip [1 ..]
 
 -- | From base-4.19.0.0.

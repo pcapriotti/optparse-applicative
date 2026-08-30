@@ -8,6 +8,8 @@
 
 - Add `commandWithAliases` for defining multiple aliases for the same command.
 
+- Add `briefDescOpt` for styling the brief help options.
+
 ## Version 0.19.0.0 (03 June 2025)
 
 - Add `briefHangPoint` modifier. This allows one to specify the command length

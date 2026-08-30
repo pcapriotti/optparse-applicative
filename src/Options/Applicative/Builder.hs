@@ -90,6 +90,7 @@ module Options.Applicative.Builder (
   helpShowGlobals,
   helpIndent,
   briefHangPoint,
+  briefDescOpt,
   prefs,
   defaultPrefs,
 
@@ -602,6 +603,11 @@ helpIndent w = PrefsMod $ \p -> p { prefTabulateFill = w }
 briefHangPoint :: Int -> PrefsMod
 briefHangPoint php = PrefsMod $ \p -> p { prefBriefHangPoint = php }
 
+-- | Set the brief option description style.
+--
+-- @since 0.20.0.0
+briefDescOpt :: BriefDescOpt -> PrefsMod
+briefDescOpt d = PrefsMod $ \p -> p { prefBriefDescOpt = d }
 
 -- | Create a `ParserPrefs` given a modifier
 prefs :: PrefsMod -> ParserPrefs
@@ -617,7 +623,8 @@ prefs m = applyPrefsMod m base
       , prefHelpLongEquals = False
       , prefHelpShowGlobal = False
       , prefTabulateFill = 24
-      , prefBriefHangPoint = 35 }
+      , prefBriefHangPoint = 35
+      , prefBriefDescOpt = BriefDescOptList }
 
 -- Convenience shortcuts
 

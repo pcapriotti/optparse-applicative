@@ -28,6 +28,7 @@ module Options.Applicative.Internal
   , disamb
 
   , mapParserOptions
+  , filterParserOptions
   ) where
 
 import Control.Applicative
@@ -290,6 +291,22 @@ mapParserOptions f = go
     go :: forall y. Parser y -> Parser y
     go (NilP x) = NilP x
     go (OptP o) = OptP (f o)
+    go (MultP p1 p2) = MultP (go p1) (go p2)
+    go (AltP p1 p2) = AltP (go p1) (go p2)
+    go (BindP p1 p2) = BindP (go p1) (\x -> go (p2 x))
+
+-- | Filters the parser based on its options.
+--
+-- @since 0.20.0.0
+filterParserOptions :: (forall x. Option x -> Bool) -> Parser a -> Parser a
+filterParserOptions f = go
+  where
+    go :: forall y. Parser y -> Parser y
+    go (NilP x) = NilP x
+    go opt@(OptP o) =
+      if f o
+        then opt
+        else NilP Nothing
     go (MultP p1 p2) = MultP (go p1) (go p2)
     go (AltP p1 p2) = AltP (go p1) (go p2)
     go (BindP p1 p2) = BindP (go p1) (\x -> go (p2 x))

@@ -1,0 +1,36 @@
+parser_group.nested_desc_opt_groups - a test for optparse-applicative
+
+Usage: parser_group_nested_desc_opt_groups 
+         [Available options] [First group] [Second group] [Logging]
+         [System Options] [Nested2] [Nested3] [Group 2] [G 2.1] [G 2.2] Command
+
+  Nested parser groups
+
+Available options:
+  --hello TARGET                     Target for the greeting
+  -q,--quiet                         Whether to be quiet
+  -v,--verbosity ARG                 Console verbosity
+  -h,--help                          Show this help text
+
+First group
+- Second group
+  - Logging
+      --file-log-path PATH           Log file path
+      --file-log-verbosity INT       File log verbosity
+
+    - System Options
+        --poll                       Whether to poll
+        --timeout INT                Whether to time out
+
+      - Nested2
+          --double-nested STR        Some nested option
+
+        - Nested3
+            --triple-nested STR      Another option
+
+Group 2
+- G 2.1
+    --one ARG                        Option 1
+
+- G 2.2
+    --two ARG                        Option 2

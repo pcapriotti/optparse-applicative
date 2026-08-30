@@ -19,9 +19,12 @@ import qualified Examples.ParserGroup.CommandGroups as ParserGroup.CommandGroups
 import qualified Examples.ParserGroup.DuplicateCommandGroups as ParserGroup.DuplicateCommandGroups
 import qualified Examples.ParserGroup.Duplicates as ParserGroup.Duplicates
 import qualified Examples.ParserGroup.Nested as ParserGroup.Nested
+import qualified Examples.ParserGroup.NestedDescOptGroups as ParserGroup.NestedDescOptGroups
+import qualified Examples.ParserGroup.NestedDescOptGroupsStyle as ParserGroup.NestedDescOptGroupsStyle
 
 import           Control.Applicative
 import           Control.Monad
+import qualified Data.Char as Ch
 import           Data.Function (on)
 import           Data.List hiding (group)
 import           Data.List.NonEmpty (NonEmpty ((:|)))
@@ -85,7 +88,10 @@ checkHelpTextWith ecode pprefs name p args = ioProperty $ do
     in  (expected === msg ++ "\n") .&&. (ecode === code)
 
 checkHelpText :: Show a => String -> ParserInfo a -> [String] -> Property
-checkHelpText = checkHelpTextWith ExitSuccess defaultPrefs
+checkHelpText = checkHelpTextPrefs defaultPrefs
+
+checkHelpTextPrefs :: Show a => ParserPrefs -> String -> ParserInfo a -> [String] -> Property
+checkHelpTextPrefs prefs = checkHelpTextWith ExitSuccess prefs
 
 prop_hello :: Property
 prop_hello = once $
@@ -1129,6 +1135,22 @@ prop_parser_group_all_grouped = once $
 prop_parser_group_nested :: Property
 prop_parser_group_nested = once $
   checkHelpText "parser_group_nested" ParserGroup.Nested.opts ["--help"]
+
+prop_parser_group_nested_desc_opt_groups :: Property
+prop_parser_group_nested_desc_opt_groups = once $
+  checkHelpTextPrefs
+    ParserGroup.NestedDescOptGroups.myPrefs
+    "parser_group_nested_desc_opt_groups"
+    ParserGroup.NestedDescOptGroups.opts
+    ["--help"]
+
+prop_parser_group_nested_desc_opt_groups_style :: Property
+prop_parser_group_nested_desc_opt_groups_style = once $
+  checkHelpTextPrefs
+    ParserGroup.NestedDescOptGroupsStyle.myPrefs
+    "parser_group_nested_desc_opt_groups_style"
+    ParserGroup.NestedDescOptGroupsStyle.opts
+    ["--help"]
 
 prop_issue_450_subcommand_show_help_on_empty_inline :: Property
 prop_issue_450_subcommand_show_help_on_empty_inline = once $

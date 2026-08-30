@@ -202,7 +202,11 @@ module Options.Applicative (
   helpShowGlobals,
   helpIndent,
   briefHangPoint,
+  briefDescOpt,
   defaultPrefs,
+
+  -- ** Brief Description
+  BriefDescOpt (..),
 
   -- * Completions
   --
