@@ -1,0 +1,11 @@
+consumeoptions - test for consume options
+
+Usage: consumeoptions [--output FILE] [--set KEY VALUE] [--verbose]
+
+  Configure the application
+
+Available options:
+  --output FILE            Output file path
+  --set KEY VALUE          Set a configuration key-value pair
+  --verbose                Enable verbose output
+  -h,--help                Show this help text

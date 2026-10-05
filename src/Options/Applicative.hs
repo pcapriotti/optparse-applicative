@@ -64,6 +64,7 @@ module Options.Applicative (
 
   strOption,
   option,
+  consumeOption,
 
   strArgument,
   argument,
@@ -111,6 +112,7 @@ module Options.Applicative (
   OptionFields,
   FlagFields,
   ArgumentFields,
+  OptionArgumentFields,
   CommandFields,
 
   HasName,
