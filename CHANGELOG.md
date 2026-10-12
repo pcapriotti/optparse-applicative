@@ -1,4 +1,4 @@
-## Version 0.20.0.0 (Unreleased)
+## Version 0.20.0.0 (15 October 2026)
 
 - Fix for showHelpOnEmpty so that it works correctly when subParserInline is
   also active.
@@ -7,6 +7,8 @@
   effect since version 0.8.
 
 - Add `commandWithAliases` for defining multiple aliases for the same command.
+
+- Support for MicroHaskell
 
 ## Version 0.19.0.0 (03 June 2025)
 
