@@ -197,6 +197,7 @@ repeatedGlobalObservations =
     _ -> [("expected repeated global help", False)]
   where
     spec = info (((,) <$> includes <*> branches) <**> helper) mempty
+    includes :: Parser [String]
     includes = many (strOption (long "include" <> help "INCLUDE_PATH"))
     branches = hsubparser (command "run" (info (pure () <**> helper) mempty))
       <|> (() <$ strOption (long "port" <> value "5050" <> help "REPEAT_LAUNCH"))
