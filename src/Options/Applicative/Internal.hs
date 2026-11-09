@@ -12,6 +12,8 @@ module Options.Applicative.Internal
   , withReadM
 
   , runP
+  , runPWithGlobals
+  , ContextStep(..)
 
   , Completion
   , runCompletion
@@ -45,15 +47,85 @@ import Options.Applicative.Types
 
 class (Alternative m, MonadPlus m) => MonadP m where
   enterContext :: String -> ParserInfo a -> m ()
+  enterContextInline :: [ContextStep] -> String -> ParserInfo a -> m ()
+  enterContextInline _ = enterContext
   exitContext :: m ()
   continueContext :: m ()
+  -- | Record only the structural choices used to reach an option.
+  -- The default leaves custom parsing/completion monads unchanged.
+  selectContext :: [ContextStep] -> m ()
+  selectContext _ = pure ()
   getPrefs :: m ParserPrefs
 
   missingArgP :: ParseError -> Completer -> m a
   errorP :: ParseError -> m a
   exitP :: ArgPolicy -> Parser b -> Maybe a -> m a
 
-newtype P a = P (ExceptT ParseError (StateT (IsCmdStart, [Context]) (Reader ParserPrefs)) a)
+-- The help tree follows the residual parser's shape, but retains consumed
+-- options. In particular an accepted alternative drops only its sibling.
+-- Bind continuations retain their original help: reevaluating a continuation
+-- as consumed history can duplicate repeated options or lose supplied options.
+data ContextStep
+  = MultLeft | MultRight | AltLeft | AltRight | BindFirst
+  | BindNext
+
+data GlobalTree
+  = GlobalLeaf (Parser ())
+  | GlobalMult GlobalTree GlobalTree
+  | GlobalAlt GlobalTree GlobalTree
+
+globalTree :: Parser a -> GlobalTree
+globalTree (MultP p q) = GlobalMult (globalTree p) (globalTree q)
+globalTree (AltP p q) = GlobalAlt (globalTree p) (globalTree q)
+globalTree p = GlobalLeaf (() <$ p)
+
+globalParser :: GlobalTree -> Parser ()
+globalParser (GlobalLeaf p) = p
+globalParser (GlobalMult p q) = globalParser p *> globalParser q
+globalParser (GlobalAlt p q) = globalParser p <|> globalParser q
+
+selectGlobal :: [ContextStep] -> GlobalTree -> GlobalTree
+selectGlobal [] tree = tree
+selectGlobal (MultLeft : path) (GlobalMult p q) = GlobalMult (selectGlobal path p) q
+selectGlobal (MultRight : path) (GlobalMult p q) = GlobalMult p (selectGlobal path q)
+selectGlobal (AltLeft : path) (GlobalAlt p _) = selectGlobal path p
+selectGlobal (AltRight : path) (GlobalAlt _ q) = selectGlobal path q
+-- Disambiguation may inspect a second match after the first. A failed or
+-- ambiguous parse must not acquire a new parsing failure from help bookkeeping.
+selectGlobal _ tree = tree
+
+-- Inline subparsers continue inside the enclosing residual parser. Their
+-- anchor locates that subtree without comparing command names or options.
+data GlobalContext = GlobalContext (Maybe [ContextStep]) GlobalTree
+
+inlineAnchor :: [ContextStep] -> [ContextStep]
+inlineAnchor [] = []
+inlineAnchor (AltLeft : path) = inlineAnchor path
+inlineAnchor (AltRight : path) = inlineAnchor path
+inlineAnchor (BindNext : path) = inlineAnchor path
+inlineAnchor (step : path) = step : inlineAnchor path
+
+stripAnchor :: [ContextStep] -> [ContextStep] -> Maybe [ContextStep]
+stripAnchor [] path = Just path
+stripAnchor (MultLeft : xs) (MultLeft : ys) = stripAnchor xs ys
+stripAnchor (MultRight : xs) (MultRight : ys) = stripAnchor xs ys
+stripAnchor (BindFirst : xs) (BindFirst : ys) = stripAnchor xs ys
+stripAnchor _ _ = Nothing
+
+selectGlobals :: [ContextStep] -> [GlobalContext] -> [GlobalContext]
+selectGlobals _ [] = []
+selectGlobals path (GlobalContext Nothing tree : rest) =
+  GlobalContext Nothing (selectGlobal path tree) : rest
+selectGlobals path (context@(GlobalContext (Just anchor) tree) : rest) =
+  case stripAnchor anchor path of
+    Just relative -> GlobalContext (Just anchor) (selectGlobal relative tree) : rest
+    Nothing -> context : selectGlobals path rest
+
+contextGlobalParser :: GlobalContext -> Parser ()
+contextGlobalParser (GlobalContext _ tree) = globalParser tree
+
+newtype P a = P (ExceptT ParseError
+  (StateT (IsCmdStart, [Context], [GlobalContext]) (Reader ParserPrefs)) a)
 
 instance Functor P where
   fmap f (P m) = P $ fmap f m
@@ -80,15 +152,25 @@ contextNames ns =
   in  reverse $ go <$> ns
 
 instance MonadP P where
-  enterContext name pinfo = P $ lift $ modify $ \(_, ctxs) -> (CmdStart, Context name pinfo : ctxs)
-  exitContext = P $ lift $ modify $ fmap (drop 1)
-  continueContext = P $ lift $ modify $ \(_, ctxs) -> (CmdCont, ctxs)
+  enterContext name pinfo = P $ lift $ modify $ \(_, ctxs, gs) ->
+    (CmdStart, Context name pinfo : ctxs, GlobalContext Nothing (globalTree (infoParser pinfo)) : gs)
+  enterContextInline path name pinfo = P $ lift $ modify $ \(_, ctxs, gs) ->
+    (CmdStart, Context name pinfo : ctxs,
+      GlobalContext (Just (inlineAnchor path)) (globalTree (infoParser pinfo)) : gs)
+  exitContext = P $ lift $ modify $ \(start, ctxs, gs) -> (start, drop 1 ctxs, drop 1 gs)
+  continueContext = P $ lift $ modify $ \(_, ctxs, gs) -> (CmdCont, ctxs, gs)
+  selectContext path = P $ do
+    settings <- lift . lift $ ask
+    if prefHelpShowGlobal settings
+      then lift $ modify $ \(start, ctxs, gs) ->
+        (start, ctxs, selectGlobals path gs)
+      else pure ()
   getPrefs = P . lift . lift $ ask
 
   missingArgP e _ = errorP e
   errorP = P . throwE
   exitP _ p ma = P $ do
-    (isCmdStart, _) <- lift get
+    (isCmdStart, _, _) <- lift get
     maybe (throwE . MissingError isCmdStart . SomeParser $ p) return ma
 
 
@@ -100,9 +182,19 @@ hoistEither :: MonadP m => Either ParseError a -> m a
 hoistEither = either errorP return
 
 runP :: P a -> ParserPrefs -> (Either ParseError a, [Context])
-runP (P p) = do
-  (e, (_, cs)) <- runReader . flip runStateT (CmdStart, []) . runExceptT $ p
-  return (e, cs)
+runP p settings =
+  let (result, contexts, _) = runPWithGlobals p settings (pure ())
+  in (result, contexts)
+
+-- Original contexts remain intact for usage and errors; only global help uses
+-- the parallel projections. runP's public result and Context are unchanged.
+runPWithGlobals :: P a -> ParserPrefs -> Parser b
+                -> (Either ParseError a, [Context], [Parser ()])
+runPWithGlobals (P p) settings root =
+  let (result, (_, contexts, globals)) = runReader
+        (runStateT (runExceptT p) (CmdStart, [], [GlobalContext Nothing (globalTree root)])) settings
+  in (result, contexts, map contextGlobalParser globals)
+
 
 uncons :: [a] -> Maybe (a, [a])
 uncons [] = Nothing

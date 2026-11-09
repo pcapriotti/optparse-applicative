@@ -137,6 +137,7 @@ test-suite tests
   default-language:    Haskell98
 
   other-modules:       Examples.Alternatives
+                     , Examples.GlobalAlternatives
                      , Examples.Cabal
                      , Examples.CommandAliasDupes
                      , Examples.CommandDupes

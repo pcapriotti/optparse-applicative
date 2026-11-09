@@ -154,10 +154,12 @@ execParserPure :: ParserPrefs       -- ^ Global preferences for this parser
                -> [String]          -- ^ Program arguments
                -> ParserResult a
 execParserPure pprefs pinfo args =
-  case runP p pprefs of
-    (Right (Right r), _) -> Success r
-    (Right (Left c), _) -> CompletionInvoked c
-    (Left err, ctx) -> Failure $ parserFailure pprefs pinfo err ctx
+  case runPWithGlobals p pprefs (infoParser pinfo') of
+    (Right (Right r), _, _) -> Success r
+    (Right (Left c), _, _) -> CompletionInvoked c
+    (Left err, ctx, globals) ->
+      Failure $ parserFailureWithGlobals
+        (if prefHelpShowGlobal pprefs then Just globals else Nothing) pprefs pinfo err ctx
   where
     pinfo' = pinfo
       { infoParser = (Left <$> bashCompletionParser pinfo pprefs)
@@ -172,7 +174,12 @@ execParserPure pprefs pinfo args =
 parserFailure :: ParserPrefs -> ParserInfo a
               -> ParseError -> [Context]
               -> ParserFailure ParserHelp
-parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
+parserFailure = parserFailureWithGlobals Nothing
+
+parserFailureWithGlobals :: Maybe [Parser ()] -> ParserPrefs -> ParserInfo a
+                         -> ParseError -> [Context]
+                         -> ParserFailure ParserHelp
+parserFailureWithGlobals globals0 pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
   let h = with_context ctx pinfo $ \names pinfo' -> mconcat
             [ base_help pinfo'
             , usage_help progn names pinfo'
@@ -184,15 +191,28 @@ parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
     --
     -- Add another context layer if the argument to --help is
     -- a valid command.
-    ctx = case msg of
+    (ctx, globalViews) = case msg of
       ShowHelpText (Just potentialCommand) ->
-        let ctx1 = with_context ctx0 pinfo $ \_ pinfo' ->
-              snd
-                $ flip runP defaultPrefs { prefBacktrack = SubparserInline }
-                $ runParserStep (infoPolicy pinfo') (infoParser pinfo') potentialCommand []
-        in ctx1 `mappend` ctx0
+        let (ctx1, views1) = with_context ctx0 pinfo $ \_ pinfo' ->
+              case globals0 of
+                Nothing ->
+                  (snd $ flip runP defaultPrefs { prefBacktrack = SubparserInline }
+                    $ runParserStep (infoPolicy pinfo') (infoParser pinfo') potentialCommand [], [])
+                Just selectedViews ->
+                  let active = case selectedViews of
+                        selected : _ -> selected
+                        [] -> void (infoParser pinfo')
+                      (_, contexts, projected) = runPWithGlobals
+                        (runParserStep (infoPolicy pinfo') active potentialCommand [])
+                        defaultPrefs { prefBacktrack = SubparserInline
+                                     , prefHelpShowGlobal = True }
+                        active
+                  in (contexts, projected)
+            combined = if null ctx1 then globals0
+                    else fmap (\original -> views1 `mappend` drop 1 original) globals0
+        in (ctx1 `mappend` ctx0, combined)
       _ ->
-        ctx0
+        (ctx0, globals0)
 
     exit_code = case msg of
       ErrorMsg {}        -> ExitFailure (infoFailureCode pinfo)
@@ -216,9 +236,9 @@ parserFailure pprefs pinfo msg ctx0 = ParserFailure $ \progn ->
         voided =
           fmap (\(Context _ p) -> void p) cs `mappend` pure (void pinfo)
 
-        globalParsers =
-          traverse_ infoParser $
-            drop 1 voided
+        globalParsers = case globalViews of
+          Just parsers -> traverse_ id (drop 1 parsers)
+          Nothing -> traverse_ infoParser (drop 1 voided)
       in
         if prefHelpShowGlobal pprefs then
           parserGlobals pprefs globalParsers
