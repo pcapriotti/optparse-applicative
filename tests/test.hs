@@ -11,6 +11,7 @@ import qualified Examples.CommandAliases as CommandAliases
 import qualified Examples.CommandAliasDupes as CommandAliasDupes
 import qualified Examples.Cabal as Cabal
 import qualified Examples.Alternatives as Alternatives
+import qualified Examples.GlobalAlternatives as GlobalAlternatives
 import qualified Examples.Formatting as Formatting
 import qualified Examples.LongSub as LongSub
 import qualified Examples.ParserGroup.AllGrouped as ParserGroup.AllGrouped
@@ -103,6 +104,10 @@ prop_cmd_header = once $
       r2 = checkHelpTextWith (ExitFailure 1) (prefs showHelpOnError)
                     "commands_header_full" i ["-zello"]
   in  (r1 .&&. r2)
+
+prop_selected_global_alternatives :: Property
+prop_selected_global_alternatives = once $ conjoin
+  [counterexample name passed | (name, passed) <- GlobalAlternatives.observations]
 
 prop_cabal_conf :: Property
 prop_cabal_conf = once $

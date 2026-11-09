@@ -1,5 +1,8 @@
 ## Version 0.20.0.0 (Unreleased)
 
+- Keep global help within the selected applicative alternatives while retaining
+  options already supplied on the command line.
+
 - Fix for showHelpOnEmpty so that it works correctly when subParserInline is
   also active.
 

@@ -138,45 +138,49 @@ parseWord ('-' : w) = case w of
 parseWord _ = Nothing
 
 searchParser :: Monad m
-             => (forall r . Option r -> NondetT m (Parser r))
+             => [ContextStep]
+             -> (forall r . [ContextStep] -> Option r -> NondetT m (Parser r))
              -> Parser a -> NondetT m (Parser a)
-searchParser _ (NilP _) = mzero
-searchParser f (OptP opt) = f opt
-searchParser f (MultP p1 p2) = foldr1 (<!>)
-  [ do p1' <- searchParser f p1
+searchParser _ _ (NilP _) = mzero
+searchParser path f (OptP opt) = f (reverse path) opt
+searchParser path f (MultP p1 p2) = foldr1 (<!>)
+  [ do p1' <- searchParser (MultLeft : path) f p1
        return (p1' <*> p2)
-  , do p2' <- searchParser f p2
+  , do p2' <- searchParser (MultRight : path) f p2
        return (p1 <*> p2') ]
-searchParser f (AltP p1 p2) = msum
-  [ searchParser f p1
-  , searchParser f p2 ]
-searchParser f (BindP p k) = msum
-  [ do p' <- searchParser f p
+searchParser path f (AltP p1 p2) = msum
+  [ searchParser (AltLeft : path) f p1
+  , searchParser (AltRight : path) f p2 ]
+searchParser path f (BindP p k) = msum
+  [ do p' <- searchParser (BindFirst : path) f p
        return $ BindP p' k
   , case evalParser p of
       Nothing -> mzero
-      Just aa -> searchParser f (k aa) ]
+      Just aa -> searchParser (BindNext : path) f (k aa) ]
 
 searchOpt :: MonadP m => ParserPrefs -> OptWord -> Parser a
           -> NondetT (StateT Args m) (Parser a)
-searchOpt pprefs w = searchParser $ \opt -> do
+searchOpt pprefs w = searchParser [] $ \path opt -> do
   let disambiguate = prefDisambiguate pprefs
                   && optVisibility opt > Internal
   case optMatches disambiguate (optMain opt) w of
     Just matcher -> lift $ do
       lift continueContext
-      fmap pure matcher
+      value <- matcher
+      lift $ selectContext path
+      return (pure value)
 
     Nothing -> mzero
 
 searchArg :: MonadP m => ParserPrefs -> String -> Parser a
           -> NondetT (StateT Args m) (Parser a)
 searchArg prefs arg =
-  searchParser $ \opt -> do
+  searchParser [] $ \path opt -> do
     when (isArg (optMain opt)) cut
     case optMain opt of
       CmdReader _ cs -> do
         subp <- hoistList (cmdMatches cs)
+        lift . lift $ selectContext path
         case prefBacktrack prefs of
           NoBacktrack -> lift $ do
             args <- get <* put []
@@ -186,12 +190,14 @@ searchArg prefs arg =
             enterContext arg subp *> runParser (infoPolicy subp) (infoParser subp) args <* exitContext
 
           SubparserInline -> lift $ do
-            lift $ enterContext arg subp
+            lift $ enterContextInline path arg subp
             return $ infoParser subp
 
       ArgReader rdr -> lift . lift $ do
         continueContext
-        pure <$> runReadM (crReader rdr) arg
+        value <- runReadM (crReader rdr) arg
+        selectContext path
+        return (pure value)
 
       _ ->
         mzero
