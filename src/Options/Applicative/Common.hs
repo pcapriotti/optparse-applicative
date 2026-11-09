@@ -165,9 +165,10 @@ searchOpt pprefs w = searchParser [] $ \path opt -> do
                   && optVisibility opt > Internal
   case optMatches disambiguate (optMain opt) w of
     Just matcher -> lift $ do
-      lift $ selectContext path
       lift continueContext
-      fmap pure matcher
+      value <- matcher
+      lift $ selectContext path
+      return (pure value)
 
     Nothing -> mzero
 
@@ -193,9 +194,10 @@ searchArg prefs arg =
             return $ infoParser subp
 
       ArgReader rdr -> lift . lift $ do
-        selectContext path
         continueContext
-        pure <$> runReadM (crReader rdr) arg
+        value <- runReadM (crReader rdr) arg
+        selectContext path
+        return (pure value)
 
       _ ->
         mzero

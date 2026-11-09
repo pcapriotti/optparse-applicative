@@ -117,6 +117,7 @@ observations =
      | (scenario, args) <- helpScenarios
      , (label, passed) <- helpChecksWith (prefs (helpShowGlobals <> subparserInline)) scenario args]
   ++ repeatedGlobalObservations
+  ++ helpAlternativeObservations
 
 -- Both structural alternatives contain a command named "run". Its command
 -- name alone cannot identify which branch's original parent help to retain.
@@ -199,3 +200,19 @@ repeatedGlobalObservations =
     includes = many (strOption (long "include" <> help "INCLUDE_PATH"))
     branches = hsubparser (command "run" (info (pure () <**> helper) mempty))
       <|> (() <$ strOption (long "port" <> value "5050" <> help "REPEAT_LAUNCH"))
+
+-- An aborting help reader has not accepted its parser alternative. Keep the
+-- command alternative available for the virtual --help COMMAND lookup.
+helpAlternativeObservations :: [(String, Bool)]
+helpAlternativeObservations = concatMap check [["--help", "run"], ["run", "--help"]]
+  where
+    child = info (pure () <**> helper) (progDesc "DISTINCT_CHILD_MARKER")
+    spec = info ((helper <*> pure ()) <|> hsubparser (command "run" child))
+      (progDesc "ROOT_ONLY_MARKER")
+    check args = case execParserPure (prefs helpShowGlobals) spec args of
+      Failure failure ->
+        let (message, code) = renderFailure failure "issue461"
+        in [(show args ++ " exits successfully", code == ExitSuccess)
+           ,(show args ++ " selects distinct child", "DISTINCT_CHILD_MARKER" `isInfixOf` message)
+           ,(show args ++ " omits root description", not ("ROOT_ONLY_MARKER" `isInfixOf` message))]
+      _ -> [(show args ++ " expected child help", False)]
